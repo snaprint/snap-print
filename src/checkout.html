@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checkout — Snap Print</title>
+  <meta name="description" content="Complete your purchase — Snap Print checkout." />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="stylesheet" href="./css/index.css" />
+  <link rel="stylesheet" href="./css/components.css" />
+  <link rel="stylesheet" href="./css/pages.css" />
+</head>
+<body>
+  <div class="page">
+    <!-- Announcement Bar -->
+    <div class="announcement-bar">
+      <div class="announcement-bar__inner">
+        <span class="announcement-bar__item"><strong>Free Shipping</strong> on orders over ₹999</span>
+        <span class="announcement-bar__divider"></span>
+        <span class="announcement-bar__item">🔒 <strong>Secure Checkout</strong> — Razorpay Protected</span>
+      </div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="navbar" id="navbar" role="navigation" aria-label="Main navigation">
+      <div class="navbar__inner">
+        <a href="/" class="navbar__logo" aria-label="Snap Print Home">SNAP PRINT</a>
+        <div class="navbar__links">
+          <a href="/" class="navbar__link">Shop</a>
+          <a href="/quote.html" class="navbar__link">Custom Parts</a>
+          <a href="/about.html" class="navbar__link">About</a>
+        </div>
+        <div class="navbar__actions">
+          <a href="/cart.html" class="cart-icon-btn" aria-label="View Cart">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            <span class="cart-badge hidden" id="cart-badge">0</span>
+          </a>
+          <button class="navbar__hamburger" id="hamburger" aria-label="Toggle menu" aria-expanded="false"><span></span><span></span><span></span></button>
+        </div>
+      </div>
+      <div class="navbar__mobile-menu" id="mobile-menu">
+        <a href="/" class="navbar__link">Shop</a><a href="/quote.html" class="navbar__link">Custom Parts</a><a href="/about.html" class="navbar__link">About</a><a href="/cart.html" class="navbar__link">Cart</a>
+      </div>
+    </nav>
+
+    <main class="checkout-page">
+      <div class="container">
+        <nav class="page-breadcrumb" aria-label="Breadcrumb">
+          <a href="/">Home</a> <span class="separator">›</span> <a href="/cart.html">Cart</a> <span class="separator">›</span> <span>Checkout</span>
+        </nav>
+
+        <h1 class="checkout-page__title">Checkout</h1>
+
+        <div class="checkout-page__layout">
+          <!-- Form Column -->
+          <div class="checkout-form" id="checkout-form">
+
+            <!-- Contact -->
+            <div class="checkout-section">
+              <h2 class="checkout-section__title">Contact</h2>
+              <div class="form-group">
+                <label class="form-label" for="buyer-email">Email <span class="required">*</span></label>
+                <input class="form-input" type="email" id="buyer-email" placeholder="john@example.com" required autocomplete="email" />
+                <span class="form-error">Please enter a valid email address</span>
+              </div>
+            </div>
+
+            <!-- Delivery -->
+            <div class="checkout-section">
+              <h2 class="checkout-section__title">Delivery</h2>
+
+              <!-- Name -->
+              <div class="address-grid address-grid--2col">
+                <div class="form-group">
+                  <label class="form-label" for="buyer-firstname">First Name <span class="required">*</span></label>
+                  <input class="form-input" type="text" id="buyer-firstname" placeholder="John" required autocomplete="given-name" />
+                  <span class="form-error">Required</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="buyer-lastname">Last Name <span class="required">*</span></label>
+                  <input class="form-input" type="text" id="buyer-lastname" placeholder="Doe" required autocomplete="family-name" />
+                  <span class="form-error">Required</span>
+                </div>
+              </div>
+
+              <!-- Address with search -->
+              <div class="form-group" style="position: relative;">
+                <label class="form-label" for="buyer-address">Address <span class="required">*</span></label>
+                <div style="position: relative;">
+                  <input class="form-input" type="text" id="buyer-address" placeholder="Start typing your address..." required autocomplete="address-line1" />
+                  <svg style="position:absolute;right:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-muted);pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </div>
+                <div class="address-suggestions" id="address-suggestions"></div>
+                <span class="form-error">Please enter your address</span>
+              </div>
+
+              <!-- Apartment -->
+              <div class="form-group">
+                <label class="form-label" for="buyer-apartment">Apartment, suite, etc. (optional)</label>
+                <input class="form-input" type="text" id="buyer-apartment" placeholder="Apt 4B, Floor 2, etc." autocomplete="address-line2" />
+              </div>
+
+              <!-- City / State / PIN -->
+              <div class="address-grid address-grid--3col">
+                <div class="form-group">
+                  <label class="form-label" for="buyer-city">City <span class="required">*</span></label>
+                  <input class="form-input" type="text" id="buyer-city" placeholder="Mumbai" required autocomplete="address-level2" />
+                  <span class="form-error">Required</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="buyer-state">State <span class="required">*</span></label>
+                  <select class="form-select" id="buyer-state" required autocomplete="address-level1">
+                    <option value="">Select State</option>
+                    <option value="AN">Andaman and Nicobar Islands</option>
+                    <option value="AP">Andhra Pradesh</option>
+                    <option value="AR">Arunachal Pradesh</option>
+                    <option value="AS">Assam</option>
+                    <option value="BR">Bihar</option>
+                    <option value="CH">Chandigarh</option>
+                    <option value="CT">Chhattisgarh</option>
+                    <option value="DN">Dadra and Nagar Haveli</option>
+                    <option value="DD">Daman and Diu</option>
+                    <option value="DL">Delhi</option>
+                    <option value="GA">Goa</option>
+                    <option value="GJ">Gujarat</option>
+                    <option value="HR">Haryana</option>
+                    <option value="HP">Himachal Pradesh</option>
+                    <option value="JK">Jammu and Kashmir</option>
+                    <option value="JH">Jharkhand</option>
+                    <option value="KA">Karnataka</option>
+                    <option value="KL">Kerala</option>
+                    <option value="LA">Ladakh</option>
+                    <option value="LD">Lakshadweep</option>
+                    <option value="MP">Madhya Pradesh</option>
+                    <option value="MH">Maharashtra</option>
+                    <option value="MN">Manipur</option>
+                    <option value="ML">Meghalaya</option>
+                    <option value="MZ">Mizoram</option>
+                    <option value="NL">Nagaland</option>
+                    <option value="OR">Odisha</option>
+                    <option value="PY">Puducherry</option>
+                    <option value="PB">Punjab</option>
+                    <option value="RJ">Rajasthan</option>
+                    <option value="SK">Sikkim</option>
+                    <option value="TN">Tamil Nadu</option>
+                    <option value="TG">Telangana</option>
+                    <option value="TR">Tripura</option>
+                    <option value="UP">Uttar Pradesh</option>
+                    <option value="UT">Uttarakhand</option>
+                    <option value="WB">West Bengal</option>
+                  </select>
+                  <span class="form-error">Required</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="buyer-pincode">PIN Code <span class="required">*</span></label>
+                  <input class="form-input" type="text" id="buyer-pincode" placeholder="802103" required autocomplete="postal-code" maxlength="6" inputmode="numeric" />
+                  <span class="form-error">Enter 6-digit PIN</span>
+                </div>
+              </div>
+
+              <!-- Phone -->
+              <div class="form-group">
+                <label class="form-label" for="buyer-phone">Phone <span class="required">*</span></label>
+                <input class="form-input" type="tel" id="buyer-phone" placeholder="98765 43210" required autocomplete="tel" inputmode="tel" />
+                <span class="form-error">Enter a valid 10-digit phone number</span>
+              </div>
+            </div>
+
+            <!-- Shipping Method -->
+            <div class="checkout-section">
+              <h2 class="checkout-section__title">Shipping Method</h2>
+              <div class="shipping-selector" id="shipping-selector">
+                <label class="shipping-option selected" id="shipping-normal">
+                  <input type="radio" name="shipping" value="normal" checked />
+                  <div class="shipping-option__info">
+                    <span class="shipping-option__name">Normal Delivery</span>
+                    <span class="shipping-option__desc">7–10 business days</span>
+                  </div>
+                  <span class="shipping-option__price" id="shipping-normal-price">₹70</span>
+                </label>
+                <label class="shipping-option" id="shipping-speed">
+                  <input type="radio" name="shipping" value="speed" />
+                  <div class="shipping-option__info">
+                    <span class="shipping-option__name">Speed Delivery</span>
+                    <span class="shipping-option__desc">3–5 business days</span>
+                  </div>
+                  <span class="shipping-option__price" id="shipping-speed-price">₹120</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Pay Button -->
+            <button class="btn btn-primary btn-lg btn-full" id="pay-btn">
+              <span id="pay-btn-text">Pay Now</span>
+            </button>
+            <p style="text-align:center;margin-top:var(--space-2);">
+              <small style="color:var(--text-muted);">🔒 Secured by Razorpay</small>
+            </p>
+          </div>
+
+          <!-- Order Summary Sidebar -->
+          <div id="order-summary"></div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="footer__grid">
+          <div><div class="footer__brand-name">Snap Print</div><p class="footer__brand-desc">Premium 3D printed toys, home decor, and custom engineering parts.</p></div>
+          <div><h3 class="footer__heading">Shop</h3><nav class="footer__links"><a href="/" class="footer__link">All Products</a><a href="/?category=toys" class="footer__link">Toys</a><a href="/?category=decor" class="footer__link">Decor</a><a href="/quote.html" class="footer__link">Custom Parts</a></nav></div>
+          <div><h3 class="footer__heading">Help</h3><nav class="footer__links"><a href="/about.html" class="footer__link">About Us</a><a href="/about.html#faq" class="footer__link">FAQ</a><a href="/about.html#contact" class="footer__link">Contact</a></nav></div>
+          <div><h3 class="footer__heading">Contact</h3><nav class="footer__links"><a href="mailto:hello@snaprint.in" class="footer__link">hello@snaprint.in</a></nav></div>
+        </div>
+        <div class="footer__bottom"><span class="footer__copy">&copy; 2026 Snap Print. All rights reserved.</span><span class="footer__copy">Made in India 🇮🇳</span></div>
+      </div>
+    </footer>
+  </div>
+
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script type="module" src="./js/main.js"></script>
+  <script type="module" src="./js/checkout.js"></script>
+</body>
+</html>

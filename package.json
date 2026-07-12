@@ -1,0 +1,20 @@
+{
+  "name": "snaprint",
+  "version": "1.0.0",
+  "description": "Snap Print — 3D Printed Toys & Custom Parts E-Commerce",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "dev:full": "vite build && npx wrangler pages dev dist/ --port 8788",
+    "deploy": "vite build && npx wrangler pages deploy dist/"
+  },
+  "dependencies": {
+    "papaparse": "^5.4.1"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5",
+    "wrangler": "^4.22.0"
+  }
+}
