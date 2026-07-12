@@ -41,7 +41,7 @@ export function addToCart(product, quantity = 1) {
       price: Number(product.price),
       compare_price: Number(product.compare_price) || 0,
       weight_g: Number(product.weight_g) || 0,
-      image: product.image_urls ? product.image_urls.split(',')[0].trim() : '',
+      image: product.image_urls ? resolveImageUrl(product.image_urls.split(',')[0].trim()) : '',
       material: product.material || '',
       quantity,
     });
@@ -142,6 +142,31 @@ export async function fetchCSV(url) {
   if (!response.ok) throw new Error(`Failed to fetch CSV: ${response.status}`);
   const text = await response.text();
   return Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+}
+
+// ── Resolve Image URL ──
+// Converts GitHub blob URLs to raw URLs so they work in <img> tags.
+// Also handles raw.githubusercontent.com, local paths, and external URLs.
+export function resolveImageUrl(url) {
+  if (!url) return '';
+  url = url.trim();
+
+  // Already a raw GitHub URL — good
+  if (url.startsWith('https://raw.githubusercontent.com/')) return url;
+
+  // GitHub blob URL → convert to raw
+  // e.g. https://github.com/user/repo/blob/main/path/img.png
+  //   → https://raw.githubusercontent.com/user/repo/main/path/img.png
+  const blobMatch = url.match(/^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/);
+  if (blobMatch) {
+    return `https://raw.githubusercontent.com/${blobMatch[1]}/${blobMatch[2]}/${blobMatch[3]}`;
+  }
+
+  // Local path (starts with /) — works as-is from same domain
+  if (url.startsWith('/')) return url;
+
+  // Any other external URL — use as-is
+  return url;
 }
 
 // ── Sample Products (with compare_price for discount display) ──

@@ -1,6 +1,10 @@
 /* ═══════════════════════════════════════════════════════════════
-   SNAP PRINT — Catalog
-   Product grid with discount pricing, category tiles, search
+   SNAP PRINT — Catalog (Fully Parametric)
+   
+   All products, categories, prices, and images are driven
+   entirely by the Google Sheets CSV. No hardcoded values.
+   Add a new category or product in the Sheet and it appears
+   automatically on the next page load — no redeployment needed.
    ═══════════════════════════════════════════════════════════════ */
 
 import {
@@ -12,6 +16,31 @@ let allProducts = [];
 let filteredProducts = [];
 let activeCategory = 'all';
 let searchQuery = '';
+
+// ── Resolve Image URL ──
+// Converts GitHub blob URLs to raw URLs so they work in <img> tags.
+// Also handles raw.githubusercontent.com, local paths, and external URLs.
+function resolveImageUrl(url) {
+  if (!url) return '';
+  url = url.trim();
+
+  // Already a raw GitHub URL — good
+  if (url.startsWith('https://raw.githubusercontent.com/')) return url;
+
+  // GitHub blob URL → convert to raw
+  // e.g. https://github.com/user/repo/blob/main/path/img.png
+  //   → https://raw.githubusercontent.com/user/repo/main/path/img.png
+  const blobMatch = url.match(/^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/);
+  if (blobMatch) {
+    return `https://raw.githubusercontent.com/${blobMatch[1]}/${blobMatch[2]}/${blobMatch[3]}`;
+  }
+
+  // Local path (starts with /) — works as-is from same domain
+  if (url.startsWith('/')) return url;
+
+  // Any other external URL — use as-is
+  return url;
+}
 
 // ── Load Products ──
 async function loadProducts() {
@@ -29,11 +58,18 @@ async function loadProducts() {
 
     allProducts = allProducts.filter(p => p.active?.toLowerCase() === 'yes');
 
+    // Build dynamic category tiles from the data
+    buildCategoryTiles();
+
     // Check URL for category
     const params = new URLSearchParams(window.location.search);
     const urlCategory = params.get('category');
-    if (urlCategory && ['toys', 'decor', 'engineering'].includes(urlCategory)) {
-      activeCategory = urlCategory;
+    if (urlCategory) {
+      // Accept any category from the URL — no hardcoded whitelist
+      const validCategories = [...new Set(allProducts.map(p => p.category?.toLowerCase()).filter(Boolean))];
+      if (validCategories.includes(urlCategory.toLowerCase())) {
+        activeCategory = urlCategory.toLowerCase();
+      }
       updateCategoryTiles();
     }
 
@@ -50,10 +86,75 @@ async function loadProducts() {
   }
 }
 
+// ── Build Dynamic Category Tiles ──
+function buildCategoryTiles() {
+  const scroll = document.getElementById('category-scroll');
+  if (!scroll) return;
+
+  // Extract unique categories from product data
+  const categoryMap = {};
+  allProducts.forEach(product => {
+    const cat = product.category?.toLowerCase();
+    if (!cat) return;
+    if (!categoryMap[cat]) {
+      // Use the first product's image as the category tile image
+      const imgUrl = product.image_urls ? product.image_urls.split(',')[0].trim() : '';
+      categoryMap[cat] = {
+        name: cat,
+        label: cat.charAt(0).toUpperCase() + cat.slice(1),
+        image: resolveImageUrl(imgUrl),
+        count: 0,
+      };
+    }
+    categoryMap[cat].count++;
+  });
+
+  const categories = Object.values(categoryMap);
+
+  // Build HTML: "All" tile first, then each category from the Sheet
+  scroll.innerHTML = `
+    <a href="/?category=all" class="category-tile active" data-category="all">
+      <div class="category-tile__image">
+        <svg viewBox="0 0 100 100" style="width:100%;height:100%;background:var(--bg-muted);"><text x="50" y="55" font-family="sans-serif" font-size="28" fill="var(--text-secondary)" text-anchor="middle">All</text></svg>
+      </div>
+      <span class="category-tile__label">All (${allProducts.length})</span>
+    </a>
+    ${categories.map(cat => `
+      <a href="/?category=${cat.name}" class="category-tile" data-category="${cat.name}">
+        <div class="category-tile__image">
+          ${cat.image
+            ? `<img src="${cat.image}" alt="${cat.label}" loading="lazy" onerror="this.parentElement.innerHTML='<svg viewBox=\\'0 0 100 100\\' style=\\'width:100%;height:100%;background:var(--bg-muted)\\'><text x=\\'50\\' y=\\'55\\' font-family=\\'sans-serif\\' font-size=\\'14\\' fill=\\'var(--text-secondary)\\' text-anchor=\\'middle\\'>${cat.label}</text></svg>'" />`
+            : `<svg viewBox="0 0 100 100" style="width:100%;height:100%;background:var(--bg-muted);"><text x="50" y="55" font-family="sans-serif" font-size="14" fill="var(--text-secondary)" text-anchor="middle">${cat.label}</text></svg>`
+          }
+        </div>
+        <span class="category-tile__label">${cat.label} (${cat.count})</span>
+      </a>
+    `).join('')}
+  `;
+
+  // Re-init click handlers on the newly created tiles
+  initCategoryTiles();
+
+  // Also populate footer shop links dynamically
+  const footerLinks = document.getElementById('footer-shop-links');
+  if (footerLinks) {
+    // Insert category links before the "Custom Parts" link
+    const customPartsLink = footerLinks.querySelector('a[href="/quote.html"]');
+    categories.forEach(cat => {
+      if (cat.name === 'engineering') return; // skip — already have "Custom Parts"
+      const link = document.createElement('a');
+      link.href = `/?category=${cat.name}`;
+      link.className = 'footer__link';
+      link.textContent = cat.label;
+      footerLinks.insertBefore(link, customPartsLink);
+    });
+  }
+}
+
 // ── Apply Filters ──
 function applyFilters() {
   filteredProducts = allProducts.filter(product => {
-    const matchesCategory = activeCategory === 'all' || product.category === activeCategory;
+    const matchesCategory = activeCategory === 'all' || product.category?.toLowerCase() === activeCategory;
     const matchesSearch = !searchQuery ||
       product.name.toLowerCase().includes(searchQuery) ||
       product.description?.toLowerCase().includes(searchQuery) ||
@@ -81,8 +182,8 @@ function renderProducts(products) {
   }
 
   grid.innerHTML = products.map((product, index) => {
-    const imageUrl = product.image_urls ? product.image_urls.split(',')[0].trim() : '';
-    const isEngineering = product.category === 'engineering';
+    const imageUrl = resolveImageUrl(product.image_urls ? product.image_urls.split(',')[0].trim() : '');
+    const isEngineering = product.category?.toLowerCase() === 'engineering';
     const isOutOfStock = !isEngineering && product.stock !== '' && Number(product.stock) <= 0 && product.made_to_order !== 'yes';
     const isMadeToOrder = product.made_to_order === 'yes';
     const discount = getDiscountPercent(product.price, product.compare_price);
@@ -169,7 +270,6 @@ function initSearch() {
 
 // ── Init ──
 document.addEventListener('DOMContentLoaded', () => {
-  initCategoryTiles();
   initSearch();
   loadProducts();
 });

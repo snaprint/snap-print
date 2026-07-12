@@ -101,29 +101,14 @@
       </div>
     </section>
 
-    <!-- Shop by Category -->
+    <!-- Shop by Category (dynamically populated by catalog.js from the Sheet) -->
     <section class="section-sm">
       <div class="container">
         <div class="section-header">
           <h2 class="section-title">Shop by Category</h2>
         </div>
         <div class="category-scroll" id="category-scroll">
-          <a href="/?category=all" class="category-tile active" data-category="all">
-            <div class="category-tile__image"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=300&h=300&fit=crop" alt="All Products" /></div>
-            <span class="category-tile__label">All</span>
-          </a>
-          <a href="/?category=toys" class="category-tile" data-category="toys">
-            <div class="category-tile__image"><img src="https://images.unsplash.com/photo-1587654780292-39c6a5a0631d?w=300&h=300&fit=crop" alt="Toys" /></div>
-            <span class="category-tile__label">Toys</span>
-          </a>
-          <a href="/?category=decor" class="category-tile" data-category="decor">
-            <div class="category-tile__image"><img src="https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=300&h=300&fit=crop" alt="Decor" /></div>
-            <span class="category-tile__label">Decor</span>
-          </a>
-          <a href="/?category=engineering" class="category-tile" data-category="engineering">
-            <div class="category-tile__image"><img src="https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=300&h=300&fit=crop" alt="Custom Parts" /></div>
-            <span class="category-tile__label">Custom Parts</span>
-          </a>
+          <!-- Category tiles generated dynamically from product data -->
         </div>
       </div>
     </section>
@@ -162,11 +147,10 @@
           </div>
           <div>
             <h3 class="footer__heading">Shop</h3>
-            <nav class="footer__links">
+            <nav class="footer__links" id="footer-shop-links">
               <a href="/" class="footer__link">All Products</a>
-              <a href="/?category=toys" class="footer__link">Toys</a>
-              <a href="/?category=decor" class="footer__link">Decor</a>
               <a href="/quote.html" class="footer__link">Custom Parts</a>
+              <!-- Additional category links populated by catalog.js -->
             </nav>
           </div>
           <div>

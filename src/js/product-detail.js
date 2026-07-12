@@ -5,7 +5,7 @@
 
 import {
   getSampleProducts, CONFIG, fetchCSV, addToCart, clearCart,
-  formatCurrency, getDiscountPercent, showToast,
+  formatCurrency, getDiscountPercent, showToast, resolveImageUrl,
 } from './utils.js';
 
 let currentProduct = null;
@@ -45,7 +45,7 @@ function renderProduct(product) {
     breadcrumbCategory.innerHTML = `<a href="/?category=${product.category}">${catLabel}</a> <span class="separator">›</span> ${product.name}`;
   }
 
-  const images = product.image_urls ? product.image_urls.split(',').map(url => url.trim()) : [];
+  const images = product.image_urls ? product.image_urls.split(',').map(url => resolveImageUrl(url.trim())) : [];
   const mainImage = images[0] || '';
   const isOutOfStock = product.stock !== '' && Number(product.stock) <= 0 && product.made_to_order !== 'yes';
   const isMadeToOrder = product.made_to_order === 'yes';
@@ -226,7 +226,7 @@ function renderRelatedProducts(product) {
 
   section.style.display = 'block';
   grid.innerHTML = related.map(p => {
-    const img = p.image_urls ? p.image_urls.split(',')[0].trim() : '';
+    const img = p.image_urls ? resolveImageUrl(p.image_urls.split(',')[0].trim()) : '';
     const disc = getDiscountPercent(p.price, p.compare_price);
     return `
       <article class="product-card">
