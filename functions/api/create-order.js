@@ -165,6 +165,10 @@ export async function onRequestPost(context) {
           buyer_pincode: buyer.pincode,
           shipping_method: shippingMethod,
           item_count: String(resolvedItems.length),
+          items_summary: resolvedItems
+            .map(i => `${i.name} x${i.quantity}`)
+            .join(', ')
+            .slice(0, 512), // Razorpay notes value limit
         },
       }),
     });
