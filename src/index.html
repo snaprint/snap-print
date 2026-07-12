@@ -113,29 +113,85 @@
       </div>
     </section>
 
-    <!-- Best Sellers -->
+    <!-- Catalog Toolbar + Product Grid -->
     <section class="section-sm" id="best-sellers">
       <div class="container">
-        <div class="section-header">
-          <h2 class="section-title">Best Sellers</h2>
-          <a href="/?category=all" class="section-link">View All</a>
+        <!-- Search Bar -->
+        <div class="catalog-search" id="catalog-search">
+          <svg class="catalog-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="search" class="catalog-search__input" id="search-input" placeholder="Search products..." aria-label="Search products" />
         </div>
+
+        <!-- Toolbar: Sort + Filter Toggle + Count -->
+        <div class="catalog-toolbar" id="catalog-toolbar">
+          <div class="catalog-toolbar__left">
+            <button class="catalog-toolbar__filter-btn" id="filter-toggle-btn" aria-expanded="false" aria-controls="filter-drawer">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="8" cy="6" r="2" fill="currentColor"/><circle cx="16" cy="12" r="2" fill="currentColor"/><circle cx="10" cy="18" r="2" fill="currentColor"/></svg>
+              <span>Filters</span>
+              <span class="catalog-toolbar__filter-count hidden" id="active-filter-count">0</span>
+            </button>
+            <span class="catalog-toolbar__count" id="product-count"></span>
+          </div>
+          <div class="catalog-toolbar__right">
+            <select class="catalog-toolbar__sort" id="sort-select" aria-label="Sort products">
+              <option value="default">Sort by</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="name-asc">Name: A–Z</option>
+              <option value="name-desc">Name: Z–A</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Filter Drawer (collapsible) -->
+        <div class="filter-drawer" id="filter-drawer" aria-hidden="true">
+          <div class="filter-drawer__inner">
+            <!-- Price Range -->
+            <div class="filter-group">
+              <h4 class="filter-group__title">Price Range</h4>
+              <div class="filter-group__price-inputs">
+                <div class="filter-price-field">
+                  <span class="filter-price-field__prefix">₹</span>
+                  <input type="number" class="filter-price-field__input" id="price-min" placeholder="Min" min="0" aria-label="Minimum price" />
+                </div>
+                <span class="filter-price-field__sep">–</span>
+                <div class="filter-price-field">
+                  <span class="filter-price-field__prefix">₹</span>
+                  <input type="number" class="filter-price-field__input" id="price-max" placeholder="Max" min="0" aria-label="Maximum price" />
+                </div>
+              </div>
+            </div>
+
+            <!-- In Stock -->
+            <div class="filter-group">
+              <label class="filter-checkbox" for="filter-in-stock">
+                <input type="checkbox" id="filter-in-stock" />
+                <span class="filter-checkbox__mark"></span>
+                <span>In stock only</span>
+              </label>
+            </div>
+
+            <!-- Material (dynamic chips) -->
+            <div class="filter-group" id="material-filter-group" style="display:none;">
+              <h4 class="filter-group__title">Material</h4>
+              <div class="filter-chips" id="material-chips">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+
+            <!-- Clear All -->
+            <div class="filter-group">
+              <button class="btn btn-ghost btn-sm" id="clear-all-filters">Clear All Filters</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Product Grid -->
         <div class="product-grid" id="product-grid" role="list" aria-label="Product catalog">
           <!-- Products rendered by catalog.js -->
         </div>
       </div>
     </section>
-
-    <!-- Search (hidden until needed) -->
-    <div class="hidden" id="search-section">
-      <div class="container catalog__toolbar">
-        <div class="search-bar" id="search-bar">
-          <svg class="search-bar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="search" class="search-bar__input" id="search-input" placeholder="Search products..." aria-label="Search products" />
-        </div>
-        <span class="catalog__count" id="product-count"></span>
-      </div>
-    </div>
 
     <!-- Footer -->
     <footer class="footer" id="footer">
