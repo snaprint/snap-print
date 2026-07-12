@@ -161,14 +161,22 @@ export async function onRequestPost(context) {
           buyer_name: `${buyer.firstName} ${buyer.lastName}`,
           buyer_email: buyer.email,
           buyer_phone: buyer.phone,
+          buyer_address: [buyer.address, buyer.apartment].filter(Boolean).join(', '),
           buyer_city: buyer.city || '',
+          buyer_state: buyer.state || '',
           buyer_pincode: buyer.pincode,
           shipping_method: shippingMethod,
+          shipping_cost: String(shippingCost),
+          subtotal: String(subtotal),
           item_count: String(resolvedItems.length),
           items_summary: resolvedItems
             .map(i => `${i.name} x${i.quantity}`)
             .join(', ')
-            .slice(0, 512), // Razorpay notes value limit
+            .slice(0, 512),
+          // JSON-encoded item details for itemized emails
+          items_detail: JSON.stringify(
+            resolvedItems.map(i => ({ n: i.name, q: i.quantity, p: i.price }))
+          ).slice(0, 512),
         },
       }),
     });

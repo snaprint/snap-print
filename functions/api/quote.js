@@ -4,7 +4,9 @@
    POST /api/quote
    
    Receives quote form data (file + details) and sends an email
-   to the seller with the quote request.
+   to the seller with the quote request details and attached file.
+   
+   Env vars: RESEND_API_KEY, SELLER_EMAIL
    ═══════════════════════════════════════════════════════════════ */
 
 export async function onRequestPost(context) {
@@ -20,7 +22,7 @@ export async function onRequestPost(context) {
     const notes = formData.get('notes') || '';
     const file = formData.get('file');
 
-    // Validate
+    // Validate required fields
     if (!name || !email || !phone || !material) {
       return jsonError('Missing required fields', 400);
     }
@@ -51,28 +53,37 @@ export async function onRequestPost(context) {
       const fileBuffer = await file.arrayBuffer();
       const fileBase64 = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
 
-      await fetch('https://api.resend.com/emails', {
+      // Seller notification with attachment
+      const sellerRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${resendApiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'Snap Print System <quotes@snaprint.in>',
+          from: 'Snap Print <orders@snaprint.in>',
           to: sellerEmail,
-          subject: `🔧 New Quote Request from ${name}`,
+          reply_to: 'queries@snaprint.in',
+          subject: `🔧 New Quote Request from ${escapeHtml(name)}`,
           html: `
-            <div style="font-family:-apple-system,sans-serif;max-width:500px;padding:20px;">
-              <h2>New Custom Part Quote Request</h2>
-              <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-                <tr><td style="padding:6px 0;color:#666;">Name</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(name)}</td></tr>
+            <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;padding:24px;color:#1a1a1a;">
+              <h2 style="margin:0 0 16px;">New Custom Part Quote Request</h2>
+
+              <h3 style="margin:16px 0 8px;font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">Contact Details</h3>
+              <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <tr><td style="padding:6px 0;color:#666;width:120px;">Name</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(name)}</td></tr>
                 <tr><td style="padding:6px 0;color:#666;">Email</td><td style="padding:6px 0;">${escapeHtml(email)}</td></tr>
                 <tr><td style="padding:6px 0;color:#666;">Phone</td><td style="padding:6px 0;">${escapeHtml(phone)}</td></tr>
-                <tr><td style="padding:6px 0;color:#666;">Material</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(material)}</td></tr>
+              </table>
+
+              <h3 style="margin:20px 0 8px;font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">Specifications</h3>
+              <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <tr><td style="padding:6px 0;color:#666;width:120px;">Material</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(material)}</td></tr>
                 <tr><td style="padding:6px 0;color:#666;">File</td><td style="padding:6px 0;">${escapeHtml(file.name)} (${(file.size / 1024).toFixed(1)} KB)</td></tr>
                 ${notes ? `<tr><td style="padding:6px 0;color:#666;">Notes</td><td style="padding:6px 0;">${escapeHtml(notes)}</td></tr>` : ''}
               </table>
-              <p style="color:#666;font-size:12px;">The design file is attached to this email.</p>
+
+              <p style="color:#888;font-size:12px;margin-top:20px;">The design file is attached to this email. Reply directly to respond to the customer.</p>
             </div>
           `,
           attachments: [
@@ -84,33 +95,12 @@ export async function onRequestPost(context) {
         }),
       });
 
-      // Also send a confirmation to the buyer
-      await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${resendApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: 'Snap Print <quotes@snaprint.in>',
-          to: email,
-          subject: 'Quote Request Received — Snap Print',
-          html: `
-            <div style="font-family:-apple-system,sans-serif;max-width:500px;margin:0 auto;padding:20px;">
-              <h2>We received your quote request! 🔧</h2>
-              <p>Hi ${escapeHtml(name)},</p>
-              <p>Thanks for your interest in a custom 3D printed part. We've received your design file and will review it shortly.</p>
-              <p>You should hear back from us within <strong>24 hours</strong> with a personalized quote.</p>
-              <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-                <tr><td style="padding:6px 0;color:#666;">Material</td><td style="padding:6px 0;">${escapeHtml(material)}</td></tr>
-                <tr><td style="padding:6px 0;color:#666;">File</td><td style="padding:6px 0;">${escapeHtml(file.name)}</td></tr>
-              </table>
-              <p>If you have any questions, just reply to this email.</p>
-              <p style="color:#666;font-size:12px;margin-top:24px;">— Team Snap Print</p>
-            </div>
-          `,
-        }),
-      });
+      if (!sellerRes.ok) {
+        const err = await sellerRes.text();
+        console.error('Seller email failed:', err);
+      } else {
+        console.log(`Quote notification sent to seller (${sellerEmail})`);
+      }
     } else {
       console.log('Email skipped (RESEND_API_KEY not set). Quote data:', { name, email, phone, material, notes, fileName: file.name });
     }
