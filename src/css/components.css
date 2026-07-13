@@ -1262,6 +1262,47 @@
 
 .footer__link:hover { color: var(--text-on-dark); }
 
+.email-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.email-copy__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-on-dark-muted);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease), background var(--duration-fast) var(--ease);
+}
+
+.email-copy__button:hover,
+.email-copy__button:focus-visible {
+  color: var(--text-on-dark);
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+}
+
+.email-copy__button svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.email-copy__button.is-copied { color: #86efac; }
+
 .footer__bottom {
   display: flex;
   align-items: center;

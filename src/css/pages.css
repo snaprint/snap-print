@@ -679,6 +679,30 @@
 
 .contact-card:hover { border-color: var(--border-medium); }
 
+.contact-card .email-copy__button {
+  color: var(--text-secondary);
+}
+
+.contact-card .email-copy__button:hover,
+.contact-card .email-copy__button:focus-visible {
+  color: var(--text-primary);
+  background: var(--bg-muted);
+}
+
+.contact-card .email-copy__button.is-copied { color: #15803d; }
+
+.email-copy--light .email-copy__button {
+  color: var(--text-secondary);
+}
+
+.email-copy--light .email-copy__button:hover,
+.email-copy--light .email-copy__button:focus-visible {
+  color: var(--text-primary);
+  background: var(--bg-muted);
+}
+
+.email-copy--light .email-copy__button.is-copied { color: #15803d; }
+
 .contact-card__icon {
   width: 40px;
   height: 40px;
@@ -692,7 +716,8 @@
 
 .contact-card__icon svg { width: 18px; height: 18px; color: var(--text-secondary); }
 .contact-card__label { font-size: var(--text-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: var(--tracking-wide); font-weight: 600; }
-.contact-card__value { font-size: var(--text-sm); color: var(--text-primary); font-weight: 500; margin-top: 2px; }
+.contact-card__value { font-size: var(--text-sm); color: var(--text-primary); font-weight: 500; margin-top: 2px; text-decoration: none; }
+.contact-card__value:hover { text-decoration: underline; }
 
 /* ── Breadcrumb ── */
 .page-breadcrumb {

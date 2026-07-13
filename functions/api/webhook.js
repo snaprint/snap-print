@@ -201,7 +201,7 @@ async function sendConfirmationEmails(env, data) {
     return;
   }
 
-  const sellerEmail = env.SELLER_EMAIL || 'hello@snaprint.in';
+  const sellerEmail = env.SELLER_EMAIL || 'queries@snaprint.in';
 
   // Build itemized table rows
   const itemRows = data.itemsDetail.length > 0
