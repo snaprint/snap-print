@@ -1240,7 +1240,7 @@
 .filter-drawer {
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.25s ease;
+  transition: max-height 0.3s ease, opacity 0.25s ease;
   opacity: 0;
   margin-bottom: 0;
 }
@@ -1254,29 +1254,31 @@
 .filter-drawer__inner {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-5) var(--space-8);
-  padding: var(--space-5);
-  background: var(--bg-muted);
-  border: 1px solid var(--border-light);
+  gap: var(--space-6) var(--space-10, 2.5rem);
+  padding: var(--space-5) var(--space-6);
+  background: #eef0f3;
+  border: 1px solid var(--border-medium);
   border-radius: var(--radius-lg);
 }
 
+/* ── Filter Groups ── */
 .filter-group {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 6px;
   min-width: 140px;
 }
 
 .filter-group__title {
-  font-size: var(--text-xs);
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
-  margin: 0;
+  letter-spacing: 0.6px;
+  color: var(--text-primary);
+  margin: 0 0 2px 0;
 }
 
+/* ── Price Range Inputs ── */
 .filter-group__price-inputs {
   display: flex;
   align-items: center;
@@ -1286,8 +1288,8 @@
 .filter-price-field {
   display: flex;
   align-items: center;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-light);
+  background: #fff;
+  border: 1.5px solid var(--border-medium);
   border-radius: var(--radius-sm);
   overflow: hidden;
   transition: border-color var(--duration-fast) var(--ease);
@@ -1295,18 +1297,20 @@
 
 .filter-price-field:focus-within {
   border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08);
 }
 
 .filter-price-field__prefix {
-  padding: 6px 0 6px 10px;
+  padding: 7px 0 7px 10px;
   font-size: var(--text-sm);
-  color: var(--text-muted);
+  font-weight: 500;
+  color: var(--text-secondary);
   user-select: none;
 }
 
 .filter-price-field__input {
-  width: 70px;
-  padding: 6px 8px 6px 4px;
+  width: 72px;
+  padding: 7px 8px 7px 4px;
   font-size: var(--text-sm);
   font-family: inherit;
   border: none;
@@ -1322,18 +1326,25 @@
   margin: 0;
 }
 
-.filter-price-field__sep {
+.filter-price-field__input::placeholder {
   color: var(--text-muted);
+}
+
+.filter-price-field__sep {
+  color: var(--text-secondary);
   font-size: var(--text-sm);
+  font-weight: 500;
+  padding: 0 2px;
 }
 
 /* ── Checkbox ── */
 .filter-checkbox {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   cursor: pointer;
   font-size: var(--text-sm);
+  font-weight: 500;
   color: var(--text-primary);
   user-select: none;
   padding: 4px 0;
@@ -1354,8 +1365,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #fff;
   transition: all var(--duration-fast) var(--ease);
   flex-shrink: 0;
+}
+
+.filter-checkbox:hover .filter-checkbox__mark {
+  border-color: var(--text-secondary);
 }
 
 .filter-checkbox input:checked + .filter-checkbox__mark {
@@ -1381,13 +1397,13 @@
 }
 
 .filter-chip {
-  padding: 5px 12px;
+  padding: 5px 13px;
   font-size: 12px;
   font-weight: 500;
   font-family: inherit;
   color: var(--text-secondary);
-  background: var(--bg-surface);
-  border: 1px solid var(--border-light);
+  background: #fff;
+  border: 1.5px solid var(--border-medium);
   border-radius: 999px;
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease);
@@ -1395,16 +1411,37 @@
 
 .filter-chip:hover {
   border-color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .filter-chip.active {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
+  background: #eff4ff;
+  color: #1e40af;
+  border-color: #93b4fd;
+  font-weight: 600;
+}
+
+/* ── Clear All Button ── */
+#clear-all-filters {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 4px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease);
+  align-self: flex-start;
+}
+
+#clear-all-filters:hover {
+  color: var(--text-primary);
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Responsive — Mobile
+   Responsive — Catalog Mobile
    ═══════════════════════════════════════════════════════════════ */
 @media (max-width: 640px) {
   .catalog-toolbar {
@@ -1417,7 +1454,7 @@
 
   .filter-drawer__inner {
     flex-direction: column;
-    gap: var(--space-4);
+    gap: var(--space-5);
     padding: var(--space-4);
   }
 
@@ -1430,4 +1467,3 @@
     padding: 7px 28px 7px 10px;
   }
 }
-
