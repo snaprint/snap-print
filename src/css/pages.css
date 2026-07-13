@@ -803,3 +803,127 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Legal / Policy Pages
+   ═══════════════════════════════════════════════════════════════ */
+.legal-page {
+  padding: var(--space-10) 0 var(--space-14);
+}
+
+.legal-page__header {
+  max-width: 720px;
+  margin: 0 auto var(--space-8);
+  text-align: center;
+}
+
+.legal-page__title {
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  margin-bottom: var(--space-2);
+}
+
+.legal-page__updated {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.legal-page__body {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.legal-page__body h2 {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  margin-top: var(--space-8);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.legal-page__body h3 {
+  font-size: var(--text-md);
+  font-weight: 600;
+  margin-top: var(--space-6);
+  margin-bottom: var(--space-2);
+}
+
+.legal-page__body p {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+  margin-bottom: var(--space-3);
+}
+
+.legal-page__body ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--space-4);
+}
+
+.legal-page__body ul li {
+  position: relative;
+  padding-left: 20px;
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+  margin-bottom: var(--space-2);
+}
+
+.legal-page__body ul li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border-medium);
+}
+
+.legal-page__body strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.legal-page__body a {
+  color: var(--text-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Simple table for shipping rates */
+.legal-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--space-3) 0 var(--space-5);
+  font-size: var(--text-sm);
+}
+
+.legal-table th,
+.legal-table td {
+  text-align: left;
+  padding: 10px 14px;
+  border: 1px solid var(--border-light);
+}
+
+.legal-table th {
+  background: var(--bg-muted);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.legal-table td {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 640px) {
+  .legal-page__title {
+    font-size: var(--text-2xl);
+  }
+
+  .legal-page__body h2 {
+    font-size: var(--text-lg);
+  }
+}
