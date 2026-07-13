@@ -16,9 +16,9 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import {
-  getSampleProducts, CONFIG, fetchCSV, addToCart,
-  formatCurrency, getDiscountPercent, debounce, renderSkeletons, showToast,
-  resolveImageUrl,
+  getSampleProducts, CONFIG, fetchCSV, fetchActiveProducts, extractCategories,
+  addToCart, formatCurrency, getDiscountPercent, debounce, renderSkeletons,
+  showToast, resolveImageUrl,
 } from './utils.js';
 
 // ── State ──
@@ -54,13 +54,10 @@ async function loadProducts() {
 
   try {
     if (CONFIG.PRODUCTS_CSV_URL) {
-      allProducts = await fetchCSV(CONFIG.PRODUCTS_CSV_URL);
+      allProducts = await fetchActiveProducts();
     } else {
       allProducts = getSampleProducts();
     }
-
-    // Only active products
-    allProducts = allProducts.filter(p => p.active?.toLowerCase() === 'yes');
 
     // Build dynamic UI elements from the data
     buildCategoryTiles();

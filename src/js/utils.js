@@ -145,6 +145,41 @@ export async function fetchCSV(url) {
   return Papa.parse(text, { header: true, skipEmptyLines: true }).data;
 }
 
+// ── Shared Active Products (fetched once, cached, used by both header and catalog) ──
+let _activeProductsCache = null;
+let _activeProductsPromise = null;
+
+export function fetchActiveProducts() {
+  if (_activeProductsCache) return Promise.resolve(_activeProductsCache);
+  if (_activeProductsPromise) return _activeProductsPromise;
+
+  _activeProductsPromise = (async () => {
+    if (!CONFIG.PRODUCTS_CSV_URL) {
+      _activeProductsCache = [];
+      return _activeProductsCache;
+    }
+    const all = await fetchCSV(CONFIG.PRODUCTS_CSV_URL);
+    _activeProductsCache = all.filter(p => p.active?.toLowerCase() === 'yes');
+    return _activeProductsCache;
+  })();
+
+  return _activeProductsPromise;
+}
+
+// ── Extract unique categories from product list ──
+export function extractCategories(products) {
+  const categoryMap = {};
+  products.forEach(p => {
+    const cat = p.category?.toLowerCase();
+    if (!cat) return;
+    if (!categoryMap[cat]) {
+      categoryMap[cat] = { name: cat, label: cat.charAt(0).toUpperCase() + cat.slice(1), count: 0 };
+    }
+    categoryMap[cat].count++;
+  });
+  return Object.values(categoryMap);
+}
+
 // ── Resolve Image URL ──
 // Converts GitHub blob URLs to raw URLs so they work in <img> tags.
 // Also handles raw.githubusercontent.com, local paths, and external URLs.
