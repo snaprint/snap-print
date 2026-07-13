@@ -518,6 +518,92 @@ function initClearAll() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Hero Image Carousel
+// ═══════════════════════════════════════════════════════════════
+let heroInterval = null;
+
+async function loadHeroCarousel() {
+  const track = document.getElementById('hero-carousel-track');
+  const dotsContainer = document.getElementById('hero-carousel-dots');
+  if (!track || !dotsContainer) return;
+
+  if (!CONFIG.HERO_IMAGES_CSV_URL) return; // No URL configured — keep fallback
+
+  try {
+    const rows = await fetchCSV(CONFIG.HERO_IMAGES_CSV_URL);
+
+    // Column B = second column. PapaParse uses headers from row 1.
+    // Get the header name for column B (second key in each row object)
+    const headers = rows.length > 0 ? Object.keys(rows[0]) : [];
+    const colBKey = headers[1]; // Column B is the second header
+
+    if (!colBKey) return; // No column B header
+
+    // Extract non-empty image URLs from column B
+    const imageUrls = rows
+      .map(row => row[colBKey]?.trim())
+      .filter(Boolean)
+      .map(url => resolveImageUrl(url));
+
+    if (imageUrls.length === 0) return; // Keep fallback
+
+    // Build slides
+    track.innerHTML = imageUrls.map((url, i) => `
+      <div class="hero__slide ${i === 0 ? 'active' : ''}">
+        <img src="${url}" alt="Snap Print – Image ${i + 1}" loading="${i === 0 ? 'eager' : 'lazy'}" />
+      </div>
+    `).join('');
+
+    // Build dots (only if more than 1 image)
+    if (imageUrls.length > 1) {
+      dotsContainer.innerHTML = imageUrls.map((_, i) => `
+        <button class="hero__carousel-dot ${i === 0 ? 'active' : ''}" data-index="${i}" aria-label="Go to slide ${i + 1}"></button>
+      `).join('');
+
+      // Dot click handlers
+      dotsContainer.addEventListener('click', (e) => {
+        const dot = e.target.closest('.hero__carousel-dot');
+        if (!dot) return;
+        const index = Number(dot.dataset.index);
+        goToSlide(index);
+        resetAutoplay();
+      });
+
+      // Start auto-advancing
+      startAutoplay();
+    }
+
+  } catch (err) {
+    console.warn('Hero carousel fetch failed — keeping fallback image:', err.message);
+  }
+}
+
+function goToSlide(index) {
+  const slides = document.querySelectorAll('.hero__slide');
+  const dots = document.querySelectorAll('.hero__carousel-dot');
+  if (slides.length === 0) return;
+
+  slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+  dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+}
+
+function startAutoplay() {
+  const slides = document.querySelectorAll('.hero__slide');
+  if (slides.length <= 1) return;
+
+  heroInterval = setInterval(() => {
+    const currentIndex = [...slides].findIndex(s => s.classList.contains('active'));
+    const nextIndex = (currentIndex + 1) % slides.length;
+    goToSlide(nextIndex);
+  }, 4500); // 4.5 seconds
+}
+
+function resetAutoplay() {
+  clearInterval(heroInterval);
+  startAutoplay();
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Init
 // ═══════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
@@ -528,4 +614,5 @@ document.addEventListener('DOMContentLoaded', () => {
   initInStockFilter();
   initClearAll();
   loadProducts();
+  loadHeroCarousel();
 });

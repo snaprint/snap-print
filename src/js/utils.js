@@ -129,6 +129,7 @@ export function debounce(fn, ms = 300) {
 export const CONFIG = {
   PRODUCTS_CSV_URL: import.meta.env.VITE_PRODUCTS_CSV_URL || '',
   SHIPPING_RATES_CSV_URL: import.meta.env.VITE_SHIPPING_RATES_CSV_URL || '',
+  HERO_IMAGES_CSV_URL: import.meta.env.VITE_HERO_IMAGES_CSV_URL || '',
   RAZORPAY_KEY_ID: import.meta.env.VITE_RAZORPAY_KEY_ID || '',
   API_BASE: '/api',
 };

@@ -66,8 +66,14 @@
               <a href="/quote.html" class="btn btn-secondary btn-lg">Custom Part →</a>
             </div>
           </div>
-          <div class="hero__image">
-            <img src="https://images.unsplash.com/photo-1581783898377-1c85bf937427?w=600&h=600&fit=crop" alt="3D printed products collection" loading="eager" />
+          <div class="hero__carousel" id="hero-carousel">
+            <div class="hero__carousel-track" id="hero-carousel-track">
+              <!-- Fallback static image (replaced by JS carousel if CSV loads) -->
+              <div class="hero__slide active">
+                <img src="https://images.unsplash.com/photo-1581783898377-1c85bf937427?w=800&h=450&fit=crop" alt="3D printed products collection" loading="eager" />
+              </div>
+            </div>
+            <div class="hero__carousel-dots" id="hero-carousel-dots"></div>
           </div>
         </div>
       </div>
