@@ -4,3 +4,4 @@ dist/
 .wrangler/
 .dev.vars
 razorpay_test_key/
+project-context-version1.md
