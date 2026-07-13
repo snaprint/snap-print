@@ -11,11 +11,11 @@ export function formatCurrency(amount) {
 }
 
 // ── Discount Calculation ──
-export function getDiscountPercent(price, comparePrice) {
-  const p = Number(price);
-  const cp = Number(comparePrice);
-  if (!cp || cp <= p) return 0;
-  return Math.round(((cp - p) / cp) * 100);
+export function getDiscountPercent(sellingPrice, actualPrice) {
+  const selling = Number(sellingPrice);
+  const actual = Number(actualPrice);
+  if (!actual || actual <= selling) return 0;
+  return Math.round(((actual - selling) / actual) * 100);
 }
 
 // ── Cart ──
@@ -39,7 +39,7 @@ export function addToCart(product, quantity = 1) {
       id: product.id,
       name: product.name,
       price: Number(product.price),
-      compare_price: Number(product.compare_price) || 0,
+      actual_price: Number(product.actual_price) || 0,
       weight_g: Number(product.weight_g) || 0,
       image: product.image_urls ? resolveImageUrl(product.image_urls.split(',')[0].trim()) : '',
       material: product.material || '',
@@ -145,6 +145,14 @@ export async function fetchCSV(url) {
   return Papa.parse(text, { header: true, skipEmptyLines: true }).data;
 }
 
+// Canonical product field: actual_price. compare_price is retained only so
+// existing sheets continue to display correctly while they are updated.
+export function normalizeProduct(product) {
+  const actualPrice = String(product.actual_price ?? '').trim()
+    || String(product.compare_price ?? '').trim();
+  return { ...product, actual_price: actualPrice };
+}
+
 // ── Shared Active Products (fetched once, cached, used by both header and catalog) ──
 let _activeProductsCache = null;
 let _activeProductsPromise = null;
@@ -158,7 +166,7 @@ export function fetchActiveProducts() {
       _activeProductsCache = [];
       return _activeProductsCache;
     }
-    const all = await fetchCSV(CONFIG.PRODUCTS_CSV_URL);
+    const all = (await fetchCSV(CONFIG.PRODUCTS_CSV_URL)).map(normalizeProduct);
     _activeProductsCache = all.filter(p => p.active?.toLowerCase() === 'yes');
     return _activeProductsCache;
   })();
@@ -205,61 +213,61 @@ export function resolveImageUrl(url) {
   return url;
 }
 
-// ── Sample Products (with compare_price for discount display) ──
+// ── Sample Products (with actual_price for discount display) ──
 export function getSampleProducts() {
   return [
     {
       id: 'TOY-001', name: 'Dragon Figurine', category: 'toys',
-      price: '499', compare_price: '699', weight_g: '120', stock: '5', made_to_order: 'no',
+      price: '499', actual_price: '699', weight_g: '120', stock: '5', made_to_order: 'no',
       image_urls: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=600&h=600&fit=crop',
       description: 'Detailed articulated dragon figurine with movable joints. Printed in high-quality PLA with a smooth finish.',
       material: 'PLA', dimensions: '15×8×10 cm', active: 'yes',
     },
     {
       id: 'TOY-002', name: 'Mecha Robot Action Figure', category: 'toys',
-      price: '799', compare_price: '999', weight_g: '180', stock: '3', made_to_order: 'no',
+      price: '799', actual_price: '999', weight_g: '180', stock: '3', made_to_order: 'no',
       image_urls: 'https://images.unsplash.com/photo-1535378620166-273708d44e4c?w=600&h=600&fit=crop',
       description: 'Fully posable mecha robot with swappable weapons. Premium detailing with metallic PLA finish.',
       material: 'PLA', dimensions: '20×12×8 cm', active: 'yes',
     },
     {
       id: 'TOY-003', name: 'Puzzle Cube Set', category: 'toys',
-      price: '349', compare_price: '', weight_g: '90', stock: '10', made_to_order: 'no',
+      price: '349', actual_price: '', weight_g: '90', stock: '10', made_to_order: 'no',
       image_urls: 'https://images.unsplash.com/photo-1591991731833-b4807cf7ef94?w=600&h=600&fit=crop',
       description: 'Interlocking 3D printed puzzle cube set. Great brain teaser for kids and adults.',
       material: 'PLA', dimensions: '6×6×6 cm', active: 'yes',
     },
     {
       id: 'DEC-001', name: 'Geometric Vase', category: 'decor',
-      price: '599', compare_price: '799', weight_g: '200', stock: '0', made_to_order: 'yes',
+      price: '599', actual_price: '799', weight_g: '200', stock: '0', made_to_order: 'yes',
       image_urls: 'https://images.unsplash.com/photo-1581783898377-1c85bf937427?w=600&h=600&fit=crop',
       description: 'Modern geometric vase with intricate low-poly design. Perfect centerpiece for any room.',
       material: 'PLA', dimensions: '12×12×20 cm', active: 'yes',
     },
     {
       id: 'DEC-002', name: 'Moon Lamp', category: 'decor',
-      price: '899', compare_price: '1199', weight_g: '250', stock: '2', made_to_order: 'no',
+      price: '899', actual_price: '1199', weight_g: '250', stock: '2', made_to_order: 'no',
       image_urls: 'https://images.unsplash.com/photo-1532274402911-5a369e4c4bb5?w=600&h=600&fit=crop',
       description: 'Realistic textured moon lamp with warm LED lighting. Lithophane technology creates stunning effects.',
       material: 'PLA', dimensions: '15×15×15 cm', active: 'yes',
     },
     {
       id: 'DEC-003', name: 'Abstract Waves Wall Art', category: 'decor',
-      price: '1299', compare_price: '1599', weight_g: '400', stock: '', made_to_order: 'yes',
+      price: '1299', actual_price: '1599', weight_g: '400', stock: '', made_to_order: 'yes',
       image_urls: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&h=600&fit=crop',
       description: 'Large 3D printed wall art panel featuring flowing wave patterns. Made to order in your choice of color.',
       material: 'PLA', dimensions: '40×30×3 cm', active: 'yes',
     },
     {
       id: 'ENG-001', name: 'Custom Engineering Part', category: 'engineering',
-      price: '0', compare_price: '', weight_g: '0', stock: '', made_to_order: 'yes',
+      price: '0', actual_price: '', weight_g: '0', stock: '', made_to_order: 'yes',
       image_urls: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&h=600&fit=crop',
       description: 'Upload your STL/STEP file and we\'ll print it to your exact specifications.',
       material: 'Various', dimensions: 'Custom', active: 'yes',
     },
     {
       id: 'TOY-004', name: 'Flexi Rex', category: 'toys',
-      price: '299', compare_price: '399', weight_g: '75', stock: '0', made_to_order: 'no',
+      price: '299', actual_price: '399', weight_g: '75', stock: '0', made_to_order: 'no',
       image_urls: 'https://images.unsplash.com/photo-1587654780292-39c6a5a0631d?w=600&h=600&fit=crop',
       description: 'Flexible T-Rex printed in one piece — fully articulated and fidget-friendly!',
       material: 'PLA', dimensions: '18×5×8 cm', active: 'yes',

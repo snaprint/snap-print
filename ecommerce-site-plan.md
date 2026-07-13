@@ -66,7 +66,8 @@ Decision: catalog is **not** stored as JSON/Markdown in the repo. Instead it's d
 | `id` | TOY-001 |
 | `name` | Dragon Figurine |
 | `category` | toys / decor / engineering |
-| `price` | 499 |
+| `price` | 499 *(selling price; checkout source of truth)* |
+| `actual_price` | 699 *(optional original price; shown struck through when higher than `price`)* |
 | `weight_g` | 120 *(weight in grams — required for shipping cost calculation, see below)* |
 | `stock` | 5 *(or leave blank + use `made_to_order`)* |
 | `made_to_order` | yes/no |
@@ -77,6 +78,7 @@ Decision: catalog is **not** stored as JSON/Markdown in the repo. Instead it's d
 | `active` | yes/no — hides a product instantly without deleting the row |
 
 - **Stock display is pure frontend logic**: if `stock <= 0`, "Add to Cart" auto-greys out / shows "Out of Stock." No backend needed.
+- **Discount display is frontend-only**: leave `actual_price` blank (or set it equal to/lower than `price`) to hide the crossed-out price and discount badge. It never affects the amount charged.
 - **Alternative worth considering**: since items are self-printed, skip stock counts entirely and label items "Made to order — ships in X days." Removes race-condition concerns altogether.
 - Race condition (two buyers, one item) accepted as low-risk given low volume; reprintable if it happens.
 - Sheet-as-CSV comfortably handles thousands of rows — scale isn't a concern at this stage. Only pagination/lazy-loading would need attention if the catalog grows into the hundreds.

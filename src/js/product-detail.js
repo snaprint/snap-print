@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import {
-  getSampleProducts, CONFIG, fetchCSV, addToCart, clearCart,
+  getSampleProducts, CONFIG, fetchCSV, normalizeProduct, addToCart, clearCart,
   formatCurrency, getDiscountPercent, showToast, resolveImageUrl,
 } from './utils.js';
 
@@ -18,7 +18,9 @@ async function loadProduct() {
 
   try {
     if (CONFIG.PRODUCTS_CSV_URL) {
-      allProducts = (await fetchCSV(CONFIG.PRODUCTS_CSV_URL)).filter(p => p.active?.toLowerCase() === 'yes');
+      allProducts = (await fetchCSV(CONFIG.PRODUCTS_CSV_URL))
+        .map(normalizeProduct)
+        .filter(p => p.active?.toLowerCase() === 'yes');
     } else {
       allProducts = getSampleProducts().filter(p => p.active?.toLowerCase() === 'yes');
     }
@@ -49,7 +51,7 @@ function renderProduct(product) {
   const mainImage = images[0] || '';
   const isOutOfStock = product.stock !== '' && Number(product.stock) <= 0 && product.made_to_order !== 'yes';
   const isMadeToOrder = product.made_to_order === 'yes';
-  const discount = getDiscountPercent(product.price, product.compare_price);
+  const discount = getDiscountPercent(product.price, product.actual_price);
 
   layout.innerHTML = `
     <!-- Gallery -->
@@ -78,7 +80,7 @@ function renderProduct(product) {
       <div class="product-info__pricing">
         <span class="product-info__price">${formatCurrency(product.price)}</span>
         ${discount > 0 ? `
-          <span class="product-info__compare-price">${formatCurrency(product.compare_price)}</span>
+          <span class="product-info__compare-price">${formatCurrency(product.actual_price)}</span>
           <span class="product-info__discount">Save ${discount}%</span>
         ` : ''}
       </div>
@@ -227,7 +229,7 @@ function renderRelatedProducts(product) {
   section.style.display = 'block';
   grid.innerHTML = related.map(p => {
     const img = p.image_urls ? resolveImageUrl(p.image_urls.split(',')[0].trim()) : '';
-    const disc = getDiscountPercent(p.price, p.compare_price);
+    const disc = getDiscountPercent(p.price, p.actual_price);
     return `
       <article class="product-card">
         <a href="/product.html?id=${p.id}" class="product-card__image-wrap">
@@ -239,7 +241,7 @@ function renderRelatedProducts(product) {
           <h3 class="product-card__name"><a href="/product.html?id=${p.id}">${p.name}</a></h3>
           <div class="product-card__pricing">
             <span class="product-card__price">${formatCurrency(p.price)}</span>
-            ${disc > 0 ? `<span class="product-card__compare-price">${formatCurrency(p.compare_price)}</span>` : ''}
+            ${disc > 0 ? `<span class="product-card__compare-price">${formatCurrency(p.actual_price)}</span>` : ''}
           </div>
         </div>
       </article>`;
