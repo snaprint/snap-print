@@ -301,6 +301,14 @@
 /* ── Shop Dropdown ── */
 .navbar__shop-wrapper {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.navbar__shop-wrapper > .navbar__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .navbar__dropdown-arrow {
