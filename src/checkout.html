@@ -164,7 +164,21 @@
                 <input class="form-input" type="tel" id="buyer-phone" placeholder="98765 43210" required autocomplete="tel" inputmode="tel" />
                 <span class="form-error">Enter a valid 10-digit phone number</span>
               </div>
+
+              <!-- Maps Link (optional) -->
+              <div class="form-group">
+                <label class="form-label" for="buyer-maps-link">
+                  Google Maps Link
+                  <span style="font-weight:400;color:var(--text-muted);font-size:var(--text-xs);margin-left:4px;">(optional)</span>
+                </label>
+                <div style="position:relative;">
+                  <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-muted);pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  <input class="form-input" type="url" id="buyer-maps-link" placeholder="https://maps.google.com/..." autocomplete="off" style="padding-left:36px;" />
+                </div>
+                <span style="font-size:var(--text-xs);color:var(--text-muted);margin-top:4px;display:block;">Paste your Google Maps location link to help us deliver accurately.</span>
+              </div>
             </div>
+
 
             <!-- Shipping Method -->
             <div class="checkout-section">
