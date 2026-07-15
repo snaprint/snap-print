@@ -15,16 +15,6 @@
 </head>
 <body>
   <div class="page">
-    <!-- Announcement Bar -->
-    <div class="announcement-bar" id="announcement-bar">
-      <div class="announcement-bar__inner">
-        <span class="announcement-bar__item"><strong>Free Shipping</strong> on orders over ₹999</span>
-        <span class="announcement-bar__divider"></span>
-        <span class="announcement-bar__item">🏭 <strong>Registered Business</strong></span>
-        <span class="announcement-bar__divider"></span>
-        <span class="announcement-bar__item">📦 Delivery in <strong>5–10 days</strong></span>
-      </div>
-    </div>
 
     <!-- Navbar -->
     <nav class="navbar" id="navbar" role="navigation" aria-label="Main navigation">
@@ -152,10 +142,11 @@
         <!-- Filter Drawer (collapsible) -->
         <div class="filter-drawer" id="filter-drawer" aria-hidden="true">
           <div class="filter-drawer__inner">
+
             <!-- Price Range -->
-            <div class="filter-group">
-              <h4 class="filter-group__title">Price Range</h4>
-              <div class="filter-group__price-inputs">
+            <div class="filter-section filter-section--price">
+              <span class="filter-section__label">PRICE RANGE</span>
+              <div class="filter-section__price-row">
                 <div class="filter-price-field">
                   <span class="filter-price-field__prefix">₹</span>
                   <input type="number" class="filter-price-field__input" id="price-min" placeholder="Min" min="0" aria-label="Minimum price" />
@@ -168,8 +159,10 @@
               </div>
             </div>
 
+            <div class="filter-divider"></div>
+
             <!-- In Stock -->
-            <div class="filter-group">
+            <div class="filter-section">
               <label class="filter-checkbox" for="filter-in-stock">
                 <input type="checkbox" id="filter-in-stock" />
                 <span class="filter-checkbox__mark"></span>
@@ -177,18 +170,22 @@
               </label>
             </div>
 
-            <!-- Material (dynamic chips) -->
-            <div class="filter-group" id="material-filter-group" style="display:none;">
-              <h4 class="filter-group__title">Material</h4>
+            <div class="filter-divider" id="material-filter-divider" style="display:none;"></div>
+
+            <!-- Material chips -->
+            <div class="filter-section filter-section--material" id="material-filter-group" style="display:none;">
+              <span class="filter-section__label">MATERIAL</span>
               <div class="filter-chips" id="material-chips">
                 <!-- Populated dynamically -->
               </div>
             </div>
 
-            <!-- Clear All -->
-            <div class="filter-group">
-              <button class="btn btn-ghost btn-sm" id="clear-all-filters">Clear All Filters</button>
-            </div>
+            <!-- Clear All — pushed to end -->
+            <button class="filter-clear-btn" id="clear-all-filters">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+              Clear All Filters
+            </button>
+
           </div>
         </div>
 
