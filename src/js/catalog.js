@@ -243,7 +243,7 @@ function renderProducts(products) {
     const isEngineering = product.category?.toLowerCase() === 'engineering';
     const isOutOfStock = !isEngineering && !isBuyable(product);
     const isMadeToOrder = product.made_to_order === 'yes';
-    const discount = getDiscountPercent(product.price, product.compare_price);
+    const discount = getDiscountPercent(product.price, product.actual_price);
     const stagger = `stagger-${(index % 6) + 1}`;
     const href = isEngineering ? '/quote.html' : `/product.html?id=${product.id}`;
 
@@ -265,7 +265,7 @@ function renderProducts(products) {
               ? '<span style="font-size:var(--text-sm);color:var(--text-secondary);">Get a Quote</span>'
               : `
                 <span class="product-card__price">${formatCurrency(product.price)}</span>
-                ${discount > 0 ? `<span class="product-card__compare-price">${formatCurrency(product.compare_price)}</span>` : ''}
+                ${discount > 0 ? `<span class="product-card__compare-price">${formatCurrency(product.actual_price)}</span>` : ''}
               `}
           </div>
         </div>

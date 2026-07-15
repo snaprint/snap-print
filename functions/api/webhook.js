@@ -201,7 +201,7 @@ async function sendConfirmationEmails(env, data) {
     return;
   }
 
-  const sellerEmail = env.SELLER_EMAIL || 'hello@snaprint.in';
+  const sellerEmail = env.SELLER_EMAIL || 'snaprint.orders@gmail.com';
 
   // Build itemized table rows
   const itemRows = data.itemsDetail.length > 0
@@ -225,100 +225,109 @@ async function sendConfirmationEmails(env, data) {
     : '5–10 business days';
 
   // ── BUYER EMAIL ──
-  await sendEmail(resendApiKey, {
-    from: 'Snap Print <orders@snaprint.in>',
-    to: data.buyerEmail,
-    reply_to: 'queries@snaprint.in',
-    subject: `Order Confirmed — ${data.orderId}`,
-    html: `
-      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1a1a1a;">
-        <h2 style="margin:0 0 16px;">Thank you for your order! 🎉</h2>
-        <p>Hi ${escapeHtml(data.buyerName)},</p>
-        <p>Your payment has been received and confirmed. We'll start preparing your order right away.</p>
+  try {
 
-        <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;">
-          <thead>
-            <tr style="background:#f9fafb;">
-              <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb;">Item</th>
-              <th style="padding:8px 12px;text-align:center;border-bottom:2px solid #e5e7eb;">Qty</th>
-              <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #e5e7eb;">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemRows}
-          </tbody>
-        </table>
+    await sendEmail(resendApiKey, {
+      from: 'Snap Print <orders@snaprint.in>',
+      to: data.buyerEmail,
+      reply_to: 'queries@snaprint.in',
+      subject: `Order Confirmed — ${data.orderId}`,
+      html: `
+        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1a1a1a;">
+          <h2 style="margin:0 0 16px;">Thank you for your order! 🎉</h2>
+          <p>Hi ${escapeHtml(data.buyerName)},</p>
+          <p>Payment confirmed. We'll notify you with tracking details upon dispatch. Any excess shipping charges will be refunded based on the actual shipping cost.</p>
 
-        <table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;">
-          <tr><td style="padding:4px 0;color:#666;">Subtotal</td><td style="padding:4px 0;text-align:right;">₹${data.subtotal.toLocaleString('en-IN')}</td></tr>
-          <tr><td style="padding:4px 0;color:#666;">${shippingLabel}</td><td style="padding:4px 0;text-align:right;">₹${data.shippingCost.toLocaleString('en-IN')}</td></tr>
-          <tr style="font-weight:700;font-size:15px;"><td style="padding:8px 0;border-top:2px solid #1a1a1a;">Total Paid</td><td style="padding:8px 0;text-align:right;border-top:2px solid #1a1a1a;">₹${data.totalAmount.toLocaleString('en-IN')}</td></tr>
-        </table>
+          <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;">
+            <thead>
+              <tr style="background:#f9fafb;">
+                <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb;">Item</th>
+                <th style="padding:8px 12px;text-align:center;border-bottom:2px solid #e5e7eb;">Qty</th>
+                <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #e5e7eb;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemRows}
+            </tbody>
+          </table>
 
-        <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
-          <tr><td style="padding:4px 0;color:#666;">Order ID</td><td style="padding:4px 0;">${data.orderId}</td></tr>
-          <tr><td style="padding:4px 0;color:#666;">Payment ID</td><td style="padding:4px 0;">${data.paymentId}</td></tr>
-          <tr><td style="padding:4px 0;color:#666;">Estimated Delivery</td><td style="padding:4px 0;font-weight:600;">${deliveryEstimate}</td></tr>
-        </table>
+          <table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;">
+            <tr><td style="padding:4px 0;color:#666;">Subtotal</td><td style="padding:4px 0;text-align:right;">₹${data.subtotal.toLocaleString('en-IN')}</td></tr>
+            <tr><td style="padding:4px 0;color:#666;">${shippingLabel}</td><td style="padding:4px 0;text-align:right;">₹${data.shippingCost.toLocaleString('en-IN')}</td></tr>
+            <tr style="font-weight:700;font-size:15px;"><td style="padding:8px 0;border-top:2px solid #1a1a1a;">Total Paid</td><td style="padding:8px 0;text-align:right;border-top:2px solid #1a1a1a;">₹${data.totalAmount.toLocaleString('en-IN')}</td></tr>
+          </table>
 
-        <p style="margin-top:20px;">If you have any questions about your order, just reply to this email.</p>
-        <p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #eee;padding-top:16px;">— Team Snap Print<br>snaprint.in</p>
-      </div>
-    `,
-  });
+          <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
+            <tr><td style="padding:4px 0;color:#666;">Order ID</td><td style="padding:4px 0;">${data.orderId}</td></tr>
+            <tr><td style="padding:4px 0;color:#666;">Payment ID</td><td style="padding:4px 0;">${data.paymentId}</td></tr>
+            <tr><td style="padding:4px 0;color:#666;">Estimated Delivery</td><td style="padding:4px 0;font-weight:600;">${deliveryEstimate}</td></tr>
+          </table>
+
+          <p style="margin-top:20px;">If you have any questions about your order, just reply to this email.</p>
+          <p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #eee;padding-top:16px;">— Team Snap Print<br>snaprint.in</p>
+        </div>
+      `,
+    });
+  } catch (buyerErr) {
+    console.error('Buyer confirmation email failed:', buyerErr);
+  }
 
   // ── SELLER EMAIL ──
-  await sendEmail(resendApiKey, {
-    from: 'Snap Print Orders <orders@snaprint.in>',
-    to: sellerEmail,
-    reply_to: 'queries@snaprint.in',
-    subject: `🆕 New Order — ${data.orderId} — ₹${data.totalAmount.toLocaleString('en-IN')}`,
-    html: `
-      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;padding:24px;color:#1a1a1a;">
-        <h2 style="margin:0 0 16px;">New Order Received</h2>
+  try {
+    await sendEmail(resendApiKey, {
+      from: 'Snap Print Orders <orders@snaprint.in>',
+      to: sellerEmail,
+      reply_to: 'queries@snaprint.in',
+      subject: `🆕 New Order — ${data.orderId} — ₹${data.totalAmount.toLocaleString('en-IN')}`,
+      html: `
+        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;padding:24px;color:#1a1a1a;">
+          <h2 style="margin:0 0 16px;">New Order Received</h2>
 
-        <h3 style="margin:16px 0 8px;font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">Order Details</h3>
-        <table style="width:100%;border-collapse:collapse;font-size:14px;">
-          <tr><td style="padding:6px 0;color:#666;width:140px;">Order ID</td><td style="padding:6px 0;font-weight:600;">${data.orderId}</td></tr>
-          <tr><td style="padding:6px 0;color:#666;">Payment ID</td><td style="padding:6px 0;">${data.paymentId}</td></tr>
-          <tr><td style="padding:6px 0;color:#666;">Timestamp</td><td style="padding:6px 0;">${data.timestamp}</td></tr>
-        </table>
+          <h3 style="margin:16px 0 8px;font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">Order Details</h3>
+          <table style="width:100%;border-collapse:collapse;font-size:14px;">
+            <tr><td style="padding:6px 0;color:#666;width:140px;">Order ID</td><td style="padding:6px 0;font-weight:600;">${data.orderId}</td></tr>
+            <tr><td style="padding:6px 0;color:#666;">Payment ID</td><td style="padding:6px 0;">${data.paymentId}</td></tr>
+            <tr><td style="padding:6px 0;color:#666;">Timestamp</td><td style="padding:6px 0;">${data.timestamp}</td></tr>
+          </table>
 
-        <h3 style="margin:20px 0 8px;font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">Items Ordered</h3>
-        <table style="width:100%;border-collapse:collapse;font-size:14px;">
-          <thead>
-            <tr style="background:#f9fafb;">
-              <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb;">Item</th>
-              <th style="padding:8px 12px;text-align:center;border-bottom:2px solid #e5e7eb;">Qty</th>
-              <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #e5e7eb;">Price</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemRows}
-          </tbody>
-        </table>
+          <h3 style="margin:20px 0 8px;font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">Items Ordered</h3>
+          <table style="width:100%;border-collapse:collapse;font-size:14px;">
+            <thead>
+              <tr style="background:#f9fafb;">
+                <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb;">Item</th>
+                <th style="padding:8px 12px;text-align:center;border-bottom:2px solid #e5e7eb;">Qty</th>
+                <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #e5e7eb;">Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemRows}
+            </tbody>
+          </table>
 
-        <table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;">
-          <tr><td style="padding:4px 0;color:#666;">Subtotal</td><td style="padding:4px 0;text-align:right;">₹${data.subtotal.toLocaleString('en-IN')}</td></tr>
-          <tr><td style="padding:4px 0;color:#666;">Shipping (${data.shippingMethod})</td><td style="padding:4px 0;text-align:right;">₹${data.shippingCost.toLocaleString('en-IN')}</td></tr>
-          <tr style="font-weight:700;font-size:15px;"><td style="padding:8px 0;border-top:2px solid #1a1a1a;">Total Charged</td><td style="padding:8px 0;text-align:right;border-top:2px solid #1a1a1a;">₹${data.totalAmount.toLocaleString('en-IN')}</td></tr>
-        </table>
+          <table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;">
+            <tr><td style="padding:4px 0;color:#666;">Subtotal</td><td style="padding:4px 0;text-align:right;">₹${data.subtotal.toLocaleString('en-IN')}</td></tr>
+            <tr><td style="padding:4px 0;color:#666;">Shipping (${data.shippingMethod})</td><td style="padding:4px 0;text-align:right;">₹${data.shippingCost.toLocaleString('en-IN')}</td></tr>
+            <tr style="font-weight:700;font-size:15px;"><td style="padding:8px 0;border-top:2px solid #1a1a1a;">Total Charged</td><td style="padding:8px 0;text-align:right;border-top:2px solid #1a1a1a;">₹${data.totalAmount.toLocaleString('en-IN')}</td></tr>
+          </table>
 
-        <h3 style="margin:20px 0 8px;font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">Buyer Information</h3>
-        <table style="width:100%;border-collapse:collapse;font-size:14px;">
-          <tr><td style="padding:6px 0;color:#666;width:140px;">Name</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(data.buyerName)}</td></tr>
-          <tr><td style="padding:6px 0;color:#666;">Email</td><td style="padding:6px 0;">${escapeHtml(data.buyerEmail)}</td></tr>
-          <tr><td style="padding:6px 0;color:#666;">Phone</td><td style="padding:6px 0;">${escapeHtml(data.buyerPhone)}</td></tr>
-          <tr><td style="padding:6px 0;color:#666;">Address</td><td style="padding:6px 0;">${escapeHtml(data.buyerAddress)}</td></tr>
-          <tr><td style="padding:6px 0;color:#666;">City</td><td style="padding:6px 0;">${escapeHtml(data.buyerCity)}</td></tr>
-          <tr><td style="padding:6px 0;color:#666;">State</td><td style="padding:6px 0;">${escapeHtml(data.buyerState)}</td></tr>
-          <tr><td style="padding:6px 0;color:#666;">Pincode</td><td style="padding:6px 0;">${escapeHtml(data.buyerPincode)}</td></tr>
-        </table>
+          <h3 style="margin:20px 0 8px;font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">Buyer Information</h3>
+          <table style="width:100%;border-collapse:collapse;font-size:14px;">
+            <tr><td style="padding:6px 0;color:#666;width:140px;">Name</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(data.buyerName)}</td></tr>
+            <tr><td style="padding:6px 0;color:#666;">Email</td><td style="padding:6px 0;">${escapeHtml(data.buyerEmail)}</td></tr>
+            <tr><td style="padding:6px 0;color:#666;">Phone</td><td style="padding:6px 0;">${escapeHtml(data.buyerPhone)}</td></tr>
+            <tr><td style="padding:6px 0;color:#666;">Address</td><td style="padding:6px 0;">${escapeHtml(data.buyerAddress)}</td></tr>
+            <tr><td style="padding:6px 0;color:#666;">City</td><td style="padding:6px 0;">${escapeHtml(data.buyerCity)}</td></tr>
+            <tr><td style="padding:6px 0;color:#666;">State</td><td style="padding:6px 0;">${escapeHtml(data.buyerState)}</td></tr>
+            <tr><td style="padding:6px 0;color:#666;">Pincode</td><td style="padding:6px 0;">${escapeHtml(data.buyerPincode)}</td></tr>
+          </table>
 
-        <p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #eee;padding-top:16px;">Automated notification from Snap Print webhook</p>
-      </div>
-    `,
-  });
+          <p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #eee;padding-top:16px;">Automated notification from Snap Print webhook</p>
+        </div>
+      `,
+    });
+  } catch (sellerErr) {
+    console.error('Seller notification email failed:', sellerErr);
+  }
 }
 
 async function sendEmail(apiKey, emailData) {

@@ -66,17 +66,19 @@ Decision: catalog is **not** stored as JSON/Markdown in the repo. Instead it's d
 | `id` | TOY-001 |
 | `name` | Dragon Figurine |
 | `category` | toys / decor / engineering |
-| `price` | 499 |
+| `price` | 499 *(selling price; checkout source of truth)* |
+| `actual_price` | 699 *(optional original price; shown struck through when higher than `price`)* |
 | `weight_g` | 120 *(weight in grams — required for shipping cost calculation, see below)* |
 | `stock` | 5 *(or leave blank + use `made_to_order`)* |
 | `made_to_order` | yes/no |
-| `image_urls` | comma-separated links (hosted on GitHub repo or R2) |
+| `image_urls` | optional comma-separated image links (hosted on GitHub repo or R2); the first image is used in catalog cards and all images are available on the product page |
 | `description` | short text |
 | `material` | PLA / Resin etc. |
 | `dimensions` | 10x5x5 cm |
 | `active` | yes/no — hides a product instantly without deleting the row |
 
 - **Stock display is pure frontend logic**: if `stock <= 0`, "Add to Cart" auto-greys out / shows "Out of Stock." No backend needed.
+- **Discount display is frontend-only**: leave `actual_price` blank (or set it equal to/lower than `price`) to hide the crossed-out price and discount badge. It never affects the amount charged.
 - **Alternative worth considering**: since items are self-printed, skip stock counts entirely and label items "Made to order — ships in X days." Removes race-condition concerns altogether.
 - Race condition (two buyers, one item) accepted as low-risk given low volume; reprintable if it happens.
 - Sheet-as-CSV comfortably handles thousands of rows — scale isn't a concern at this stage. Only pagination/lazy-loading would need attention if the catalog grows into the hundreds.
@@ -248,9 +250,10 @@ All items below stay on free tiers — no new recurring cost, consistent with th
 
 ---
 
-## Professional Email (`hello@snaprint.in`)
+## Professional Email (`queries@snaprint.in`)
 
-- **Decision:** use **Cloudflare Email Routing (free)** to forward `hello@snaprint.in` (or similar) to the existing personal Gmail, with Gmail's "send as" feature configured so replies also show the professional address. No paid mailbox needed for v1.
+- **Decision:** use **Cloudflare Email Routing (free)** to forward `queries@snaprint.in` to the existing personal Gmail, with Gmail's "send as" feature configured so replies also show the professional address. No paid mailbox needed for v1.
+- **Storefront contact UX:** every buyer-facing `queries@snaprint.in` address is a mail link with a small copy button beside it, so buyers can either open their email app or copy the address.
 - **Prerequisite:** this only works once the "Domain DNS Setup" step above is done (nameservers pointed from GoDaddy to Cloudflare) — Cloudflare Email Routing can't be configured until Cloudflare is managing the domain's DNS.
 - Avoid GoDaddy's paid email add-ons (e.g. "Professional Email") for now — they're a recurring cost with no functional benefit at this scale.
 - Revisit only if the business grows to the point of needing multiple team logins, shared inbox, or larger storage — at that point Zoho Mail's free tier is the next cheapest step up before a fully paid mailbox (Google Workspace / GoDaddy Professional Email).
@@ -265,30 +268,32 @@ All items below stay on free tiers — no new recurring cost, consistent with th
 
 ---
 
-## v1 Feature List
+## v1 Feature List — Current Status
 
-- [ ] Product catalog fetched live from published Google Sheet CSV (categories: Toys / Decor / Custom Engineering Parts)
-- [ ] Product detail pages: multiple images, dimensions, material, print time estimate
-- [ ] Shipping method selector at checkout (Normal / Speed), with cost fetched live from Shipping Rates Sheet CSV based on server-computed combined cart weight
-- [ ] Cart + Razorpay checkout via **Orders API + Checkout.js popup** (not the no-code Payment Button, not a redirect flow) — server computes amount (subtotal + shipping), never the frontend
-- [ ] Stock display logic (greyed out when unavailable) or "made to order" labeling
-- [ ] "Request a Quote" form for custom engineering parts (file upload + specs)
-- [ ] Razorpay webhook (signature-verified, `captured` status only) → seller email notification (with buyer details in `notes`), sent to two addresses
-- [ ] Razorpay webhook (signature-verified, `captured` status only) → Google Sheets order log
-- [ ] Razorpay webhook signature (HMAC) verification — **must-have, not optional**
-- [ ] Webhook idempotency check (payment ID lookup before appending a row)
-- [ ] Frontend `handler` callback used for UI/thank-you page only — never wired to fulfillment, email, or Sheets logic
+- [x] Product catalog fetched live from published Google Sheet CSV (categories: Toys / Decor / Custom Engineering Parts)
+- [x] Product detail pages: multiple images, dimensions, and material
+- [x] Optional `actual_price` Sheet field: shows the original price struck through and a calculated discount when it is higher than `price`; it is display-only and is never used for checkout
+- [x] Shipping method selector at checkout (Normal / Speed), with cost fetched live from Shipping Rates Sheet CSV based on server-computed combined cart weight
+- [x] Cart + Razorpay checkout via **Orders API + Checkout.js popup** (not the no-code Payment Button, not a redirect flow) — server computes amount (subtotal + shipping), never the frontend
+- [x] Stock display logic (greyed out when unavailable) and "made to order" labeling
+- [x] "Request a Quote" form for custom engineering parts (file upload + specs)
+- [x] Razorpay webhook (signature-verified, `captured` status only) → seller and buyer email notifications
+- [x] Razorpay webhook (signature-verified, `captured` status only) → Google Sheets order log
+- [x] Razorpay webhook signature (HMAC) verification — **must-have, not optional**
+- [x] Webhook idempotency check (payment ID lookup before appending a row)
+- [x] Frontend `handler` callback used for UI/thank-you page only — never wired to fulfillment, email, or Sheets logic
 - [ ] Cloudflare Turnstile on checkout + "Request a Quote" forms
-- [ ] File size/type limits on the quote-upload form
-- [ ] Basic search/filter by category and price
-- [ ] Contact/WhatsApp link for support & order status requests
+- [x] File size/type limits on the quote-upload form
+- [x] Search/filter by category, price, material, and product name; global search and a Sheet-driven Shop dropdown use shareable URL parameters
+- [x] Support contact link at `queries@snaprint.in`, including an email-copy control
 - [ ] Data validation (dropdowns) on Products Sheet `category` and `active` columns
 - [ ] Free uptime monitoring (UptimeRobot) configured post-launch
 
 ---
 
 ## Open Items for Next Discussion
-- Actual architecture/code structure for the serverless functions (Razorpay webhook, email, Sheets logging)
-- Frontend fetch/render code for the parametric Products Sheet
-- Choice of frontend framework/tech stack
-- Domain + Cloudflare Pages account setup steps
+
+- Four policy pages: Refund/Return, Shipping, Terms & Conditions, and Privacy Policy (needed before Razorpay website verification).
+- Cloudflare Turnstile for checkout and quote submissions.
+- Razorpay KYC, website verification, and the coordinated move to live-mode credentials/webhook.
+- Data validation in the public Sheets and a deliberate webhook-replay/idempotency test.

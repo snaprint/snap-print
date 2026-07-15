@@ -208,6 +208,7 @@ function initPayButton() {
       state: document.getElementById('buyer-state').value,
       pincode: document.getElementById('buyer-pincode').value.trim(),
       phone: document.getElementById('buyer-phone').value.trim(),
+      mapsLink: document.getElementById('buyer-maps-link')?.value.trim() || '',
     };
 
     const items = cart.map(item => ({ id: item.id, quantity: item.quantity }));
@@ -277,6 +278,9 @@ function openRazorpay(orderId, amount, buyer, keyId) {
       name: `${buyer.firstName} ${buyer.lastName}`,
       email: buyer.email,
       contact: buyer.phone,
+    },
+    notes: {
+      maps_link: buyer.mapsLink || '',
     },
     theme: { color: '#1a1a1a' },
     handler() {

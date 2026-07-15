@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import {
-  getSampleProducts, CONFIG, fetchCSV, addToCart, clearCart,
+  getSampleProducts, CONFIG, fetchCSV, normalizeProduct, addToCart, clearCart,
   formatCurrency, getDiscountPercent, showToast, resolveImageUrl,
 } from './utils.js';
 
@@ -18,7 +18,9 @@ async function loadProduct() {
 
   try {
     if (CONFIG.PRODUCTS_CSV_URL) {
-      allProducts = (await fetchCSV(CONFIG.PRODUCTS_CSV_URL)).filter(p => p.active?.toLowerCase() === 'yes');
+      allProducts = (await fetchCSV(CONFIG.PRODUCTS_CSV_URL))
+        .map(normalizeProduct)
+        .filter(p => p.active?.toLowerCase() === 'yes');
     } else {
       allProducts = getSampleProducts().filter(p => p.active?.toLowerCase() === 'yes');
     }
@@ -45,23 +47,37 @@ function renderProduct(product) {
     breadcrumbCategory.innerHTML = `<a href="/?category=${product.category}">${catLabel}</a> <span class="separator">›</span> ${product.name}`;
   }
 
-  const images = product.image_urls ? product.image_urls.split(',').map(url => resolveImageUrl(url.trim())) : [];
-  const mainImage = images[0] || '';
+  const images = (product.image_urls || '')
+    .split(',')
+    .map(url => url.trim())
+    .filter(Boolean)
+    .map(resolveImageUrl);
+  const imageFallback = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 600 600%22%3E%3Crect fill=%22%23f3f4f6%22 width=%22600%22 height=%22600%22/%3E%3Ctext fill=%22%239ca3af%22 font-family=%22sans-serif%22 font-size=%2218%22 x=%22300%22 y=%22300%22 text-anchor=%22middle%22%3EImage unavailable%3C/text%3E%3C/svg%3E';
+  const mainImage = images[0] || imageFallback;
   const isOutOfStock = product.stock !== '' && Number(product.stock) <= 0 && product.made_to_order !== 'yes';
   const isMadeToOrder = product.made_to_order === 'yes';
-  const discount = getDiscountPercent(product.price, product.compare_price);
+  const discount = getDiscountPercent(product.price, product.actual_price);
 
   layout.innerHTML = `
     <!-- Gallery -->
     <div class="product-gallery">
       <div class="product-gallery__main">
-        <img src="${mainImage}" alt="${product.name}" id="main-image"
-          onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 600 600%22%3E%3Crect fill=%22%23f3f4f6%22 width=%22600%22 height=%22600%22/%3E%3Ctext fill=%22%239ca3af%22 font-family=%22sans-serif%22 font-size=%2218%22 x=%22300%22 y=%22300%22 text-anchor=%22middle%22%3ENo Image%3C/text%3E%3C/svg%3E'" />
+        <img src="${mainImage}" alt="${product.name}${images.length > 1 ? ' — image 1' : ''}" id="main-image"
+          onerror="this.src='${imageFallback}'" />
+        ${images.length > 1 ? `
+          <button type="button" class="product-gallery__nav product-gallery__nav--previous" id="gallery-previous" aria-label="View previous product image">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <button type="button" class="product-gallery__nav product-gallery__nav--next" id="gallery-next" aria-label="View next product image">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <span class="product-gallery__count" aria-live="polite"><span id="gallery-current-image">1</span> / ${images.length}</span>
+        ` : ''}
       </div>
       ${images.length > 1 ? `
         <div class="product-gallery__thumbs">
           ${images.map((img, i) => `
-            <button class="product-gallery__thumb ${i === 0 ? 'active' : ''}" data-index="${i}">
+            <button type="button" class="product-gallery__thumb ${i === 0 ? 'active' : ''}" data-index="${i}" aria-label="View image ${i + 1}" aria-current="${i === 0 ? 'true' : 'false'}">
               <img src="${img}" alt="${product.name} ${i + 1}" />
             </button>
           `).join('')}
@@ -78,7 +94,7 @@ function renderProduct(product) {
       <div class="product-info__pricing">
         <span class="product-info__price">${formatCurrency(product.price)}</span>
         ${discount > 0 ? `
-          <span class="product-info__compare-price">${formatCurrency(product.compare_price)}</span>
+          <span class="product-info__compare-price">${formatCurrency(product.actual_price)}</span>
           <span class="product-info__discount">Save ${discount}%</span>
         ` : ''}
       </div>
@@ -168,16 +184,38 @@ function renderProduct(product) {
 
   // ─ Event Listeners ─
 
-  // Gallery thumbs
+  // Gallery controls
+  let activeImageIndex = 0;
+  const selectGalleryImage = (index) => {
+    if (!images.length) return;
+
+    activeImageIndex = (index + images.length) % images.length;
+    const mainImg = document.getElementById('main-image');
+    if (mainImg) {
+      mainImg.src = images[activeImageIndex];
+      mainImg.alt = `${product.name} — image ${activeImageIndex + 1}`;
+    }
+
+    const currentImage = document.getElementById('gallery-current-image');
+    if (currentImage) currentImage.textContent = activeImageIndex + 1;
+
+    layout.querySelectorAll('.product-gallery__thumb').forEach(thumb => {
+      const isActive = Number(thumb.dataset.index) === activeImageIndex;
+      thumb.classList.toggle('active', isActive);
+      thumb.setAttribute('aria-current', String(isActive));
+    });
+  };
+
+  document.getElementById('gallery-previous')?.addEventListener('click', () => {
+    selectGalleryImage(activeImageIndex - 1);
+  });
+  document.getElementById('gallery-next')?.addEventListener('click', () => {
+    selectGalleryImage(activeImageIndex + 1);
+  });
+
   layout.querySelectorAll('.product-gallery__thumb').forEach(thumb => {
     thumb.addEventListener('click', () => {
-      const idx = Number(thumb.dataset.index);
-      const mainImg = document.getElementById('main-image');
-      if (mainImg && images[idx]) {
-        mainImg.src = images[idx];
-        layout.querySelectorAll('.product-gallery__thumb').forEach(t => t.classList.remove('active'));
-        thumb.classList.add('active');
-      }
+      selectGalleryImage(Number(thumb.dataset.index));
     });
   });
 
@@ -227,7 +265,7 @@ function renderRelatedProducts(product) {
   section.style.display = 'block';
   grid.innerHTML = related.map(p => {
     const img = p.image_urls ? resolveImageUrl(p.image_urls.split(',')[0].trim()) : '';
-    const disc = getDiscountPercent(p.price, p.compare_price);
+    const disc = getDiscountPercent(p.price, p.actual_price);
     return `
       <article class="product-card">
         <a href="/product.html?id=${p.id}" class="product-card__image-wrap">
@@ -239,7 +277,7 @@ function renderRelatedProducts(product) {
           <h3 class="product-card__name"><a href="/product.html?id=${p.id}">${p.name}</a></h3>
           <div class="product-card__pricing">
             <span class="product-card__price">${formatCurrency(p.price)}</span>
-            ${disc > 0 ? `<span class="product-card__compare-price">${formatCurrency(p.compare_price)}</span>` : ''}
+            ${disc > 0 ? `<span class="product-card__compare-price">${formatCurrency(p.actual_price)}</span>` : ''}
           </div>
         </div>
       </article>`;

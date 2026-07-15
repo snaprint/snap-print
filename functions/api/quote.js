@@ -46,7 +46,7 @@ export async function onRequestPost(context) {
 
     // Send email notification to seller
     const resendApiKey = env.RESEND_API_KEY;
-    const sellerEmail = env.SELLER_EMAIL || 'hello@snaprint.in';
+    const sellerEmail = env.SELLER_EMAIL || 'queries@snaprint.in';
 
     if (resendApiKey) {
       // Convert file to base64 for email attachment

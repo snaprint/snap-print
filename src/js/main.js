@@ -60,6 +60,55 @@ function initNavbar() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Copy Email Address
+// ═══════════════════════════════════════════════════════════════
+function initEmailCopyButtons() {
+  document.querySelectorAll('[data-copy-email]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const email = button.dataset.copyEmail;
+      const copied = await copyToClipboard(email);
+
+      if (!copied) return;
+
+      const originalLabel = button.getAttribute('aria-label');
+      const originalTitle = button.title;
+      button.classList.add('is-copied');
+      button.setAttribute('aria-label', `${email} copied`);
+      button.title = 'Copied!';
+
+      window.setTimeout(() => {
+        button.classList.remove('is-copied');
+        button.setAttribute('aria-label', originalLabel);
+        button.title = originalTitle;
+      }, 1800);
+    });
+  });
+}
+
+async function copyToClipboard(text) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+
+    const input = document.createElement('textarea');
+    input.value = text;
+    input.setAttribute('readonly', '');
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.appendChild(input);
+    input.select();
+    const copied = document.execCommand('copy');
+    input.remove();
+    return copied;
+  } catch (err) {
+    console.warn('Unable to copy email address:', err);
+    return false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Global Search (injected into navbar on all pages)
 // ═══════════════════════════════════════════════════════════════
 function initGlobalSearch() {
@@ -254,6 +303,7 @@ function initScrollAnimations() {
 // ═══════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
   initNavbar();
+  initEmailCopyButtons();
   initGlobalSearch();
   initShopDropdown();
   initScrollAnimations();
