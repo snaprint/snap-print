@@ -227,7 +227,7 @@ async function sendConfirmationEmails(env, data) {
   // ── BUYER EMAIL ──
   try {
 
-    await sendEmail(resendApiKey, {
+    await sendEmailWithRetry(resendApiKey, {
       from: 'Snap Print <orders@snaprint.in>',
       to: data.buyerEmail,
       reply_to: 'queries@snaprint.in',
@@ -272,9 +272,12 @@ async function sendConfirmationEmails(env, data) {
     console.error('Buyer confirmation email failed:', buyerErr);
   }
 
+  // Space calls ≥500ms apart to stay under Resend's 2 req/s rate limit
+  await sleep(500);
+
   // ── SELLER EMAIL ──
   try {
-    await sendEmail(resendApiKey, {
+    await sendEmailWithRetry(resendApiKey, {
       from: 'Snap Print Orders <orders@snaprint.in>',
       to: sellerEmail,
       reply_to: 'queries@snaprint.in',
@@ -330,22 +333,50 @@ async function sendConfirmationEmails(env, data) {
   }
 }
 
-async function sendEmail(apiKey, emailData) {
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(emailData),
-  });
+// ── Delay helper ──
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Resend API error (${response.status}): ${err}`);
+// ── Resend API call with 429 retry-backoff ──
+// Retries up to maxRetries times on 429 rate-limit responses.
+// Reads the Retry-After header from Resend; falls back to exponential backoff.
+// Any non-429 error (4xx/5xx) is thrown immediately — no retry.
+async function sendEmailWithRetry(apiKey, emailData, maxRetries = 3) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'User-Agent': 'SnapPrint-Webhook/1.0',
+      },
+      body: JSON.stringify(emailData),
+    });
+
+    // Success
+    if (response.ok) {
+      console.log(`Email sent to ${emailData.to} (attempt ${attempt + 1})`);
+      return;
+    }
+
+    // Rate limited — wait and retry
+    if (response.status === 429 && attempt < maxRetries) {
+      const retryAfter = response.headers.get('retry-after');
+      const waitMs = retryAfter
+        ? Number(retryAfter) * 1000          // Resend says "wait N seconds"
+        : 500 * Math.pow(2, attempt);        // exponential fallback: 500ms, 1s, 2s
+      console.warn(`Resend 429 for ${emailData.to} — waiting ${waitMs}ms before retry (attempt ${attempt + 1}/${maxRetries})`);
+      await sleep(waitMs);
+      continue;
+    }
+
+    // Any other error — throw immediately, no retry
+    const errText = await response.text();
+    throw new Error(`Resend API error (${response.status}): ${errText}`);
   }
 
-  console.log(`Email sent to ${emailData.to}`);
+  throw new Error(`Resend rate limit: exhausted ${maxRetries} retries for ${emailData.to}`);
 }
 
 // ═══════════════════════════════════════════════════════════════
