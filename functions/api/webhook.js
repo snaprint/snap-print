@@ -234,7 +234,7 @@ async function sendConfirmationEmails(env, data) {
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1a1a1a;">
         <h2 style="margin:0 0 16px;">Thank you for your order! 🎉</h2>
         <p>Hi ${escapeHtml(data.buyerName)},</p>
-        <p>Your payment has been received and confirmed. We'll start preparing your order right away.</p>
+        <p>Payment confirmed. We'll notify you with tracking details upon dispatch. Any excess shipping charges will be refunded based on the actual shipping cost.</p>
 
         <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;">
           <thead>
