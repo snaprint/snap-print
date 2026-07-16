@@ -4,13 +4,13 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import {
-  getCart, getCartSubtotal, getCartWeight, getCartCount, clearCart,
+  getCart, getCartSubtotal, getCartCount, clearCart,
   formatCurrency, getSampleShippingRates, getShippingCostPreview,
   isValidEmail, isValidPhone, showToast, CONFIG, fetchCSV, lookupPIN,
 } from './utils.js';
 
 let shippingRates = [];
-let selectedMethod = 'normal';
+let selectedMethod = 'surface';
 let shippingCost = 0;
 
 // ── Init ──
@@ -82,21 +82,21 @@ function renderOrderSummary() {
 
 // ── Shipping Prices ──
 function updateShippingPrices() {
-  const weight = getCartWeight();
-  const normalPrice = getShippingCostPreview(shippingRates, 'normal', weight);
-  const speedPrice = getShippingCostPreview(shippingRates, 'speed', weight);
+  const itemTotal = getCartSubtotal();  // item_total: total value of products in cart
+  const surfacePrice = getShippingCostPreview(shippingRates, 'surface', itemTotal);
+  const airPrice = getShippingCostPreview(shippingRates, 'air', itemTotal);
 
-  const normalEl = document.getElementById('shipping-normal-price');
-  const speedEl = document.getElementById('shipping-speed-price');
-  if (normalEl) normalEl.textContent = formatCurrency(normalPrice);
-  if (speedEl) speedEl.textContent = formatCurrency(speedPrice);
+  const surfaceEl = document.getElementById('shipping-surface-price');
+  const airEl = document.getElementById('shipping-air-price');
+  if (surfaceEl) surfaceEl.textContent = surfacePrice === 0 ? 'Free' : formatCurrency(surfacePrice);
+  if (airEl) airEl.textContent = airPrice === 0 ? 'Free' : formatCurrency(airPrice);
 
-  shippingCost = getShippingCostPreview(shippingRates, selectedMethod, weight);
-  const subtotal = getCartSubtotal();
+  shippingCost = getShippingCostPreview(shippingRates, selectedMethod, itemTotal);
+  const subtotal = itemTotal;
 
   const summaryShipping = document.getElementById('summary-shipping');
   const summaryTotal = document.getElementById('summary-total');
-  if (summaryShipping) summaryShipping.textContent = formatCurrency(shippingCost);
+  if (summaryShipping) summaryShipping.textContent = shippingCost === 0 ? 'Free' : formatCurrency(shippingCost);
   if (summaryTotal) summaryTotal.textContent = formatCurrency(subtotal + shippingCost);
 
   const payBtnText = document.getElementById('pay-btn-text');

@@ -276,19 +276,27 @@ export function getSampleProducts() {
 }
 
 // ── Sample Shipping Rates ──
+// Rates are based on item_total (total value of products in cart).
+// method: 'surface' = Ship Rocket Surface, 'air' = Ship Rocket Air
+// item_total_threshold: orders >= this value qualify for free shipping
 export function getSampleShippingRates() {
   return [
-    { method: 'normal', weight_tier: 'under_500g', price: '70' },
-    { method: 'normal', weight_tier: '500g_or_more', price: '80' },
-    { method: 'speed', weight_tier: 'under_500g', price: '120' },
-    { method: 'speed', weight_tier: '500g_or_more', price: '150' },
+    { method: 'surface', item_total_threshold: '999', price_below: '100', price_above: '0' },
+    { method: 'air',     item_total_threshold: '999', price_below: '150', price_above: '0' },
   ];
 }
 
-export function getShippingCostPreview(rates, method, totalWeightG) {
-  const tier = totalWeightG < 500 ? 'under_500g' : '500g_or_more';
-  const rate = rates.find(r => r.method === method && r.weight_tier === tier);
-  return rate ? Number(rate.price) : 0;
+/**
+ * Returns the shipping cost for a given method and item_total.
+ * @param {Array}  rates      - Shipping rate rows (from CSV or getSampleShippingRates)
+ * @param {string} method     - 'surface' or 'air'
+ * @param {number} itemTotal  - Total value of products in the cart (not weight)
+ */
+export function getShippingCostPreview(rates, method, itemTotal) {
+  const rate = rates.find(r => r.method === method);
+  if (!rate) return 0;
+  const threshold = Number(rate.item_total_threshold);
+  return itemTotal >= threshold ? Number(rate.price_above) : Number(rate.price_below);
 }
 
 // ── Validation ──

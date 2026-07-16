@@ -176,23 +176,27 @@
             <div class="checkout-section">
               <h2 class="checkout-section__title">Shipping Method</h2>
               <div class="shipping-selector" id="shipping-selector">
-                <label class="shipping-option selected" id="shipping-normal">
-                  <input type="radio" name="shipping" value="normal" checked />
+                <label class="shipping-option selected" id="shipping-surface">
+                  <input type="radio" name="shipping" value="surface" checked />
                   <div class="shipping-option__info">
-                    <span class="shipping-option__name">India Post Economy</span>
-                    <span class="shipping-option__desc">Est. 7-10 business days</span>
+                    <span class="shipping-option__name">Ship Rocket Surface</span>
+                    <span class="shipping-option__desc">Est. 5–7 business days</span>
                   </div>
-                  <span class="shipping-option__price" id="shipping-normal-price">₹XX</span>
+                  <span class="shipping-option__price" id="shipping-surface-price">₹XX</span>
                 </label>
-                <label class="shipping-option" id="shipping-speed">
-                  <input type="radio" name="shipping" value="speed" />
+                <label class="shipping-option" id="shipping-air">
+                  <input type="radio" name="shipping" value="air" />
                   <div class="shipping-option__info">
-                    <span class="shipping-option__name">India Post Fastest</span>
-                    <span class="shipping-option__desc">Est. 3-5 business days</span>
+                    <span class="shipping-option__name">Ship Rocket Air</span>
+                    <span class="shipping-option__desc">Est. 2–4 business days</span>
                   </div>
-                  <span class="shipping-option__price" id="shipping-speed-price">₹XX</span>
+                  <span class="shipping-option__price" id="shipping-air-price">₹XX</span>
                 </label>
               </div>
+              <p style="margin-top:var(--space-2);font-size:var(--text-xs);color:var(--text-muted);display:flex;align-items:flex-start;gap:6px;">
+                <svg style="width:14px;height:14px;flex-shrink:0;margin-top:1px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <span>Shipping rates may vary. Any overpaid shipping cost will be refunded.</span>
+              </p>
             </div>
 
             <!-- Pay Button -->
