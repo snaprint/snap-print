@@ -276,27 +276,52 @@ export function getSampleProducts() {
 }
 
 // ── Sample Shipping Rates ──
-// Rates are based on item_total (total value of products in cart).
-// method: 'surface' = Ship Rocket Surface, 'air' = Ship Rocket Air
-// item_total_threshold: orders >= this value qualify for free shipping
+// Mirrors the Google Sheet columns exactly: method, item_total, shipping_cost
+// item_total column contains a condition string like '< 999' or '> 999'
 export function getSampleShippingRates() {
   return [
-    { method: 'surface', item_total_threshold: '999', price_below: '100', price_above: '0' },
-    { method: 'air',     item_total_threshold: '999', price_below: '150', price_above: '0' },
+    { method: 'surface', item_total: '< 999',  shipping_cost: '100' },
+    { method: 'air',     item_total: '< 999',  shipping_cost: '150' },
+    { method: 'surface', item_total: '> 999',  shipping_cost: '0'   },
+    { method: 'air',     item_total: '> 999',  shipping_cost: '0'   },
   ];
 }
 
 /**
+ * Evaluates a condition string like '< 999' or '> 999' against a value.
+ * Strips whitespace, parses the operator and threshold, returns true/false.
+ */
+function evalCondition(conditionStr, value) {
+  const match = String(conditionStr).trim().match(/^([<>]=?)\s*(\d+(?:\.\d+)?)$/);
+  if (!match) return false;
+  const [, op, numStr] = match;
+  const threshold = Number(numStr);
+  if (op === '<')  return value <  threshold;
+  if (op === '<=') return value <= threshold;
+  if (op === '>')  return value >  threshold;
+  if (op === '>=') return value >= threshold;
+  return false;
+}
+
+/**
  * Returns the shipping cost for a given method and item_total.
- * @param {Array}  rates      - Shipping rate rows (from CSV or getSampleShippingRates)
+ * Finds the matching row in the sheet where the item_total condition is satisfied.
+ *
+ * @param {Array}  rates      - Shipping rate rows (from CSV — columns: method, item_total, shipping_cost)
  * @param {string} method     - 'surface' or 'air'
- * @param {number} itemTotal  - Total value of products in the cart (not weight)
+ * @param {number} itemTotal  - Total value of products in the cart
  */
 export function getShippingCostPreview(rates, method, itemTotal) {
-  const rate = rates.find(r => r.method === method);
-  if (!rate) return 0;
-  const threshold = Number(rate.item_total_threshold);
-  return itemTotal >= threshold ? Number(rate.price_above) : Number(rate.price_below);
+  // Find the row whose method matches AND whose item_total condition is satisfied
+  const matchingRow = rates.find(
+    r => r.method?.trim().toLowerCase() === method &&
+         evalCondition(r.item_total, itemTotal)
+  );
+  if (matchingRow) return Number(matchingRow.shipping_cost);
+
+  // Fallback: find any row for this method and return its cost
+  const fallback = rates.find(r => r.method?.trim().toLowerCase() === method);
+  return fallback ? Number(fallback.shipping_cost) : 0;
 }
 
 // ── Validation ──
