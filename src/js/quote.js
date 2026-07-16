@@ -3,7 +3,7 @@
    File upload validation, form submission, drag & drop
    ═══════════════════════════════════════════════════════════════ */
 
-import { isValidEmail, isValidPhone, showToast, CONFIG } from './utils.js';
+import { isValidEmail, isValidPhone, showToast, CONFIG, showPageLoader, hidePageLoader } from './utils.js';
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 const ALLOWED_EXTENSIONS = ['.stl', '.step', '.stp'];
@@ -162,7 +162,8 @@ function initFormSubmission() {
     const submitBtn = document.getElementById('quote-submit');
     const submitText = document.getElementById('quote-submit-text');
     submitBtn.disabled = true;
-    submitText.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:8px;"></span> Submitting...';
+    submitText.textContent = 'Submitting…';
+    showPageLoader('Submitting your quote request…');
 
     try {
       // Build form data
@@ -194,6 +195,7 @@ function initFormSubmission() {
         }
       }
 
+      hidePageLoader();
       showToast('Quote request submitted successfully! We\'ll get back to you within 24 hours.', 'success', 6000);
       form.reset();
       selectedFile = null;
@@ -203,6 +205,7 @@ function initFormSubmission() {
       console.error('Quote submission error:', err);
       showToast(err.message || 'Failed to submit quote request. Please try again or email us directly.', 'error');
     } finally {
+      hidePageLoader();
       submitBtn.disabled = false;
       submitText.textContent = 'Submit Quote Request';
     }

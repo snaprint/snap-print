@@ -328,17 +328,58 @@ export function getShippingCostPreview(rates, method, itemTotal) {
 export function isValidEmail(email) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); }
 export function isValidPhone(phone) { return /^[6-9]\d{9}$/.test(phone.replace(/[\s\-+]/g, '').replace(/^91/, '')); }
 
-// ── Skeleton Loader ──
-export function renderSkeletons(container, count = 8) {
-  container.innerHTML = Array.from({ length: count }, () => `
-    <div class="skeleton-card">
-      <div class="skeleton skeleton-card__image"></div>
-      <div class="skeleton-card__body">
-        <div class="skeleton skeleton-text skeleton-text--sm"></div>
-        <div class="skeleton skeleton-text skeleton-text--lg"></div>
+// ── Hamster Wheel HTML (single source of truth) ──
+const HAMSTER_HTML = `
+  <div aria-label="Loading" role="img" class="wheel-and-hamster">
+    <div class="wheel"></div>
+    <div class="hamster">
+      <div class="hamster__body">
+        <div class="hamster__head">
+          <div class="hamster__ear"></div>
+          <div class="hamster__eye"></div>
+          <div class="hamster__nose"></div>
+        </div>
+        <div class="hamster__limb hamster__limb--fr"></div>
+        <div class="hamster__limb hamster__limb--fl"></div>
+        <div class="hamster__limb hamster__limb--br"></div>
+        <div class="hamster__limb hamster__limb--bl"></div>
+        <div class="hamster__tail"></div>
       </div>
     </div>
-  `).join('');
+    <div class="spoke"></div>
+  </div>
+`;
+
+// ── Inline Loader (replaces skeleton cards inside a grid/container) ──
+export function renderSkeletons(container, count = 8) {
+  container.innerHTML = `
+    <div class="loader-center">
+      ${HAMSTER_HTML}
+      <span class="loader-center__text">Loading products…</span>
+    </div>
+  `;
+}
+
+// ── Full-page Overlay Loader (checkout / quote submit) ──
+let _loaderEl = null;
+
+export function showPageLoader(message = '') {
+  if (_loaderEl) return;
+  _loaderEl = document.createElement('div');
+  _loaderEl.className = 'loader-overlay';
+  _loaderEl.innerHTML = `
+    ${HAMSTER_HTML}
+    ${message ? `<span class="loader-overlay__text">${message}</span>` : ''}
+  `;
+  document.body.appendChild(_loaderEl);
+  document.body.style.overflow = 'hidden';
+}
+
+export function hidePageLoader() {
+  if (!_loaderEl) return;
+  _loaderEl.remove();
+  _loaderEl = null;
+  document.body.style.overflow = '';
 }
 
 // ── Indian PIN Code → State/District Lookup ──

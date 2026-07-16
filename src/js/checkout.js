@@ -7,6 +7,7 @@ import {
   getCart, getCartSubtotal, getCartCount, clearCart,
   formatCurrency, getSampleShippingRates, getShippingCostPreview,
   isValidEmail, isValidPhone, showToast, CONFIG, fetchCSV, lookupPIN,
+  showPageLoader, hidePageLoader,
 } from './utils.js';
 
 let shippingRates = [];
@@ -216,7 +217,8 @@ function initPayButton() {
     payBtn.disabled = true;
     const payBtnText = document.getElementById('pay-btn-text');
     const originalText = payBtnText.textContent;
-    payBtnText.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:8px;"></span>Processing...';
+    payBtnText.textContent = 'Processing…';
+    showPageLoader('Preparing your order…');
 
     try {
       try {
@@ -230,12 +232,14 @@ function initPayButton() {
           throw new Error(err.message || 'Failed to create order');
         }
         const { order_id, amount, key_id } = await response.json();
+        hidePageLoader(); // dismiss before Razorpay modal opens
         openRazorpay(order_id, amount, buyer, key_id);
       } catch (fetchErr) {
         // If API is unreachable (dev without backend), simulate
         if (fetchErr instanceof TypeError && fetchErr.message.includes('fetch')) {
           console.log('Dev mode: simulating checkout');
           await new Promise(r => setTimeout(r, 1500));
+          hidePageLoader();
           showToast('Dev mode — redirecting to confirmation', 'info');
           clearCart();
           setTimeout(() => { window.location.href = '/thank-you.html?order=DEV-' + Date.now(); }, 500);
@@ -247,6 +251,7 @@ function initPayButton() {
       console.error('Checkout error:', err);
       showToast(err.message || 'Something went wrong. Please try again.', 'error');
     } finally {
+      hidePageLoader();
       payBtn.disabled = false;
       payBtnText.textContent = originalText;
     }

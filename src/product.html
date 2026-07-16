@@ -43,15 +43,27 @@
         </nav>
 
         <div class="product-detail__layout" id="product-layout">
-          <!-- Loading skeleton -->
-          <div class="product-gallery">
-            <div class="skeleton" style="width:100%;aspect-ratio:1/1;border-radius:var(--radius-lg)"></div>
-          </div>
-          <div class="product-info" style="gap:var(--space-3);">
-            <div class="skeleton skeleton-text--sm" style="width:80px;height:12px"></div>
-            <div class="skeleton skeleton-text--lg" style="width:70%;height:24px"></div>
-            <div class="skeleton skeleton-text--lg" style="width:40%;height:28px"></div>
-            <div class="skeleton skeleton-text" style="width:100%;height:48px"></div>
+          <!-- Loading state -->
+          <div class="loader-center" style="grid-column:1/-1;">
+            <div aria-label="Loading product" role="img" class="wheel-and-hamster">
+              <div class="wheel"></div>
+              <div class="hamster">
+                <div class="hamster__body">
+                  <div class="hamster__head">
+                    <div class="hamster__ear"></div>
+                    <div class="hamster__eye"></div>
+                    <div class="hamster__nose"></div>
+                  </div>
+                  <div class="hamster__limb hamster__limb--fr"></div>
+                  <div class="hamster__limb hamster__limb--fl"></div>
+                  <div class="hamster__limb hamster__limb--br"></div>
+                  <div class="hamster__limb hamster__limb--bl"></div>
+                  <div class="hamster__tail"></div>
+                </div>
+              </div>
+              <div class="spoke"></div>
+            </div>
+            <span class="loader-center__text">Loading product…</span>
           </div>
         </div>
 
