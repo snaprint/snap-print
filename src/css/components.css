@@ -724,29 +724,8 @@
 
 @media (max-width: 640px) {
   .trust-row {
-    grid-template-columns: repeat(4, 1fr);
-    gap: var(--space-2);
-    padding: var(--space-4) 0;
-  }
-
-  .trust-item {
-    gap: var(--space-1);
-  }
-
-  .trust-item__icon {
-    width: 22px;
-    height: 22px;
-  }
-
-  /* Descriptions removed on mobile — icon + short title is enough
-     and saves ~2 lines of height per badge across the row */
-  .trust-item__desc {
-    display: none;
-  }
-
-  .trust-item__title {
-    font-size: 9px;
-    letter-spacing: 0.02em;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-6);
   }
 }
 
@@ -807,8 +786,8 @@
 }
 
 @media (max-width: 480px) {
-  .category-tile { width: 96px; }
-  .category-tile__image { width: 96px; height: 96px; margin-bottom: var(--space-2); }
+  .category-tile { width: 110px; }
+  .category-tile__image { width: 110px; height: 110px; }
 }
 
 /* ── Search Bar ── */
@@ -1995,17 +1974,8 @@
    Responsive — Catalog Mobile
    ═══════════════════════════════════════════════════════════════ */
 @media (max-width: 640px) {
-  .catalog-search {
-    margin-bottom: var(--space-3);
-  }
-
-  .catalog-search__input {
-    padding: 10px 16px 10px 42px;
-  }
-
   .catalog-toolbar {
     gap: var(--space-3);
-    margin-bottom: var(--space-3);
   }
 
   .catalog-toolbar__count {

@@ -123,48 +123,25 @@
 }
 
 @media (max-width: 768px) {
-  .hero {
-    padding: var(--space-5) 0;
-  }
-
   .hero__inner {
     grid-template-columns: 1fr;
-    gap: var(--space-4);
+    gap: var(--space-6);
     text-align: center;
   }
 
-  .hero__content {
-    gap: var(--space-2);
-  }
-
-  .hero__title { font-size: var(--text-2xl); }
+  .hero__title { font-size: var(--text-3xl); }
   .hero__desc { max-width: 100%; }
 
   .hero__actions {
     justify-content: center;
     flex-wrap: wrap;
-    margin-top: 0;
   }
 
   .hero__carousel {
-    /* Wider/shorter than desktop so it doesn't eat the whole first screen */
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 4 / 3;
     max-width: 100%;
     order: -1;
   }
-}
-
-@media (max-width: 480px) {
-  .hero {
-    padding: var(--space-4) 0;
-  }
-
-  .hero__carousel {
-    aspect-ratio: 3 / 2;
-  }
-
-  .hero__label { display: none; }
-  .hero__desc { font-size: var(--text-sm); }
 }
 
 /* ── Catalog / Product Grid ── */
@@ -204,8 +181,11 @@
   }
 }
 
-/* Keep 2 columns even on narrow phones — dropping to 1 column made
-   users scroll further to see the same number of products. */
+@media (max-width: 380px) {
+  .product-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 /* ── Product Detail Page ── */
 .product-detail {
