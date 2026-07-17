@@ -4,13 +4,14 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import {
-  getCart, getCartSubtotal, getCartWeight, getCartCount, clearCart,
+  getCart, getCartSubtotal, getCartCount, clearCart,
   formatCurrency, getSampleShippingRates, getShippingCostPreview,
   isValidEmail, isValidPhone, showToast, CONFIG, fetchCSV, lookupPIN,
+  showPageLoader, hidePageLoader,
 } from './utils.js';
 
 let shippingRates = [];
-let selectedMethod = 'normal';
+let selectedMethod = 'surface';
 let shippingCost = 0;
 
 // ── Init ──
@@ -82,21 +83,21 @@ function renderOrderSummary() {
 
 // ── Shipping Prices ──
 function updateShippingPrices() {
-  const weight = getCartWeight();
-  const normalPrice = getShippingCostPreview(shippingRates, 'normal', weight);
-  const speedPrice = getShippingCostPreview(shippingRates, 'speed', weight);
+  const itemTotal = getCartSubtotal();  // item_total: total value of products in cart
+  const surfacePrice = getShippingCostPreview(shippingRates, 'surface', itemTotal);
+  const airPrice = getShippingCostPreview(shippingRates, 'air', itemTotal);
 
-  const normalEl = document.getElementById('shipping-normal-price');
-  const speedEl = document.getElementById('shipping-speed-price');
-  if (normalEl) normalEl.textContent = formatCurrency(normalPrice);
-  if (speedEl) speedEl.textContent = formatCurrency(speedPrice);
+  const surfaceEl = document.getElementById('shipping-surface-price');
+  const airEl = document.getElementById('shipping-air-price');
+  if (surfaceEl) surfaceEl.textContent = surfacePrice === 0 ? 'Free' : formatCurrency(surfacePrice);
+  if (airEl) airEl.textContent = airPrice === 0 ? 'Free' : formatCurrency(airPrice);
 
-  shippingCost = getShippingCostPreview(shippingRates, selectedMethod, weight);
-  const subtotal = getCartSubtotal();
+  shippingCost = getShippingCostPreview(shippingRates, selectedMethod, itemTotal);
+  const subtotal = itemTotal;
 
   const summaryShipping = document.getElementById('summary-shipping');
   const summaryTotal = document.getElementById('summary-total');
-  if (summaryShipping) summaryShipping.textContent = formatCurrency(shippingCost);
+  if (summaryShipping) summaryShipping.textContent = shippingCost === 0 ? 'Free' : formatCurrency(shippingCost);
   if (summaryTotal) summaryTotal.textContent = formatCurrency(subtotal + shippingCost);
 
   const payBtnText = document.getElementById('pay-btn-text');
@@ -216,7 +217,8 @@ function initPayButton() {
     payBtn.disabled = true;
     const payBtnText = document.getElementById('pay-btn-text');
     const originalText = payBtnText.textContent;
-    payBtnText.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:8px;"></span>Processing...';
+    payBtnText.textContent = 'Processing…';
+    showPageLoader('Preparing your order…');
 
     try {
       try {
@@ -230,12 +232,14 @@ function initPayButton() {
           throw new Error(err.message || 'Failed to create order');
         }
         const { order_id, amount, key_id } = await response.json();
+        hidePageLoader(); // dismiss before Razorpay modal opens
         openRazorpay(order_id, amount, buyer, key_id);
       } catch (fetchErr) {
         // If API is unreachable (dev without backend), simulate
         if (fetchErr instanceof TypeError && fetchErr.message.includes('fetch')) {
           console.log('Dev mode: simulating checkout');
           await new Promise(r => setTimeout(r, 1500));
+          hidePageLoader();
           showToast('Dev mode — redirecting to confirmation', 'info');
           clearCart();
           setTimeout(() => { window.location.href = '/thank-you.html?order=DEV-' + Date.now(); }, 500);
@@ -247,6 +251,7 @@ function initPayButton() {
       console.error('Checkout error:', err);
       showToast(err.message || 'Something went wrong. Please try again.', 'error');
     } finally {
+      hidePageLoader();
       payBtn.disabled = false;
       payBtnText.textContent = originalText;
     }

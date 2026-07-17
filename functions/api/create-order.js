@@ -56,7 +56,7 @@ export async function onRequestPost(context) {
     if (!items || !Array.isArray(items) || items.length === 0) {
       return jsonError('No items provided', 400);
     }
-    if (!shippingMethod || !['normal', 'speed'].includes(shippingMethod)) {
+    if (!shippingMethod || !['surface', 'air'].includes(shippingMethod)) {
       return jsonError('Invalid shipping method', 400);
     }
     if (!buyer || !buyer.email || !buyer.firstName || !buyer.phone || !buyer.pincode) {
@@ -85,7 +85,6 @@ export async function onRequestPost(context) {
 
     // Compute server-side total
     let subtotal = 0;
-    let totalWeight = 0;
     const resolvedItems = [];
 
     for (const cartItem of items) {
@@ -101,7 +100,6 @@ export async function onRequestPost(context) {
 
       const price = Number(product.price);
       const quantity = Math.max(1, Math.min(100, Number(cartItem.quantity)));
-      const weight = Number(product.weight_g) || 0;
 
       // Check stock (skip for made-to-order)
       if (product.made_to_order !== 'yes') {
@@ -115,22 +113,32 @@ export async function onRequestPost(context) {
       }
 
       subtotal += price * quantity;
-      totalWeight += weight * quantity;
       resolvedItems.push({
         id: product.id,
         name: product.name,
         price,
         quantity,
-        weight,
       });
     }
 
-    // Compute shipping
-    const weightTier = totalWeight < 500 ? 'under_500g' : '500g_or_more';
-    const shippingRate = shippingRates.find(
-      r => r.method === shippingMethod && r.weight_tier === weightTier
+    // Compute shipping cost server-side using item_total from the sheet
+    // Parses condition strings like '< 999' or '> 999'
+    function evalCondition(condStr, value) {
+      const m = String(condStr).trim().match(/^([<>]=?)\s*(\d+(?:\.\d+)?)$/);
+      if (!m) return false;
+      const threshold = Number(m[2]);
+      if (m[1] === '<')  return value <  threshold;
+      if (m[1] === '<=') return value <= threshold;
+      if (m[1] === '>')  return value >  threshold;
+      if (m[1] === '>=') return value >= threshold;
+      return false;
+    }
+
+    const matchingRate = shippingRates.find(
+      r => r.method?.trim().toLowerCase() === shippingMethod &&
+           evalCondition(r.item_total, subtotal)
     );
-    const shippingCost = shippingRate ? Number(shippingRate.price) : 0;
+    const shippingCost = matchingRate ? Number(matchingRate.shipping_cost) : 0;
 
     const totalAmount = subtotal + shippingCost;
     const totalAmountPaise = Math.round(totalAmount * 100);

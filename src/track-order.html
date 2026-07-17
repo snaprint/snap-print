@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Track Your Order — Snap Print</title>
+  <meta name="description" content="Track your Snap Print order status and get your shipping tracking link." />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="stylesheet" href="./css/index.css" />
+  <link rel="stylesheet" href="./css/components.css" />
+  <link rel="stylesheet" href="./css/pages.css" />
+  <style>
+    /* ── Track Order Page Styles ── */
+    .track-page {
+      min-height: calc(100vh - var(--navbar-height));
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: var(--space-16) var(--space-4) var(--space-20);
+      background: var(--bg-base);
+    }
+
+    .track-card {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    /* Header */
+    .track-card__header {
+      text-align: center;
+      margin-bottom: var(--space-10);
+    }
+
+    .track-card__icon {
+      width: 80px;
+      height: 80px;
+      background: var(--bg-muted);
+      border-radius: var(--radius-xl);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto var(--space-5);
+    }
+
+    .track-card__title {
+      font-size: var(--text-3xl);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: var(--space-2);
+    }
+
+    .track-card__subtitle {
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+      line-height: var(--leading-relaxed);
+    }
+
+    /* Form box */
+    .track-form-box {
+      background: var(--bg-muted);
+      border-radius: var(--radius-xl);
+      padding: var(--space-8);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+    }
+
+    /* Evenly space form fields, loader and button */
+    #track-form {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    /* Loader (shows inside the card while fetching) */
+    .track-loader {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-3);
+      padding: var(--space-6) 0;
+    }
+
+    .track-loader__text {
+      font-size: var(--text-sm);
+      color: var(--text-muted);
+    }
+
+    /* Result card */
+    .track-result {
+      display: none;
+      background: var(--bg-base);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-xl);
+      padding: var(--space-8);
+      text-align: center;
+      margin-top: var(--space-5);
+    }
+
+    .track-result__icon {
+      width: 52px;
+      height: 52px;
+      background: #ecfdf5;
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto var(--space-4);
+      color: #10b981;
+    }
+
+    .track-result__icon svg { width: 26px; height: 26px; }
+
+    .track-result__name {
+      font-size: var(--text-xl);
+      font-weight: 700;
+      margin-bottom: var(--space-2);
+    }
+
+    .track-result__desc {
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+      margin-bottom: var(--space-6);
+    }
+
+    /* Error card */
+    .track-error {
+      background: #fff5f5;
+      border: 1px solid #fed7d7;
+      border-radius: var(--radius-lg);
+      padding: var(--space-5) var(--space-6);
+      margin-top: var(--space-5);
+      display: none;
+      gap: var(--space-3);
+      align-items: flex-start;
+    }
+
+    .track-error__icon {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      color: #e53e3e;
+      margin-top: 1px;
+    }
+
+    .track-error__msg {
+      font-size: var(--text-sm);
+      color: #c53030;
+      line-height: var(--leading-relaxed);
+    }
+
+    /* Divider inside form */
+    .track-divider {
+      height: 1px;
+      background: var(--border-light);
+      margin: var(--space-1) 0;
+    }
+
+    /* Link button override for external tracking */
+    .btn-track-link {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      text-decoration: none;
+    }
+
+    .btn-track-link svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    @media (max-width: 520px) {
+      .track-form-box { padding: var(--space-6); }
+      .track-result   { padding: var(--space-6); }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- Navbar -->
+    <nav class="navbar" id="navbar" role="navigation" aria-label="Main navigation">
+      <div class="navbar__inner">
+        <a href="/" class="navbar__logo" aria-label="Snap Print Home">SNAP PRINT</a>
+        <div class="navbar__links">
+          <a href="/" class="navbar__link">Shop</a>
+          <a href="/quote.html" class="navbar__link">Custom Parts</a>
+          <a href="/about.html" class="navbar__link">About</a>
+        </div>
+        <div class="navbar__actions">
+          <a href="/cart.html" class="cart-icon-btn" aria-label="View Cart">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            <span class="cart-badge hidden" id="cart-badge">0</span>
+          </a>
+          <button class="navbar__hamburger" id="hamburger" aria-label="Toggle menu" aria-expanded="false"><span></span><span></span><span></span></button>
+        </div>
+      </div>
+      <div class="navbar__mobile-menu" id="mobile-menu">
+        <a href="/" class="navbar__link">Shop</a>
+        <a href="/quote.html" class="navbar__link">Custom Parts</a>
+        <a href="/about.html" class="navbar__link">About</a>
+        <a href="/cart.html" class="navbar__link">Cart</a>
+      </div>
+    </nav>
+
+    <main class="track-page">
+      <div class="track-card animate-fade-in-up">
+
+        <!-- Header -->
+        <div class="track-card__header">
+          <div class="track-card__icon">
+            <img
+              src="/svg_files/track_order.svg"
+              alt="Track Order"
+              width="48"
+              height="48"
+              style="display:block;"
+            />
+          </div>
+          <h1 class="track-card__title">Track Your Order</h1>
+          <p class="track-card__subtitle">Enter your registered email address and mobile number to get your shipping tracking link.</p>
+        </div>
+
+        <!-- Form box -->
+        <div class="track-form-box">
+          <form id="track-form" novalidate>
+
+            <div class="form-group" id="group-email">
+              <label class="form-label" for="track-email">
+                Email Address <span class="required">*</span>
+              </label>
+              <input
+                class="form-input"
+                type="email"
+                id="track-email"
+                placeholder="you@example.com"
+                required
+                autocomplete="email"
+                inputmode="email"
+              />
+              <span class="form-error" id="track-email-error">Please enter a valid email address</span>
+            </div>
+
+            <div class="form-group" id="group-mobile">
+              <label class="form-label" for="track-mobile">
+                Mobile Number <span class="required">*</span>
+              </label>
+              <input
+                class="form-input"
+                type="tel"
+                id="track-mobile"
+                placeholder="98765 43210"
+                required
+                autocomplete="tel"
+                inputmode="tel"
+                maxlength="15"
+              />
+              <span class="form-error" id="track-mobile-error">Please enter your 10-digit mobile number</span>
+            </div>
+
+            <!-- Hamster loader (shown inside the card while fetching) -->
+            <div class="track-loader" id="track-loader">
+              <div aria-label="Searching your order" role="img" class="wheel-and-hamster">
+                <div class="wheel"></div>
+                <div class="hamster">
+                  <div class="hamster__body">
+                    <div class="hamster__head">
+                      <div class="hamster__ear"></div>
+                      <div class="hamster__eye"></div>
+                      <div class="hamster__nose"></div>
+                    </div>
+                    <div class="hamster__limb hamster__limb--fr"></div>
+                    <div class="hamster__limb hamster__limb--fl"></div>
+                    <div class="hamster__limb hamster__limb--br"></div>
+                    <div class="hamster__limb hamster__limb--bl"></div>
+                    <div class="hamster__tail"></div>
+                  </div>
+                </div>
+                <div class="spoke"></div>
+              </div>
+              <span class="track-loader__text">Looking up your order…</span>
+            </div>
+
+            <button class="btn btn-primary btn-md btn-full" type="submit" id="track-submit">
+              <span id="track-submit-text">Track My Order</span>
+            </button>
+
+          </form>
+
+          <p style="text-align:center;font-size:var(--text-xs);color:var(--text-muted);">
+            Use the same email and mobile number you provided at checkout.
+          </p>
+        </div>
+
+        <!-- Error message -->
+        <div class="track-error" id="track-error" role="alert">
+          <svg class="track-error__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span class="track-error__msg" id="track-error-msg"></span>
+        </div>
+
+        <!-- Success result -->
+        <div class="track-result" id="track-result" role="region" aria-label="Tracking result">
+          <div class="track-result__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+          </div>
+          <p class="track-result__name" id="result-name">Order Found!</p>
+          <p class="track-result__desc">Your order is on its way. Click below to track it live.</p>
+          <a
+            id="result-link"
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-primary btn-lg btn-track-link"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14"/><path d="M12 5l7 7-7 7"/>
+            </svg>
+            Open Tracking Page
+          </a>
+        </div>
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="footer__grid">
+          <div><div class="footer__brand-name">Snap Print</div><p class="footer__brand-desc">Premium 3D printed toys, home decor, and custom engineering parts.</p></div>
+          <div><h3 class="footer__heading">Shop</h3><nav class="footer__links"><a href="/" class="footer__link">All Products</a><a href="/?category=toys" class="footer__link">Toys</a><a href="/?category=decor" class="footer__link">Decor</a><a href="/quote.html" class="footer__link">Custom Parts</a></nav></div>
+          <div><h3 class="footer__heading">Help</h3><nav class="footer__links"><a href="/about.html" class="footer__link">About Us</a><a href="/about.html#faq" class="footer__link">FAQ</a><a href="/about.html#contact" class="footer__link">Contact</a></nav></div>
+          <div><h3 class="footer__heading">Legal</h3><nav class="footer__links"><a href="/refund-policy.html" class="footer__link">Refund Policy</a><a href="/shipping-policy.html" class="footer__link">Shipping Policy</a><a href="/terms.html" class="footer__link">Terms</a><a href="/privacy-policy.html" class="footer__link">Privacy Policy</a></nav></div>
+        </div>
+        <div class="footer__bottom"><span class="footer__copy">&copy; 2026 Snap Print. All rights reserved.</span><div class="footer__social"><a href="https://x.com/snaprint_" class="footer__social-link" target="_blank" rel="noopener noreferrer" aria-label="Snap Print on X"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.261 5.636zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a><a href="https://www.instagram.com/snap.print.3d/" class="footer__social-link" target="_blank" rel="noopener noreferrer" aria-label="Snap Print on Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a><a href="https://www.linkedin.com/in/snap-print-57044a422/" class="footer__social-link" target="_blank" rel="noopener noreferrer" aria-label="Snap Print on LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></a></div><span class="footer__copy">Made in India 🇮🇳</span></div>
+      </div>
+    </footer>
+  </div>
+
+  <script type="module" src="./js/main.js"></script>
+  <script type="module" src="./js/track-order.js"></script>
+</body>
+</html>

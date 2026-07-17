@@ -130,6 +130,7 @@ export const CONFIG = {
   PRODUCTS_CSV_URL: import.meta.env.VITE_PRODUCTS_CSV_URL || '',
   SHIPPING_RATES_CSV_URL: import.meta.env.VITE_SHIPPING_RATES_CSV_URL || '',
   HERO_IMAGES_CSV_URL: import.meta.env.VITE_HERO_IMAGES_CSV_URL || '',
+  ORDER_TRACKING_CSV_URL: import.meta.env.VITE_ORDER_TRACKING_CSV_URL || '',
   RAZORPAY_KEY_ID: import.meta.env.VITE_RAZORPAY_KEY_ID || '',
   API_BASE: '/api',
 };
@@ -276,36 +277,110 @@ export function getSampleProducts() {
 }
 
 // ── Sample Shipping Rates ──
+// Mirrors the Google Sheet columns exactly: method, item_total, shipping_cost
+// item_total column contains a condition string like '< 999' or '> 999'
 export function getSampleShippingRates() {
   return [
-    { method: 'normal', weight_tier: 'under_500g', price: '70' },
-    { method: 'normal', weight_tier: '500g_or_more', price: '80' },
-    { method: 'speed', weight_tier: 'under_500g', price: '120' },
-    { method: 'speed', weight_tier: '500g_or_more', price: '150' },
+    { method: 'surface', item_total: '< 999',  shipping_cost: '100' },
+    { method: 'air',     item_total: '< 999',  shipping_cost: '150' },
+    { method: 'surface', item_total: '> 999',  shipping_cost: '0'   },
+    { method: 'air',     item_total: '> 999',  shipping_cost: '0'   },
   ];
 }
 
-export function getShippingCostPreview(rates, method, totalWeightG) {
-  const tier = totalWeightG < 500 ? 'under_500g' : '500g_or_more';
-  const rate = rates.find(r => r.method === method && r.weight_tier === tier);
-  return rate ? Number(rate.price) : 0;
+/**
+ * Evaluates a condition string like '< 999' or '> 999' against a value.
+ * Strips whitespace, parses the operator and threshold, returns true/false.
+ */
+function evalCondition(conditionStr, value) {
+  const match = String(conditionStr).trim().match(/^([<>]=?)\s*(\d+(?:\.\d+)?)$/);
+  if (!match) return false;
+  const [, op, numStr] = match;
+  const threshold = Number(numStr);
+  if (op === '<')  return value <  threshold;
+  if (op === '<=') return value <= threshold;
+  if (op === '>')  return value >  threshold;
+  if (op === '>=') return value >= threshold;
+  return false;
+}
+
+/**
+ * Returns the shipping cost for a given method and item_total.
+ * Finds the matching row in the sheet where the item_total condition is satisfied.
+ *
+ * @param {Array}  rates      - Shipping rate rows (from CSV — columns: method, item_total, shipping_cost)
+ * @param {string} method     - 'surface' or 'air'
+ * @param {number} itemTotal  - Total value of products in the cart
+ */
+export function getShippingCostPreview(rates, method, itemTotal) {
+  // Find the row whose method matches AND whose item_total condition is satisfied
+  const matchingRow = rates.find(
+    r => r.method?.trim().toLowerCase() === method &&
+         evalCondition(r.item_total, itemTotal)
+  );
+  if (matchingRow) return Number(matchingRow.shipping_cost);
+
+  // Fallback: find any row for this method and return its cost
+  const fallback = rates.find(r => r.method?.trim().toLowerCase() === method);
+  return fallback ? Number(fallback.shipping_cost) : 0;
 }
 
 // ── Validation ──
 export function isValidEmail(email) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); }
 export function isValidPhone(phone) { return /^[6-9]\d{9}$/.test(phone.replace(/[\s\-+]/g, '').replace(/^91/, '')); }
 
-// ── Skeleton Loader ──
-export function renderSkeletons(container, count = 8) {
-  container.innerHTML = Array.from({ length: count }, () => `
-    <div class="skeleton-card">
-      <div class="skeleton skeleton-card__image"></div>
-      <div class="skeleton-card__body">
-        <div class="skeleton skeleton-text skeleton-text--sm"></div>
-        <div class="skeleton skeleton-text skeleton-text--lg"></div>
+// ── Hamster Wheel HTML (single source of truth) ──
+const HAMSTER_HTML = `
+  <div aria-label="Loading" role="img" class="wheel-and-hamster">
+    <div class="wheel"></div>
+    <div class="hamster">
+      <div class="hamster__body">
+        <div class="hamster__head">
+          <div class="hamster__ear"></div>
+          <div class="hamster__eye"></div>
+          <div class="hamster__nose"></div>
+        </div>
+        <div class="hamster__limb hamster__limb--fr"></div>
+        <div class="hamster__limb hamster__limb--fl"></div>
+        <div class="hamster__limb hamster__limb--br"></div>
+        <div class="hamster__limb hamster__limb--bl"></div>
+        <div class="hamster__tail"></div>
       </div>
     </div>
-  `).join('');
+    <div class="spoke"></div>
+  </div>
+`;
+
+// ── Inline Loader (replaces skeleton cards inside a grid/container) ──
+export function renderSkeletons(container, count = 8) {
+  container.innerHTML = `
+    <div class="loader-center">
+      ${HAMSTER_HTML}
+      <span class="loader-center__text">Loading products…</span>
+    </div>
+  `;
+}
+
+// ── Full-page Overlay Loader (checkout / quote submit) ──
+let _loaderEl = null;
+
+export function showPageLoader(message = '') {
+  if (_loaderEl) return;
+  _loaderEl = document.createElement('div');
+  _loaderEl.className = 'loader-overlay';
+  _loaderEl.innerHTML = `
+    ${HAMSTER_HTML}
+    ${message ? `<span class="loader-overlay__text">${message}</span>` : ''}
+  `;
+  document.body.appendChild(_loaderEl);
+  document.body.style.overflow = 'hidden';
+}
+
+export function hidePageLoader() {
+  if (!_loaderEl) return;
+  _loaderEl.remove();
+  _loaderEl = null;
+  document.body.style.overflow = '';
 }
 
 // ── Indian PIN Code → State/District Lookup ──

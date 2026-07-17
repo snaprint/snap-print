@@ -414,6 +414,8 @@ function buildMaterialChips() {
   if (materials.length < 2) return; // not useful with 0 or 1 material
 
   group.style.display = '';
+  const divider = document.getElementById('material-filter-divider');
+  if (divider) divider.style.display = '';
 
   container.innerHTML = `
     <button class="filter-chip active" data-material="">All</button>
