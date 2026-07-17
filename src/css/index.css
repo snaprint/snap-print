@@ -379,4 +379,11 @@ input, textarea, select {
   h2 { font-size: var(--text-xl); }
   .container { padding: 0 var(--space-4); }
   .section { padding: var(--space-10) 0; }
+  /* Tighter vertical rhythm on mobile so users reach products faster */
+  .section-sm { padding: var(--space-5) 0; }
+  .section-header { margin-bottom: var(--space-3); }
+}
+
+@media (max-width: 480px) {
+  .section-sm { padding: var(--space-4) 0; }
 }
