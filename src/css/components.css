@@ -232,7 +232,7 @@
   text-shadow: 0 0 12px rgba(255,255,255,0.5);
 }
 
-@media (min-width: 800px) {
+@media (min-width: 769px) {
   .navbar__track-btn { display: inline-flex; }
 }
 
