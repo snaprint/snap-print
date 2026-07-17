@@ -16,6 +16,7 @@ export default defineConfig({
         quote: resolve(__dirname, 'src/quote.html'),
         'thank-you': resolve(__dirname, 'src/thank-you.html'),
         about: resolve(__dirname, 'src/about.html'),
+        'track-order': resolve(__dirname, 'src/track-order.html'),
         'refund-policy': resolve(__dirname, 'src/refund-policy.html'),
         'shipping-policy': resolve(__dirname, 'src/shipping-policy.html'),
         terms: resolve(__dirname, 'src/terms.html'),

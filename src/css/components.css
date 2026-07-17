@@ -205,6 +205,36 @@
   background: rgba(255,255,255,0.05);
 }
 
+/* ── Track Order pill button (home page navbar only) ── */
+.navbar__track-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
+  height: 34px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: var(--text-on-dark);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease);
+  background: rgba(255,255,255,0.05);
+}
+
+.navbar__track-btn:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.3);
+  color: var(--text-on-dark);
+}
+
+@media (max-width: 768px) {
+  .navbar__track-btn { display: none; } /* shown as a plain link in the mobile menu */
+}
+
 /* ── Navbar Search Toggle (icon button) ── */
 .navbar__search-toggle {
   display: flex;
