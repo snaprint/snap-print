@@ -55,6 +55,11 @@
                 <input class="form-input" type="email" id="buyer-email" placeholder="john@example.com" required autocomplete="email" />
                 <span class="form-error">Please enter a valid email address</span>
               </div>
+              <div class="form-group">
+                <label class="form-label" for="buyer-email-confirm">Confirm Email <span class="required">*</span></label>
+                <input class="form-input" type="email" id="buyer-email-confirm" placeholder="john@example.com" required autocomplete="off" />
+                <span class="form-error">Emails do not match</span>
+              </div>
             </div>
 
             <!-- Delivery -->
@@ -62,17 +67,10 @@
               <h2 class="checkout-section__title">Delivery</h2>
 
               <!-- Name -->
-              <div class="address-grid address-grid--2col">
-                <div class="form-group">
-                  <label class="form-label" for="buyer-firstname">First Name <span class="required">*</span></label>
-                  <input class="form-input" type="text" id="buyer-firstname" placeholder="John" required autocomplete="given-name" />
-                  <span class="form-error">Required</span>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="buyer-lastname">Last Name <span class="required">*</span></label>
-                  <input class="form-input" type="text" id="buyer-lastname" placeholder="Doe" required autocomplete="family-name" />
-                  <span class="form-error">Required</span>
-                </div>
+              <div class="form-group">
+                <label class="form-label" for="buyer-fullname">Full Name <span class="required">*</span></label>
+                <input class="form-input" type="text" id="buyer-fullname" placeholder="John Doe" required autocomplete="name" />
+                <span class="form-error">Required</span>
               </div>
 
               <!-- Address with search -->
@@ -155,6 +153,13 @@
                 <label class="form-label" for="buyer-phone">Phone <span class="required">*</span></label>
                 <input class="form-input" type="tel" id="buyer-phone" placeholder="98765 43210" required autocomplete="tel" inputmode="tel" />
                 <span class="form-error">Enter a valid 10-digit phone number</span>
+              </div>
+
+              <!-- Confirm Phone -->
+              <div class="form-group">
+                <label class="form-label" for="buyer-phone-confirm">Confirm Phone <span class="required">*</span></label>
+                <input class="form-input" type="tel" id="buyer-phone-confirm" placeholder="98765 43210" required autocomplete="off" inputmode="tel" />
+                <span class="form-error">Phone numbers do not match</span>
               </div>
 
               <!-- Maps Link (optional) -->

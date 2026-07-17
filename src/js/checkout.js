@@ -145,14 +145,15 @@ function initPINLookup() {
 
 // ── Form Validation ──
 const FIELDS = [
-  { id: 'buyer-email', validate: isValidEmail },
-  { id: 'buyer-firstname', validate: v => v.trim().length >= 1 },
-  { id: 'buyer-lastname', validate: v => v.trim().length >= 1 },
-  { id: 'buyer-address', validate: v => v.trim().length >= 5 },
-  { id: 'buyer-city', validate: v => v.trim().length >= 2 },
-  { id: 'buyer-state', validate: v => v.trim().length >= 1 },
-  { id: 'buyer-pincode', validate: v => /^\d{6}$/.test(v.trim()) },
-  { id: 'buyer-phone', validate: isValidPhone },
+  { id: 'buyer-email',         validate: isValidEmail },
+  { id: 'buyer-email-confirm', validate: v => v.trim() === document.getElementById('buyer-email')?.value.trim() && v.trim().length > 0 },
+  { id: 'buyer-fullname',      validate: v => v.trim().length >= 1 },
+  { id: 'buyer-address',       validate: v => v.trim().length >= 5 },
+  { id: 'buyer-city',          validate: v => v.trim().length >= 2 },
+  { id: 'buyer-state',         validate: v => v.trim().length >= 1 },
+  { id: 'buyer-pincode',       validate: v => /^\d{6}$/.test(v.trim()) },
+  { id: 'buyer-phone',         validate: isValidPhone },
+  { id: 'buyer-phone-confirm', validate: v => v.trim() === document.getElementById('buyer-phone')?.value.trim() && v.trim().length > 0 },
 ];
 
 function initFormValidation() {
@@ -200,16 +201,15 @@ function initPayButton() {
     if (cart.length === 0) { showToast('Your cart is empty', 'error'); return; }
 
     const buyer = {
-      email: document.getElementById('buyer-email').value.trim(),
-      firstName: document.getElementById('buyer-firstname').value.trim(),
-      lastName: document.getElementById('buyer-lastname').value.trim(),
-      address: document.getElementById('buyer-address').value.trim(),
+      email:     document.getElementById('buyer-email').value.trim(),
+      fullName:  document.getElementById('buyer-fullname').value.trim(),
+      address:   document.getElementById('buyer-address').value.trim(),
       apartment: document.getElementById('buyer-apartment')?.value.trim() || '',
-      city: document.getElementById('buyer-city').value.trim(),
-      state: document.getElementById('buyer-state').value,
-      pincode: document.getElementById('buyer-pincode').value.trim(),
-      phone: document.getElementById('buyer-phone').value.trim(),
-      mapsLink: document.getElementById('buyer-maps-link')?.value.trim() || '',
+      city:      document.getElementById('buyer-city').value.trim(),
+      state:     document.getElementById('buyer-state').value,
+      pincode:   document.getElementById('buyer-pincode').value.trim(),
+      phone:     document.getElementById('buyer-phone').value.trim(),
+      mapsLink:  document.getElementById('buyer-maps-link')?.value.trim() || '',
     };
 
     const items = cart.map(item => ({ id: item.id, quantity: item.quantity }));
@@ -280,7 +280,7 @@ function openRazorpay(orderId, amount, buyer, keyId) {
     description: 'Order Payment',
     order_id: orderId,
     prefill: {
-      name: `${buyer.firstName} ${buyer.lastName}`,
+      name: buyer.fullName,
       email: buyer.email,
       contact: buyer.phone,
     },
