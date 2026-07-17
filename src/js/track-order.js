@@ -17,8 +17,26 @@ const resultBox   = document.getElementById('track-result');
 const errorBox    = document.getElementById('track-error');
 
 // ── Normalise helpers ──
-function normaliseEmail(v)  { return v.trim().toLowerCase(); }
-function normaliseMobile(v) { return v.replace(/[\s\-+]/g, '').replace(/^91/, ''); }
+function normaliseEmail(v) { return v.trim().toLowerCase(); }
+
+/**
+ * Strips every possible prefix/format a browser or user might enter:
+ *   +91 98765 43210  →  9876543210
+ *   0091-9876543210  →  9876543210
+ *   09876543210      →  9876543210   (leading STD 0)
+ *   919876543210     →  9876543210
+ *   9876543210       →  9876543210   (already clean)
+ */
+function normaliseMobile(v) {
+  // Remove spaces, dashes, and the literal '+' sign
+  let n = v.replace(/[\s\-+]/g, '');
+  // Strip international prefix: 0091 or 91 (only if result would be 10 digits)
+  if (/^0091/.test(n))  n = n.slice(4);
+  else if (/^91/.test(n) && n.length === 12) n = n.slice(2);
+  // Strip leading STD zero: 0XXXXXXXXXX → XXXXXXXXXX
+  if (/^0/.test(n) && n.length === 11) n = n.slice(1);
+  return n;
+}
 
 // ── Main lookup ──
 async function handleTrack(e) {
@@ -55,13 +73,9 @@ async function handleTrack(e) {
       return rowEmail === email && rowMobile === mobile;
     });
 
-    if (!match) {
-      showError('No order found matching those details. Please check your email and mobile number and try again.');
-      return;
-    }
-
-    if (!match.tracking_link || !match.tracking_link.trim()) {
-      showError(`Hi ${match.customer_name || 'there'}, your order is being prepared and a tracking link will be available soon. Please check back shortly.`);
+    // Single output for all non-success cases — covers no match AND link not ready yet
+    if (!match || !match.tracking_link || !match.tracking_link.trim()) {
+      showError('The details you entered do not match our records. Please check your email and mobile number and try again.');
       return;
     }
 
@@ -69,7 +83,7 @@ async function handleTrack(e) {
 
   } catch (err) {
     console.error('Track order error:', err);
-    showToast(err.message || 'Something went wrong. Please try again.', 'error');
+    showError('Something went wrong while looking up your order. Please try again in a moment.');
   } finally {
     setLoading(false);
   }
@@ -88,9 +102,20 @@ function showResult(row) {
   const nameEl    = document.getElementById('result-name');
   const linkBtn   = document.getElementById('result-link');
 
-  if (nameEl)  nameEl.textContent  = row.customer_name ? `Hi ${row.customer_name}!` : 'Order Found!';
+  if (nameEl) nameEl.textContent = row.customer_name ? `Hi ${row.customer_name}!` : 'Order Found!';
+
   if (linkBtn) {
-    linkBtn.href = row.tracking_link.trim();
+    // Ensure the raw string from the sheet is always a full URL before opening.
+    // If someone stored "shiprocket.com/track/..." without a scheme, this fixes it.
+    let url = row.tracking_link.trim();
+    if (url && !/^https?:\/\//i.test(url)) url = 'https://' + url;
+
+    // Use onclick + window.open so the sheet value is opened in a new tab
+    // regardless of whether it's a full URL, a bare domain, or any other format.
+    linkBtn.onclick = (e) => {
+      e.preventDefault();
+      if (url) window.open(url, '_blank', 'noopener,noreferrer');
+    };
   }
 
   resultBox.style.display = 'block';
