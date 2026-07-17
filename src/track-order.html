@@ -32,20 +32,14 @@
     }
 
     .track-card__icon {
-      width: 64px;
-      height: 64px;
+      width: 80px;
+      height: 80px;
       background: var(--bg-muted);
       border-radius: var(--radius-xl);
       display: flex;
       align-items: center;
       justify-content: center;
       margin: 0 auto var(--space-5);
-      color: var(--text-primary);
-    }
-
-    .track-card__icon svg {
-      width: 30px;
-      height: 30px;
     }
 
     .track-card__title {
@@ -209,15 +203,13 @@
         <!-- Header -->
         <div class="track-card__header">
           <div class="track-card__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M5 12h14"/><path d="M12 5l7 7-7 7"/>
-              <rect x="1" y="3" width="15" height="13" rx="2" opacity="0"/>
-              <!-- Truck icon -->
-              <rect x="1" y="3" width="15" height="13" rx="2"/>
-              <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
-              <circle cx="5.5" cy="18.5" r="2.5"/>
-              <circle cx="18.5" cy="18.5" r="2.5"/>
-            </svg>
+            <img
+              src="/svg_files/track_order.svg"
+              alt="Track Order"
+              width="48"
+              height="48"
+              style="display:block;"
+            />
           </div>
           <h1 class="track-card__title">Track Your Order</h1>
           <p class="track-card__subtitle">Enter your registered email address and mobile number to get your shipping tracking link.</p>
@@ -283,7 +275,7 @@
               <span class="track-loader__text">Looking up your order…</span>
             </div>
 
-            <button class="btn btn-primary btn-full" type="submit" id="track-submit">
+            <button class="btn btn-primary btn-md btn-full" type="submit" id="track-submit">
               <span id="track-submit-text">Track My Order</span>
             </button>
 
