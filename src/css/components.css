@@ -226,9 +226,10 @@
 }
 
 .navbar__track-btn:hover {
-  background: #ffffff;
-  border-color: #ffffff;
-  color: #111111;
+  color: #ffffff;
+  border-color: rgba(255,255,255,0.9);
+  background: rgba(255,255,255,0.18);
+  text-shadow: 0 0 12px rgba(255,255,255,0.5);
 }
 
 @media (max-width: 768px) {
