@@ -207,7 +207,7 @@
 
 /* ── Track Order pill button (home page navbar only) ── */
 .navbar__track-btn {
-  display: inline-flex;
+  display: none; /* hidden on mobile; shown on desktop via min-width media query below */
   align-items: center;
   gap: var(--space-2);
   padding: 0 var(--space-4);
@@ -232,8 +232,8 @@
   text-shadow: 0 0 12px rgba(255,255,255,0.5);
 }
 
-@media (max-width: 768px) {
-  .navbar__track-btn { display: none; } /* shown as a plain link in the mobile menu */
+@media (min-width: 769px) {
+  .navbar__track-btn { display: inline-flex; }
 }
 
 /* ── Navbar Search Toggle (icon button) ── */
