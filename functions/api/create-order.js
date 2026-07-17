@@ -59,7 +59,7 @@ export async function onRequestPost(context) {
     if (!shippingMethod || !['surface', 'air'].includes(shippingMethod)) {
       return jsonError('Invalid shipping method', 400);
     }
-    if (!buyer || !buyer.email || !buyer.firstName || !buyer.phone || !buyer.pincode) {
+    if (!buyer || !buyer.email || !buyer.fullName || !buyer.phone || !buyer.pincode) {
       return jsonError('Missing buyer information', 400);
     }
 
