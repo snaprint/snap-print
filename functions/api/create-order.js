@@ -17,7 +17,11 @@ function parseCSV(text) {
   return lines.slice(1).map(line => {
     const values = parseCSVLine(line);
     const obj = {};
-    headers.forEach((h, i) => { obj[h.trim()] = (values[i] || '').trim(); });
+    headers.forEach((h, i) => {
+      // Strip UTF-8 BOM from the first header (Google Sheets CSVs often include it)
+      const key = h.replace(/^\uFEFF/, '').trim();
+      obj[key] = (values[i] || '').trim();
+    });
     return obj;
   });
 }
@@ -52,18 +56,18 @@ export async function onRequestPost(context) {
     const body = await context.request.json();
     const { items, shippingMethod, buyer } = body;
 
-    // Validate input
+    // Validate basic input before making any network requests
     if (!items || !Array.isArray(items) || items.length === 0) {
       return jsonError('No items provided', 400);
     }
-    if (!shippingMethod || !['surface', 'air'].includes(shippingMethod)) {
-      return jsonError('Invalid shipping method', 400);
+    if (!shippingMethod) {
+      return jsonError('Missing shipping method', 400);
     }
     if (!buyer || !buyer.email || !buyer.fullName || !buyer.phone || !buyer.pincode) {
       return jsonError('Missing buyer information', 400);
     }
 
-    // Fetch Products CSV server-side
+    // Fetch Products + Shipping CSVs server-side
     const productsCSVUrl = env.PRODUCTS_CSV_URL || env.VITE_PRODUCTS_CSV_URL;
     const shippingCSVUrl = env.SHIPPING_RATES_CSV_URL || env.VITE_SHIPPING_RATES_CSV_URL;
 
@@ -80,8 +84,19 @@ export async function onRequestPost(context) {
       return jsonError('Failed to fetch pricing data', 500);
     }
 
-    const products = parseCSV(await productsRes.text());
+    const products     = parseCSV(await productsRes.text());
     const shippingRates = parseCSV(await shippingRes.text());
+
+    // Validate that the requested shipping method actually exists in the sheet.
+    // This replaces a previous hardcoded ['surface','air'] allowlist so that
+    // adding new methods to the sheet works without a code change.
+    const validMethods = shippingRates
+      .map(r => r.method?.trim().toLowerCase())
+      .filter(Boolean);
+    if (!validMethods.includes(shippingMethod.trim().toLowerCase())) {
+      return jsonError(`Invalid shipping method. Valid options: ${validMethods.join(', ')}`, 400);
+    }
+
 
     // Compute server-side total
     let subtotal = 0;

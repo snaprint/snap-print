@@ -143,7 +143,16 @@ export async function fetchCSV(url) {
   const response = await fetch(cacheBusterUrl, { cache: 'no-store' });
   if (!response.ok) throw new Error(`Failed to fetch CSV: ${response.status}`);
   const text = await response.text();
-  return Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+  return Papa.parse(text, {
+    header: true,
+    skipEmptyLines: true,
+    // Strip BOM, leading/trailing whitespace from every header key.
+    // Google Sheets CSVs often prepend a UTF-8 BOM (\uFEFF) to the first
+    // header, which would make `row.method` undefined and break all lookups.
+    transformHeader: h => h.replace(/^\uFEFF/, '').trim(),
+    // Also trim every cell value so stray spaces don't break Number() parsing.
+    transform: v => v.trim(),
+  }).data;
 }
 
 // Canonical product field: actual_price. compare_price is retained only so
@@ -300,12 +309,22 @@ export function getSampleShippingRates() {
  * @param {number} itemTotal  - Total value of products in the cart
  */
 export function getShippingCostPreview(rates, method, itemTotal) {
-  const row = rates.find(r => r.method?.trim().toLowerCase() === method);
+  const row = rates.find(r => r.method?.trim().toLowerCase() === method.trim().toLowerCase());
   if (!row) return 0;
+
   const cap = Number(row.item_total);
+
+  // Guard: if the sheet value couldn't be parsed as a number (NaN), something
+  // is wrong with the data — log it and fall back to charging the shipping cost
+  // so we never silently give free shipping due to a data error.
+  if (isNaN(cap)) {
+    console.warn('[Shipping] item_total could not be parsed as a number:', row.item_total);
+    return Number(row.shipping_cost) || 0;
+  }
+
   // If cart meets or exceeds the free-shipping threshold, cost is 0
   if (itemTotal >= cap) return 0;
-  return Number(row.shipping_cost);
+  return Number(row.shipping_cost) || 0;
 }
 
 // ── Validation ──
