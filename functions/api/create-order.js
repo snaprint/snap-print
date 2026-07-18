@@ -121,24 +121,17 @@ export async function onRequestPost(context) {
       });
     }
 
-    // Compute shipping cost server-side using item_total from the sheet
-    // Parses condition strings like '< 999' or '> 999'
-    function evalCondition(condStr, value) {
-      const m = String(condStr).trim().match(/^([<>]=?)\s*(\d+(?:\.\d+)?)$/);
-      if (!m) return false;
-      const threshold = Number(m[2]);
-      if (m[1] === '<')  return value <  threshold;
-      if (m[1] === '<=') return value <= threshold;
-      if (m[1] === '>')  return value >  threshold;
-      if (m[1] === '>=') return value >= threshold;
-      return false;
-    }
-
-    const matchingRate = shippingRates.find(
-      r => r.method?.trim().toLowerCase() === shippingMethod &&
-           evalCondition(r.item_total, subtotal)
+    // Compute shipping cost server-side using the item_total price cap from the sheet.
+    // Logic: item_total is a plain number (the free-shipping threshold).
+    //   - If subtotal >= item_total  →  shipping is FREE (0)
+    //   - If subtotal <  item_total  →  charge shipping_cost
+    const rateRow = shippingRates.find(
+      r => r.method?.trim().toLowerCase() === shippingMethod
     );
-    const shippingCost = matchingRate ? Number(matchingRate.shipping_cost) : 0;
+    const shippingCap  = rateRow ? Number(rateRow.item_total)   : Infinity;
+    const shippingCost = (rateRow && subtotal < shippingCap)
+      ? Number(rateRow.shipping_cost)
+      : 0;
 
     const totalAmount = subtotal + shippingCost;
     const totalAmountPaise = Math.round(totalAmount * 100);

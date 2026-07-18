@@ -10,29 +10,30 @@ import {
   showPageLoader, hidePageLoader,
 } from './utils.js';
 
-let shippingRates = [];
 let selectedMethod = 'surface';
 let shippingCost = 0;
+
+// ── Fetch shipping rates fresh from Sheets (or fall back to sample) ──
+async function fetchShippingRates() {
+  if (!CONFIG.SHIPPING_RATES_CSV_URL) return getSampleShippingRates();
+  try {
+    return await fetchCSV(CONFIG.SHIPPING_RATES_CSV_URL);
+  } catch {
+    return getSampleShippingRates();
+  }
+}
 
 // ── Init ──
 async function init() {
   const cart = getCart();
   if (cart.length === 0) { window.location.href = '/cart.html'; return; }
 
-  try {
-    shippingRates = CONFIG.SHIPPING_RATES_CSV_URL
-      ? await fetchCSV(CONFIG.SHIPPING_RATES_CSV_URL)
-      : getSampleShippingRates();
-  } catch {
-    shippingRates = getSampleShippingRates();
-  }
-
   renderOrderSummary();
   initShippingSelector();
   initPINLookup();
   initFormValidation();
   initPayButton();
-  updateShippingPrices();
+  await refreshShippingUI();
 }
 
 // ── Order Summary ──
@@ -82,26 +83,28 @@ function renderOrderSummary() {
 }
 
 // ── Shipping Prices ──
-function updateShippingPrices() {
-  const itemTotal = getCartSubtotal();  // item_total: total value of products in cart
-  const surfacePrice = getShippingCostPreview(shippingRates, 'surface', itemTotal);
-  const airPrice = getShippingCostPreview(shippingRates, 'air', itemTotal);
+// Fetches fresh rates from Sheets, updates the UI, and stores current shippingCost.
+async function refreshShippingUI() {
+  const rates = await fetchShippingRates();
+  const itemTotal = getCartSubtotal();
+
+  const surfacePrice = getShippingCostPreview(rates, 'surface', itemTotal);
+  const airPrice     = getShippingCostPreview(rates, 'air',     itemTotal);
 
   const surfaceEl = document.getElementById('shipping-surface-price');
-  const airEl = document.getElementById('shipping-air-price');
+  const airEl     = document.getElementById('shipping-air-price');
   if (surfaceEl) surfaceEl.textContent = surfacePrice === 0 ? 'Free' : formatCurrency(surfacePrice);
-  if (airEl) airEl.textContent = airPrice === 0 ? 'Free' : formatCurrency(airPrice);
+  if (airEl)     airEl.textContent     = airPrice     === 0 ? 'Free' : formatCurrency(airPrice);
 
-  shippingCost = getShippingCostPreview(shippingRates, selectedMethod, itemTotal);
-  const subtotal = itemTotal;
+  shippingCost = getShippingCostPreview(rates, selectedMethod, itemTotal);
 
   const summaryShipping = document.getElementById('summary-shipping');
-  const summaryTotal = document.getElementById('summary-total');
-  if (summaryShipping) summaryShipping.textContent = shippingCost === 0 ? 'Free' : formatCurrency(shippingCost);
-  if (summaryTotal) summaryTotal.textContent = formatCurrency(subtotal + shippingCost);
+  const summaryTotal    = document.getElementById('summary-total');
+  const payBtnText      = document.getElementById('pay-btn-text');
 
-  const payBtnText = document.getElementById('pay-btn-text');
-  if (payBtnText) payBtnText.textContent = `Pay ${formatCurrency(subtotal + shippingCost)}`;
+  if (summaryShipping) summaryShipping.textContent = shippingCost === 0 ? 'Free' : formatCurrency(shippingCost);
+  if (summaryTotal)    summaryTotal.textContent    = formatCurrency(itemTotal + shippingCost);
+  if (payBtnText)      payBtnText.textContent      = `Pay ${formatCurrency(itemTotal + shippingCost)}`;
 }
 
 // ── Shipping Selector ──
@@ -110,14 +113,15 @@ function initShippingSelector() {
   if (!selector) return;
 
   selector.querySelectorAll('.shipping-option').forEach(option => {
-    option.addEventListener('click', () => {
+    option.addEventListener('click', async () => {
       const radio = option.querySelector('input[type="radio"]');
       if (!radio) return;
       radio.checked = true;
       selectedMethod = radio.value;
       selector.querySelectorAll('.shipping-option').forEach(o => o.classList.remove('selected'));
       option.classList.add('selected');
-      updateShippingPrices();
+      // Re-fetch from Sheets every time a method is chosen
+      await refreshShippingUI();
     });
   });
 }
