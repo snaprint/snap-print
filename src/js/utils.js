@@ -3,6 +3,8 @@
    Cart, formatting, toast, helpers, sample data
    ═══════════════════════════════════════════════════════════════ */
 
+import Papa from 'papaparse';
+
 const CART_KEY = 'snaprint_cart';
 
 // ── Currency Formatting ──
@@ -137,7 +139,6 @@ export const CONFIG = {
 
 // ── CSV Helper ──
 export async function fetchCSV(url) {
-  const Papa = (await import('papaparse')).default;
   // Bypasses browser cache by adding a unique timestamp to the query string
   const cacheBusterUrl = url.includes('?') ? `${url}&_t=${Date.now()}` : `${url}?_t=${Date.now()}`;
   const response = await fetch(cacheBusterUrl, { cache: 'no-store' });

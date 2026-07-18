@@ -18,7 +18,9 @@ async function fetchShippingRates() {
   if (!CONFIG.SHIPPING_RATES_CSV_URL) return getSampleShippingRates();
   try {
     return await fetchCSV(CONFIG.SHIPPING_RATES_CSV_URL);
-  } catch {
+  } catch (err) {
+    console.warn('[Shipping] Failed to fetch live rates, using fallback:', err);
+    showToast('Could not load live shipping rates. Amounts shown may be approximate — the correct cost will be confirmed before payment.', 'info', 6000);
     return getSampleShippingRates();
   }
 }
@@ -112,14 +114,17 @@ function initShippingSelector() {
   const selector = document.getElementById('shipping-selector');
   if (!selector) return;
 
-  selector.querySelectorAll('.shipping-option').forEach(option => {
-    option.addEventListener('click', async () => {
-      const radio = option.querySelector('input[type="radio"]');
-      if (!radio) return;
-      radio.checked = true;
+  // Listen on the radio <input> directly instead of the parent <label>.
+  // On iOS Safari, clicking a <label> fires the click event TWICE (once for
+  // the label, once auto-forwarded to the inner input), which caused
+  // refreshShippingUI() to race against itself on mobile.
+  // The `change` event fires exactly once when the selection actually changes.
+  selector.querySelectorAll('input[type="radio"]').forEach(radio => {
+    radio.addEventListener('change', async () => {
+      if (!radio.checked) return; // guard: only act on the newly-selected input
       selectedMethod = radio.value;
       selector.querySelectorAll('.shipping-option').forEach(o => o.classList.remove('selected'));
-      option.classList.add('selected');
+      radio.closest('.shipping-option')?.classList.add('selected');
       // Re-fetch from Sheets every time a method is chosen
       await refreshShippingUI();
     });
