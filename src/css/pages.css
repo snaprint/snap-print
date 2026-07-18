@@ -181,12 +181,6 @@
   }
 }
 
-@media (max-width: 380px) {
-  .product-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* ── Product Detail Page ── */
 .product-detail {
   padding: var(--space-8) 0 var(--space-16);
