@@ -31,6 +31,7 @@ async function loadProduct() {
 
     renderProduct(currentProduct);
     renderRelatedProducts(currentProduct);
+    renderInstagramEmbed(currentProduct);
     document.title = `${currentProduct.name} — Snap Print`;
   } catch (err) {
     console.error('Failed to load product:', err);
@@ -249,6 +250,55 @@ function renderProduct(product) {
       if (!isOpen) item.classList.add('open');
     });
   });
+}
+
+function renderInstagramEmbed(product) {
+  const section = document.getElementById('instagram-section');
+  const grid = document.getElementById('instagram-grid');
+  if (!section || !grid) return;
+
+  // Parse comma-separated URLs
+  const urls = (product.instagram_url || '')
+    .split(',')
+    .map(u => u.trim())
+    .filter(Boolean);
+
+  if (urls.length === 0) return;
+
+  // Clean URL: extract the canonical permalink (strip query params)
+  const cleanPermalink = (rawUrl) => {
+    try {
+      const u = new URL(rawUrl);
+      // Keep only the pathname, ensure trailing slash
+      let path = u.pathname.replace(/\/+$/, '') + '/';
+      return `https://www.instagram.com${path}`;
+    } catch { return rawUrl; }
+  };
+
+  // Build one blockquote per URL
+  grid.innerHTML = urls.map(rawUrl => {
+    const permalink = cleanPermalink(rawUrl);
+    return `
+      <div class="instagram-section__item">
+        <blockquote class="instagram-media"
+          data-instgrm-permalink="${permalink}"
+          data-instgrm-version="14"
+          data-instgrm-captioned>
+        </blockquote>
+      </div>`;
+  }).join('');
+
+  section.style.display = 'block';
+
+  // Load or re-trigger Instagram embed script
+  if (window.instgrm) {
+    window.instgrm.Embeds.process();
+  } else {
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = '//www.instagram.com/embed.js';
+    document.body.appendChild(script);
+  }
 }
 
 function renderRelatedProducts(product) {

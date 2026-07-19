@@ -965,3 +965,62 @@
     font-size: var(--text-lg);
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Instagram Embed Section (Product Detail)
+   ═══════════════════════════════════════════════════════════════ */
+.instagram-section {
+  margin-top: var(--space-10);
+}
+
+.instagram-section__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.instagram-section__icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  stroke: var(--text-primary);
+}
+
+.instagram-section__grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-6);
+  margin-top: var(--space-4);
+}
+
+.instagram-section__item {
+  width: 100%;
+  max-width: 540px;
+  min-width: 0;
+}
+
+/* Override Instagram's default blockquote styling before embed.js loads */
+.instagram-section__item .instagram-media {
+  margin: 0 auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 540px !important;
+}
+
+/* Smooth fade-in when the iframe renders */
+.instagram-section__item iframe {
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 640px) {
+  .instagram-section__icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .instagram-section__item {
+    max-width: 100%;
+  }
+}
