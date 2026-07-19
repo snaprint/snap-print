@@ -996,7 +996,7 @@
 
 .instagram-section__item {
   width: 100%;
-  max-width: 400px;
+  max-width: 300px;
   min-width: 0;
 }
 
@@ -1005,7 +1005,7 @@
   margin: 0 auto !important;
   width: 100% !important;
   min-width: 0 !important;
-  max-width: 400px !important;
+  max-width: 300px !important;
 }
 
 /* Smooth fade-in when the iframe renders */
