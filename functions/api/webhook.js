@@ -216,13 +216,18 @@ async function sendConfirmationEmails(env, data) {
         ${escapeHtml(data.itemsSummary || `${data.itemCount} item(s)`)}
        </td></tr>`;
 
-  const shippingLabel = data.shippingMethod === 'speed'
-    ? 'Speed Shipping (3–5 business days)'
-    : 'Standard Shipping (5–10 business days)';
+  const methodLower = (data.shippingMethod || '').toLowerCase();
+  const shippingLabel = methodLower === 'air'
+    ? 'Air Shipping (3–5 business days)'
+    : methodLower === 'surface'
+      ? 'Surface Shipping (5–10 business days)'
+      : `${data.shippingMethod} Shipping`;
 
-  const deliveryEstimate = data.shippingMethod === 'speed'
+  const deliveryEstimate = methodLower === 'air'
     ? '3–5 business days'
-    : '5–10 business days';
+    : methodLower === 'surface'
+      ? '5–10 business days'
+      : 'We will notify you';
 
   // ── BUYER EMAIL ──
   try {
@@ -309,7 +314,7 @@ async function sendConfirmationEmails(env, data) {
 
           <table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;">
             <tr><td style="padding:4px 0;color:#666;">Subtotal</td><td style="padding:4px 0;text-align:right;">₹${data.subtotal.toLocaleString('en-IN')}</td></tr>
-            <tr><td style="padding:4px 0;color:#666;">Shipping (${data.shippingMethod})</td><td style="padding:4px 0;text-align:right;">₹${data.shippingCost.toLocaleString('en-IN')}</td></tr>
+            <tr><td style="padding:4px 0;color:#666;">${shippingLabel}</td><td style="padding:4px 0;text-align:right;">₹${data.shippingCost.toLocaleString('en-IN')}</td></tr>
             <tr style="font-weight:700;font-size:15px;"><td style="padding:8px 0;border-top:2px solid #1a1a1a;">Total Charged</td><td style="padding:8px 0;text-align:right;border-top:2px solid #1a1a1a;">₹${data.totalAmount.toLocaleString('en-IN')}</td></tr>
           </table>
 

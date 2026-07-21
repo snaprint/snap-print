@@ -5,3 +5,6 @@ dist/
 .dev.vars
 razorpay_test_key/
 project-context-version1.md
+public/images/products_png/
+public/images/hero_png/
+scripts/
