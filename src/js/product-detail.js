@@ -91,8 +91,15 @@ function renderProduct(product) {
 
     <!-- Product Info -->
     <div class="product-info">
-      <span class="product-info__category">${product.category}</span>
-      <h1 class="product-info__title">${product.name}</h1>
+      <div class="product-info__header">
+        <div>
+          <span class="product-info__category">${product.category}</span>
+          <h1 class="product-info__title">${product.name}</h1>
+        </div>
+        <button type="button" class="product-info__share" id="share-btn" aria-label="Share this product">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </button>
+      </div>
 
       <!-- Pricing -->
       <div class="product-info__pricing">
@@ -280,6 +287,35 @@ function renderProduct(product) {
 
   document.getElementById('gallery-fullscreen')?.addEventListener('click', openLightbox);
   document.getElementById('main-image')?.addEventListener('click', openLightbox);
+
+  // Share button
+  document.getElementById('share-btn')?.addEventListener('click', async () => {
+    const shareUrl = window.location.href;
+    const shareData = {
+      title: `${product.name} — Snap Print`,
+      text: `Check out ${product.name} on Snap Print!`,
+      url: shareUrl,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        showToast('Link copied to clipboard!', 'success');
+      }
+    } catch (err) {
+      // User cancelled share or clipboard failed — try fallback
+      if (err.name !== 'AbortError') {
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+          showToast('Link copied to clipboard!', 'success');
+        } catch {
+          showToast('Could not share. Copy the URL from the address bar.', 'info');
+        }
+      }
+    }
+  });
 
   // Quantity
   let quantity = 1;

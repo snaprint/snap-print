@@ -470,9 +470,50 @@
   color: var(--text-muted);
 }
 
+.product-info__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 .product-info__title {
   font-size: var(--text-2xl);
   font-weight: 800;
+}
+
+.product-info__share {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-top: var(--space-1);
+  padding: 0;
+  border: 1px solid var(--border-light);
+  border-radius: 50%;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease), background var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
+}
+
+.product-info__share:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+  background: var(--bg-muted);
+  transform: scale(1.08);
+}
+
+.product-info__share:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+.product-info__share svg {
+  width: 18px;
+  height: 18px;
 }
 
 .product-info__pricing {
