@@ -65,6 +65,9 @@ function renderProduct(product) {
       <div class="product-gallery__main">
         <img src="${mainImage}" alt="${product.name}${images.length > 1 ? ' — image 1' : ''}" id="main-image"
           onerror="this.src='${imageFallback}'" />
+        <button type="button" class="product-gallery__fullscreen" id="gallery-fullscreen" aria-label="View image fullscreen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        </button>
         ${images.length > 1 ? `
           <button type="button" class="product-gallery__nav product-gallery__nav--previous" id="gallery-previous" aria-label="View previous product image">
             <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
@@ -88,8 +91,15 @@ function renderProduct(product) {
 
     <!-- Product Info -->
     <div class="product-info">
-      <span class="product-info__category">${product.category}</span>
-      <h1 class="product-info__title">${product.name}</h1>
+      <div class="product-info__header">
+        <div>
+          <span class="product-info__category">${product.category}</span>
+          <h1 class="product-info__title">${product.name}</h1>
+        </div>
+        <button type="button" class="product-info__share" id="share-btn" aria-label="Share this product">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </button>
+      </div>
 
       <!-- Pricing -->
       <div class="product-info__pricing">
@@ -218,6 +228,93 @@ function renderProduct(product) {
     thumb.addEventListener('click', () => {
       selectGalleryImage(Number(thumb.dataset.index));
     });
+  });
+
+  // Fullscreen lightbox
+  const openLightbox = () => {
+    const overlay = document.createElement('div');
+    overlay.className = 'product-lightbox';
+    overlay.id = 'product-lightbox';
+    overlay.innerHTML = `
+      <button type="button" class="product-lightbox__close" aria-label="Close fullscreen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      ${images.length > 1 ? `
+        <button type="button" class="product-lightbox__nav product-lightbox__nav--prev" aria-label="Previous image">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <button type="button" class="product-lightbox__nav product-lightbox__nav--next" aria-label="Next image">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      ` : ''}
+      <img src="${images[activeImageIndex] || mainImage}" alt="${product.name} — fullscreen" class="product-lightbox__img" />
+      ${images.length > 1 ? `<span class="product-lightbox__count">${activeImageIndex + 1} / ${images.length}</span>` : ''}
+    `;
+    document.body.appendChild(overlay);
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(() => overlay.classList.add('open'));
+
+    const closeLightbox = () => {
+      overlay.classList.remove('open');
+      setTimeout(() => { overlay.remove(); document.body.style.overflow = ''; }, 250);
+    };
+
+    overlay.querySelector('.product-lightbox__close').addEventListener('click', closeLightbox);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeLightbox(); });
+
+    const lightboxImg = overlay.querySelector('.product-lightbox__img');
+    const lightboxCount = overlay.querySelector('.product-lightbox__count');
+
+    const updateLightboxImage = (dir) => {
+      activeImageIndex = (activeImageIndex + dir + images.length) % images.length;
+      lightboxImg.src = images[activeImageIndex];
+      lightboxImg.alt = `${product.name} — image ${activeImageIndex + 1}`;
+      if (lightboxCount) lightboxCount.textContent = `${activeImageIndex + 1} / ${images.length}`;
+      // Sync gallery thumbnails
+      selectGalleryImage(activeImageIndex);
+    };
+
+    overlay.querySelector('.product-lightbox__nav--prev')?.addEventListener('click', (e) => { e.stopPropagation(); updateLightboxImage(-1); });
+    overlay.querySelector('.product-lightbox__nav--next')?.addEventListener('click', (e) => { e.stopPropagation(); updateLightboxImage(1); });
+
+    const keyHandler = (e) => {
+      if (e.key === 'Escape') { closeLightbox(); document.removeEventListener('keydown', keyHandler); }
+      if (e.key === 'ArrowLeft' && images.length > 1) updateLightboxImage(-1);
+      if (e.key === 'ArrowRight' && images.length > 1) updateLightboxImage(1);
+    };
+    document.addEventListener('keydown', keyHandler);
+  };
+
+  document.getElementById('gallery-fullscreen')?.addEventListener('click', openLightbox);
+  document.getElementById('main-image')?.addEventListener('click', openLightbox);
+
+  // Share button
+  document.getElementById('share-btn')?.addEventListener('click', async () => {
+    const shareUrl = window.location.href;
+    const shareData = {
+      title: `${product.name} — Snap Print`,
+      text: `Check out ${product.name} on Snap Print!`,
+      url: shareUrl,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        showToast('Link copied to clipboard!', 'success');
+      }
+    } catch (err) {
+      // User cancelled share or clipboard failed — try fallback
+      if (err.name !== 'AbortError') {
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+          showToast('Link copied to clipboard!', 'success');
+        } catch {
+          showToast('Could not share. Copy the URL from the address bar.', 'info');
+        }
+      }
+    }
   });
 
   // Quantity
