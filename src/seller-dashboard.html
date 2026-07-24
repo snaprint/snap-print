@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seller Dashboard — Snap Print</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="stylesheet" href="./css/index.css" />
+  <link rel="stylesheet" href="./css/components.css" />
+  <style>
+    /* ── Seller Dashboard Styles ── */
+
+    /* Top bar */
+    .seller-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg-base);
+      border-bottom: 1px solid var(--border-light);
+      padding: var(--space-3) var(--space-6);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .seller-topbar__logo {
+      font-size: var(--text-base);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      text-transform: uppercase;
+      color: var(--text-primary);
+      text-decoration: none;
+    }
+
+    .seller-topbar__right {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
+    .seller-topbar__user {
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+    }
+
+    .seller-topbar__user strong {
+      color: var(--text-primary);
+    }
+
+    .btn-logout {
+      font-size: var(--text-xs);
+      padding: 6px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-default);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-logout:hover {
+      background: #fff5f5;
+      border-color: #e53e3e;
+      color: #e53e3e;
+    }
+
+    /* Main content */
+    .seller-page {
+      min-height: calc(100vh - 52px);
+      display: flex;
+      justify-content: center;
+      padding: var(--space-10) var(--space-4) var(--space-20);
+      background: var(--bg-base);
+    }
+
+    .seller-card {
+      width: 100%;
+      max-width: 580px;
+      animation: fadeInUp 0.5s ease-out;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .seller-card__header {
+      margin-bottom: var(--space-8);
+    }
+
+    .seller-card__title {
+      font-size: var(--text-2xl);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: var(--space-2);
+    }
+
+    .seller-card__subtitle {
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+      line-height: var(--leading-relaxed);
+    }
+
+    /* Form */
+    .seller-form-box {
+      background: var(--bg-muted);
+      border-radius: var(--radius-xl);
+      padding: var(--space-8);
+    }
+
+    .seller-form {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4);
+    }
+
+    /* Shipment partner "Other" input */
+    .partner-other-input {
+      display: none;
+      margin-top: var(--space-2);
+    }
+
+    .partner-other-input.visible {
+      display: block;
+    }
+
+    /* ── Items Autocomplete ── */
+    .items-field {
+      position: relative;
+    }
+
+    .items-search-wrapper {
+      position: relative;
+    }
+
+    .items-search-wrapper .form-input {
+      padding-left: 36px;
+    }
+
+    .items-search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .items-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      max-height: 200px;
+      overflow-y: auto;
+      background: var(--bg-base);
+      border: 1px solid var(--border-default);
+      border-top: none;
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    .items-dropdown.open {
+      display: block;
+    }
+
+    .items-dropdown__item {
+      padding: 10px 14px;
+      font-size: var(--text-sm);
+      cursor: pointer;
+      transition: background 0.1s ease;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .items-dropdown__item:last-child {
+      border-bottom: none;
+    }
+
+    .items-dropdown__item:hover,
+    .items-dropdown__item.active {
+      background: var(--bg-muted);
+    }
+
+    .items-dropdown__item mark {
+      background: #fef3c7;
+      color: inherit;
+      padding: 0 1px;
+      border-radius: 2px;
+    }
+
+    .items-dropdown__empty {
+      padding: 12px 14px;
+      font-size: var(--text-sm);
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* Selected items chips */
+    .items-chips {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      margin-top: var(--space-3);
+    }
+
+    .item-chip {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      background: var(--bg-base);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: 8px 12px;
+      animation: fadeInUp 0.2s ease-out;
+    }
+
+    .item-chip__name {
+      flex: 1;
+      font-size: var(--text-sm);
+      font-weight: 500;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .item-chip__qty {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      flex-shrink: 0;
+    }
+
+    .item-chip__qty-btn {
+      width: 26px;
+      height: 26px;
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      background: var(--bg-base);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      transition: all 0.1s ease;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .item-chip__qty-btn:hover {
+      background: var(--bg-muted);
+      border-color: var(--text-secondary);
+    }
+
+    .item-chip__qty-val {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      min-width: 20px;
+      text-align: center;
+    }
+
+    .item-chip__remove {
+      width: 24px;
+      height: 24px;
+      border: none;
+      border-radius: var(--radius-full);
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      transition: all 0.15s ease;
+      padding: 0;
+      flex-shrink: 0;
+    }
+
+    .item-chip__remove:hover {
+      background: #fff5f5;
+      color: #e53e3e;
+    }
+
+    .item-chip__remove svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Success toast */
+    .seller-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #065f46;
+      color: #ecfdf5;
+      padding: 12px 24px;
+      border-radius: var(--radius-lg);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      opacity: 0;
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+
+    .seller-toast.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .seller-toast.error {
+      background: #991b1b;
+      color: #fef2f2;
+    }
+
+    /* Form divider */
+    .form-divider {
+      height: 1px;
+      background: var(--border-light);
+      margin: var(--space-1) 0;
+    }
+
+    @media (max-width: 520px) {
+      .seller-form-box { padding: var(--space-6); }
+      .form-row { grid-template-columns: 1fr; }
+      .seller-topbar { padding: var(--space-3) var(--space-4); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <header class="seller-topbar">
+    <a href="/" class="seller-topbar__logo">SNAP PRINT</a>
+    <div class="seller-topbar__right">
+      <span class="seller-topbar__user">Logged in as <strong id="seller-username">—</strong></span>
+      <button class="btn-logout" id="btn-logout">Logout</button>
+    </div>
+  </header>
+
+  <main class="seller-page">
+    <div class="seller-card">
+
+      <!-- Header -->
+      <div class="seller-card__header">
+        <h1 class="seller-card__title">Send Shipment Notification</h1>
+        <p class="seller-card__subtitle">Notify a buyer that their order has been shipped. An email will be sent from <strong>orders@snaprint.in</strong>.</p>
+      </div>
+
+      <!-- Form -->
+      <div class="seller-form-box">
+        <form class="seller-form" id="shipment-form" novalidate>
+
+          <!-- Buyer info -->
+          <div class="form-row">
+            <div class="form-group" id="group-buyer-name">
+              <label class="form-label" for="buyer-name">
+                Buyer Name <span class="required">*</span>
+              </label>
+              <input class="form-input" type="text" id="buyer-name" placeholder="John Doe" required />
+              <span class="form-error">Buyer name is required</span>
+            </div>
+            <div class="form-group" id="group-buyer-email">
+              <label class="form-label" for="buyer-email">
+                Buyer Email <span class="required">*</span>
+              </label>
+              <input class="form-input" type="email" id="buyer-email" placeholder="buyer@example.com" required inputmode="email" />
+              <span class="form-error">Enter a valid email</span>
+            </div>
+          </div>
+
+          <!-- Order ID -->
+          <div class="form-group" id="group-order-id">
+            <label class="form-label" for="order-id">
+              Order ID <span style="font-weight:400;color:var(--text-muted);">(optional)</span>
+            </label>
+            <input class="form-input" type="text" id="order-id" placeholder="order_xyz123" />
+          </div>
+
+          <div class="form-divider"></div>
+
+          <!-- Shipment partner -->
+          <div class="form-group" id="group-shipment-partner">
+            <label class="form-label" for="shipment-partner">
+              Shipment Partner <span class="required">*</span>
+            </label>
+            <select class="form-input" id="shipment-partner" required>
+              <option value="" disabled selected>Select a shipping partner</option>
+              <option value="Shiprocket">Shiprocket</option>
+              <option value="Delhivery">Delhivery</option>
+              <option value="India Post">India Post</option>
+              <option value="BlueDart">BlueDart</option>
+              <option value="DTDC">DTDC</option>
+              <option value="Ekart">Ekart</option>
+              <option value="__other__">Other…</option>
+            </select>
+            <input class="form-input partner-other-input" type="text" id="partner-other" placeholder="Enter partner name" />
+            <span class="form-error">Shipment partner is required</span>
+          </div>
+
+          <!-- Tracking link -->
+          <div class="form-group" id="group-tracking-link">
+            <label class="form-label" for="tracking-link">
+              Tracking Link <span style="font-weight:400;color:var(--text-muted);">(optional)</span>
+            </label>
+            <input class="form-input" type="url" id="tracking-link" placeholder="https://tracking.example.com/..." />
+          </div>
+
+          <div class="form-divider"></div>
+
+          <!-- Items in shipment -->
+          <div class="form-group items-field" id="group-items">
+            <label class="form-label" for="items-search">
+              Items in Shipment <span style="font-weight:400;color:var(--text-muted);">(optional)</span>
+            </label>
+            <div class="items-search-wrapper">
+              <svg class="items-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input class="form-input" type="text" id="items-search" placeholder="Type to search products…" autocomplete="off" />
+              <div class="items-dropdown" id="items-dropdown"></div>
+            </div>
+            <div class="items-chips" id="items-chips"></div>
+          </div>
+
+          <!-- Submit -->
+          <button class="btn btn-primary btn-md btn-full" type="submit" id="send-submit">
+            <span id="send-submit-text">Send Shipment Email</span>
+          </button>
+
+        </form>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Toast notification -->
+  <div class="seller-toast" id="seller-toast"></div>
+
+  <script type="module" src="./js/seller-dashboard.js"></script>
+</body>
+</html>

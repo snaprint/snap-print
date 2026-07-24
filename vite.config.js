@@ -21,6 +21,8 @@ export default defineConfig({
         'shipping-policy': resolve(__dirname, 'src/shipping-policy.html'),
         terms: resolve(__dirname, 'src/terms.html'),
         'privacy-policy': resolve(__dirname, 'src/privacy-policy.html'),
+        'seller-login': resolve(__dirname, 'src/seller-login.html'),
+        'seller-dashboard': resolve(__dirname, 'src/seller-dashboard.html'),
       },
     },
   },

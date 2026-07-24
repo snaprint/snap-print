@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seller Login — Snap Print</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="stylesheet" href="./css/index.css" />
+  <link rel="stylesheet" href="./css/components.css" />
+  <style>
+    /* ── Seller Login Page ── */
+    .seller-login-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-6);
+      background: var(--bg-base);
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 400px;
+      animation: fadeInUp 0.5s ease-out;
+    }
+
+    .login-card__header {
+      text-align: center;
+      margin-bottom: var(--space-8);
+    }
+
+    .login-card__logo {
+      font-size: var(--text-xl);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      text-transform: uppercase;
+      color: var(--text-primary);
+      text-decoration: none;
+      display: inline-block;
+      margin-bottom: var(--space-6);
+    }
+
+    .login-card__title {
+      font-size: var(--text-2xl);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: var(--space-2);
+    }
+
+    .login-card__subtitle {
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+    }
+
+    .login-form-box {
+      background: var(--bg-muted);
+      border-radius: var(--radius-xl);
+      padding: var(--space-8);
+    }
+
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+    }
+
+    .login-error {
+      display: none;
+      background: #fff5f5;
+      border: 1px solid #fed7d7;
+      border-radius: var(--radius-lg);
+      padding: var(--space-3) var(--space-4);
+      font-size: var(--text-sm);
+      color: #c53030;
+      text-align: center;
+      animation: shake 0.4s ease-in-out;
+    }
+
+    .login-error.visible {
+      display: block;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Password field with toggle */
+    .password-wrapper {
+      position: relative;
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .password-toggle:hover {
+      color: var(--text-primary);
+    }
+
+    .password-toggle svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .login-form .form-input {
+      width: 100%;
+    }
+
+    @media (max-width: 480px) {
+      .login-form-box { padding: var(--space-6); }
+    }
+  </style>
+</head>
+<body>
+  <main class="seller-login-page">
+    <div class="login-card">
+
+      <!-- Header -->
+      <div class="login-card__header">
+        <a href="/" class="login-card__logo">SNAP PRINT</a>
+        <h1 class="login-card__title">Seller Login</h1>
+        <p class="login-card__subtitle">Sign in to access the seller dashboard</p>
+      </div>
+
+      <!-- Login Form -->
+      <div class="login-form-box">
+        <form class="login-form" id="login-form" novalidate>
+
+          <div class="form-group" id="group-username">
+            <label class="form-label" for="login-username">Username</label>
+            <input
+              class="form-input"
+              type="text"
+              id="login-username"
+              placeholder="Enter your username"
+              required
+              autocomplete="username"
+              autocapitalize="none"
+              spellcheck="false"
+            />
+          </div>
+
+          <div class="form-group" id="group-password">
+            <label class="form-label" for="login-password">Password</label>
+            <div class="password-wrapper">
+              <input
+                class="form-input"
+                type="password"
+                id="login-password"
+                placeholder="Enter your password"
+                required
+                autocomplete="current-password"
+              />
+              <button type="button" class="password-toggle" id="password-toggle" aria-label="Toggle password visibility">
+                <svg id="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Error message -->
+          <div class="login-error" id="login-error" role="alert"></div>
+
+          <button class="btn btn-primary btn-md btn-full" type="submit" id="login-submit">
+            <span id="login-submit-text">Sign In</span>
+          </button>
+
+        </form>
+      </div>
+
+    </div>
+  </main>
+
+  <script type="module" src="./js/seller-login.js"></script>
+</body>
+</html>
