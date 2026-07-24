@@ -134,6 +134,7 @@
     /* ── Items Autocomplete ── */
     .items-field {
       position: relative;
+      z-index: 10;
     }
 
     .items-search-wrapper {
@@ -161,14 +162,21 @@
       top: 100%;
       left: 0;
       right: 0;
-      z-index: 50;
+      z-index: 100;
       max-height: 200px;
       overflow-y: auto;
       background: var(--bg-base);
       border: 1px solid var(--border-default);
       border-top: none;
       border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+    }
+
+    /* Submit button — placed outside the form card */
+    .seller-submit-wrapper {
+      margin-top: var(--space-6);
+      position: relative;
+      z-index: 1;
     }
 
     .items-dropdown.open {
@@ -437,12 +445,14 @@
             <div class="items-chips" id="items-chips"></div>
           </div>
 
-          <!-- Submit -->
-          <button class="btn btn-primary btn-md btn-full" type="submit" id="send-submit">
-            <span id="send-submit-text">Send Shipment Email</span>
-          </button>
-
         </form>
+      </div>
+
+      <!-- Submit button — outside the card to avoid dropdown overlap -->
+      <div class="seller-submit-wrapper">
+        <button class="btn btn-primary btn-md btn-full" type="submit" form="shipment-form" id="send-submit">
+          <span id="send-submit-text">Send Shipment Email</span>
+        </button>
       </div>
 
     </div>
