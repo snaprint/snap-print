@@ -37,14 +37,21 @@ export async function onRequest(context) {
 }
 
 function corsHeaders(request) {
-  const origin = request.headers.get('Origin') || '*';
+  const origin = request.headers.get('Origin') || '';
   
-  // In production, restrict to your domain
-  // const allowedOrigins = ['https://snaprint.in', 'https://www.snaprint.in'];
-  // const corsOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+  // Only allow requests from our own domains (and localhost for dev)
+  const allowedOrigins = [
+    'https://snaprint.in',
+    'https://www.snaprint.in',
+    'https://dev.snap-print.pages.dev',
+    'http://localhost:3000',
+    'http://localhost:8788',
+  ];
+
+  const corsOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
 
   return {
-    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Origin': corsOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Max-Age': '86400',
