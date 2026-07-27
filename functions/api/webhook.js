@@ -136,25 +136,38 @@ export async function onRequestPost(context) {
       timestamp: new Date().toISOString(),
     };
 
-    // ── 7. Log to Google Sheets (best-effort) ──
-    try {
-      await logToGoogleSheets(env, orderData);
-    } catch (sheetErr) {
-      console.error('Google Sheets logging failed:', sheetErr);
-    }
-
-    // ── 8. Send confirmation emails (best-effort) ──
-    try {
-      await sendConfirmationEmails(env, orderData);
-    } catch (emailErr) {
-      console.error('Email sending failed:', emailErr);
-    }
+    // ── 7. Return 200 immediately — run heavy work in background ──
+    // Razorpay has a ~5s webhook timeout. If we don't respond fast,
+    // it retries → hits a different edge worker → KV hasn't propagated
+    // yet (eventually consistent, up to 60s) → duplicate emails.
+    // Fix: respond instantly, do Sheets + emails via waitUntil().
+    context.waitUntil(processOrderBackground(env, orderData));
 
     return jsonResponse({ received: true, order_id: orderId });
 
   } catch (err) {
     console.error('Webhook processing error:', err);
     return jsonError('Internal server error', 500);
+  }
+}
+
+/**
+ * Runs in the background after the 200 response has been sent to Razorpay.
+ * Google Sheets logging + confirmation emails — both best-effort.
+ */
+async function processOrderBackground(env, orderData) {
+  // ── Log to Google Sheets ──
+  try {
+    await logToGoogleSheets(env, orderData);
+  } catch (sheetErr) {
+    console.error('Google Sheets logging failed:', sheetErr);
+  }
+
+  // ── Send confirmation emails ──
+  try {
+    await sendConfirmationEmails(env, orderData);
+  } catch (emailErr) {
+    console.error('Email sending failed:', emailErr);
   }
 }
 
