@@ -285,7 +285,7 @@ async function sendConfirmationEmails(env, data) {
           <p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #eee;padding-top:16px;">— Team Snap Print<br>snaprint.in</p>
         </div>
       `,
-    });
+    }, 3, `order-confirmed/${data.paymentId}-buyer`);
   } catch (buyerErr) {
     console.error('Buyer confirmation email failed:', buyerErr);
   }
@@ -345,7 +345,7 @@ async function sendConfirmationEmails(env, data) {
           <p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #eee;padding-top:16px;">Automated notification from Snap Print webhook</p>
         </div>
       `,
-    });
+    }, 3, `order-received/${data.paymentId}-seller`);
   } catch (sellerErr) {
     console.error('Seller notification email failed:', sellerErr);
   }
@@ -360,21 +360,31 @@ function sleep(ms) {
 // Retries up to maxRetries times on 429 rate-limit responses.
 // Reads the Retry-After header from Resend; falls back to exponential backoff.
 // Any non-429 error (4xx/5xx) is thrown immediately — no retry.
-async function sendEmailWithRetry(apiKey, emailData, maxRetries = 3) {
+// idempotencyKey: optional Resend Idempotency-Key header to prevent duplicate sends.
+async function sendEmailWithRetry(apiKey, emailData, maxRetries = 3, idempotencyKey = '') {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const headers = {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'User-Agent': 'SnapPrint-Webhook/1.0',
+    };
+
+    // Resend deduplicates requests with the same Idempotency-Key within 24 hours.
+    // This closes the TOCTOU race condition: even if two webhook workers both
+    // call Resend, only the first request's email is actually sent.
+    if (idempotencyKey) {
+      headers['Idempotency-Key'] = idempotencyKey;
+    }
+
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'User-Agent': 'SnapPrint-Webhook/1.0',
-      },
+      headers,
       body: JSON.stringify(emailData),
     });
 
     // Success
     if (response.ok) {
-      console.log(`Email sent to ${emailData.to} (attempt ${attempt + 1})`);
+      console.log(`Email sent to ${emailData.to} (attempt ${attempt + 1}${idempotencyKey ? ', idempotency-key: ' + idempotencyKey : ''})`);
       return;
     }
 
