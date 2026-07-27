@@ -157,7 +157,7 @@ export async function onRequestPost(context) {
 
   } catch (err) {
     console.error('Send shipment error:', err);
-    return jsonError(err.message || 'Internal server error', 500);
+    return jsonError('Something went wrong. Please try again.', 500);
   }
 }
 
