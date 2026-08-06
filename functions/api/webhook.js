@@ -153,17 +153,9 @@ export async function onRequestPost(context) {
 
 /**
  * Runs in the background after the 200 response has been sent to Razorpay.
- * Google Sheets logging + confirmation emails — both best-effort.
+ * Sends buyer + seller confirmation emails.
  */
 async function processOrderBackground(env, orderData) {
-  // ── Log to Google Sheets ──
-  try {
-    await logToGoogleSheets(env, orderData);
-  } catch (sheetErr) {
-    console.error('Google Sheets logging failed:', sheetErr);
-  }
-
-  // ── Send confirmation emails ──
   try {
     await sendConfirmationEmails(env, orderData);
   } catch (emailErr) {
@@ -407,111 +399,7 @@ async function sendEmailWithRetry(apiKey, emailData, maxRetries = 3, idempotency
   throw new Error(`Resend rate limit: exhausted ${maxRetries} retries for ${emailData.to}`);
 }
 
-// ═══════════════════════════════════════════════════════════════
-// Google Sheets Logging
-// ═══════════════════════════════════════════════════════════════
-async function logToGoogleSheets(env, data) {
-  const serviceAccountJSON = env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!serviceAccountJSON) {
-    console.log('Google Sheets logging skipped (no service account configured)');
-    console.log('Order data:', JSON.stringify(data));
-    return;
-  }
 
-  const creds = JSON.parse(serviceAccountJSON);
-  const token = await getGoogleAccessToken(creds);
-
-  const spreadsheetId = env.GOOGLE_SPREADSHEET_ID;
-  if (!spreadsheetId) {
-    console.error('GOOGLE_SPREADSHEET_ID not set');
-    return;
-  }
-
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Orders!A:N:append?valueInputOption=USER_ENTERED`;
-  
-  const row = [
-    data.timestamp,
-    data.orderId,
-    data.paymentId,
-    data.totalAmount,
-    data.subtotal,
-    data.shippingCost,
-    data.shippingMethod,
-    data.buyerName,
-    data.buyerEmail,
-    data.buyerPhone,
-    `${data.buyerAddress}, ${data.buyerCity}, ${data.buyerState} ${data.buyerPincode}`,
-    data.itemsSummary,
-    data.itemCount,
-    'PAID',
-  ];
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ values: [row] }),
-  });
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Sheets API error: ${err}`);
-  }
-
-  console.log('Order logged to Google Sheets successfully');
-}
-
-// ── Google OAuth2 JWT Token ──
-async function getGoogleAccessToken(credentials) {
-  const now = Math.floor(Date.now() / 1000);
-  const header = { alg: 'RS256', typ: 'JWT' };
-  const payload = {
-    iss: credentials.client_email,
-    scope: 'https://www.googleapis.com/auth/spreadsheets',
-    aud: 'https://oauth2.googleapis.com/token',
-    iat: now,
-    exp: now + 3600,
-  };
-
-  const headerB64 = btoa(JSON.stringify(header));
-  const payloadB64 = btoa(JSON.stringify(payload));
-  const unsignedToken = `${headerB64}.${payloadB64}`;
-
-  const pemContent = credentials.private_key
-    .replace('-----BEGIN PRIVATE KEY-----', '')
-    .replace('-----END PRIVATE KEY-----', '')
-    .replace(/\s/g, '');
-
-  const keyData = Uint8Array.from(atob(pemContent), c => c.charCodeAt(0));
-  const key = await crypto.subtle.importKey(
-    'pkcs8', keyData,
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    false, ['sign']
-  );
-
-  const encoder = new TextEncoder();
-  const signatureBuffer = await crypto.subtle.sign(
-    'RSASSA-PKCS1-v1_5', key, encoder.encode(unsignedToken)
-  );
-
-  const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)));
-  const jwt = `${unsignedToken}.${signatureB64}`;
-
-  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
-  });
-
-  if (!tokenResponse.ok) {
-    throw new Error('Failed to get Google access token');
-  }
-
-  const tokenData = await tokenResponse.json();
-  return tokenData.access_token;
-}
 
 // ═══════════════════════════════════════════════════════════════
 // Helpers
