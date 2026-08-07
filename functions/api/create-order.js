@@ -9,8 +9,9 @@
    ═══════════════════════════════════════════════════════════════ */
 
 // Simple CSV parser (no external deps in Pages Functions)
+// Handles multi-line quoted fields (e.g. descriptions with line breaks)
 function parseCSV(text) {
-  const lines = text.split('\n').filter(l => l.trim());
+  const lines = splitCSVRows(text);
   if (lines.length === 0) return [];
 
   const headers = parseCSVLine(lines[0]);
@@ -24,6 +25,36 @@ function parseCSV(text) {
     });
     return obj;
   });
+}
+
+/**
+ * Splits raw CSV text into rows, respecting quoted fields that contain newlines.
+ * A newline inside a quoted field is part of the cell value, not a row boundary.
+ */
+function splitCSVRows(text) {
+  const rows = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+
+    if (char === '"') {
+      inQuotes = !inQuotes;
+      current += char;
+    } else if ((char === '\n' || char === '\r') && !inQuotes) {
+      // Row boundary (only outside quotes)
+      if (char === '\r' && text[i + 1] === '\n') i++; // skip \r\n pair
+      if (current.trim()) rows.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+
+  // Last row (may not end with newline)
+  if (current.trim()) rows.push(current);
+  return rows;
 }
 
 function parseCSVLine(line) {
