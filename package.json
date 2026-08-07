@@ -11,7 +11,6 @@
     "deploy": "vite build && npx wrangler pages deploy dist/"
   },
   "dependencies": {
-    "marked": "^15.0.0",
     "papaparse": "^5.4.1"
   },
   "devDependencies": {
