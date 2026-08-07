@@ -23,6 +23,7 @@ export default defineConfig({
         'privacy-policy': resolve(__dirname, 'src/privacy-policy.html'),
         'seller-login': resolve(__dirname, 'src/seller-login.html'),
         'seller-dashboard': resolve(__dirname, 'src/seller-dashboard.html'),
+        'cancel-order': resolve(__dirname, 'src/cancel-order.html'),
       },
     },
   },

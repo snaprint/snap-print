@@ -153,17 +153,9 @@ export async function onRequestPost(context) {
 
 /**
  * Runs in the background after the 200 response has been sent to Razorpay.
- * Google Sheets logging + confirmation emails — both best-effort.
+ * Sends buyer + seller confirmation emails.
  */
 async function processOrderBackground(env, orderData) {
-  // ── Log to Google Sheets ──
-  try {
-    await logToGoogleSheets(env, orderData);
-  } catch (sheetErr) {
-    console.error('Google Sheets logging failed:', sheetErr);
-  }
-
-  // ── Send confirmation emails ──
   try {
     await sendConfirmationEmails(env, orderData);
   } catch (emailErr) {
@@ -285,7 +277,7 @@ async function sendConfirmationEmails(env, data) {
           <p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #eee;padding-top:16px;">— Team Snap Print<br>snaprint.in</p>
         </div>
       `,
-    });
+    }, 3, `order-confirmed/${data.paymentId}-buyer`);
   } catch (buyerErr) {
     console.error('Buyer confirmation email failed:', buyerErr);
   }
@@ -345,7 +337,7 @@ async function sendConfirmationEmails(env, data) {
           <p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #eee;padding-top:16px;">Automated notification from Snap Print webhook</p>
         </div>
       `,
-    });
+    }, 3, `order-received/${data.paymentId}-seller`);
   } catch (sellerErr) {
     console.error('Seller notification email failed:', sellerErr);
   }
@@ -360,21 +352,31 @@ function sleep(ms) {
 // Retries up to maxRetries times on 429 rate-limit responses.
 // Reads the Retry-After header from Resend; falls back to exponential backoff.
 // Any non-429 error (4xx/5xx) is thrown immediately — no retry.
-async function sendEmailWithRetry(apiKey, emailData, maxRetries = 3) {
+// idempotencyKey: optional Resend Idempotency-Key header to prevent duplicate sends.
+async function sendEmailWithRetry(apiKey, emailData, maxRetries = 3, idempotencyKey = '') {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const headers = {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'User-Agent': 'SnapPrint-Webhook/1.0',
+    };
+
+    // Resend deduplicates requests with the same Idempotency-Key within 24 hours.
+    // This closes the TOCTOU race condition: even if two webhook workers both
+    // call Resend, only the first request's email is actually sent.
+    if (idempotencyKey) {
+      headers['Idempotency-Key'] = idempotencyKey;
+    }
+
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'User-Agent': 'SnapPrint-Webhook/1.0',
-      },
+      headers,
       body: JSON.stringify(emailData),
     });
 
     // Success
     if (response.ok) {
-      console.log(`Email sent to ${emailData.to} (attempt ${attempt + 1})`);
+      console.log(`Email sent to ${emailData.to} (attempt ${attempt + 1}${idempotencyKey ? ', idempotency-key: ' + idempotencyKey : ''})`);
       return;
     }
 
@@ -397,111 +399,7 @@ async function sendEmailWithRetry(apiKey, emailData, maxRetries = 3) {
   throw new Error(`Resend rate limit: exhausted ${maxRetries} retries for ${emailData.to}`);
 }
 
-// ═══════════════════════════════════════════════════════════════
-// Google Sheets Logging
-// ═══════════════════════════════════════════════════════════════
-async function logToGoogleSheets(env, data) {
-  const serviceAccountJSON = env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!serviceAccountJSON) {
-    console.log('Google Sheets logging skipped (no service account configured)');
-    console.log('Order data:', JSON.stringify(data));
-    return;
-  }
 
-  const creds = JSON.parse(serviceAccountJSON);
-  const token = await getGoogleAccessToken(creds);
-
-  const spreadsheetId = env.GOOGLE_SPREADSHEET_ID;
-  if (!spreadsheetId) {
-    console.error('GOOGLE_SPREADSHEET_ID not set');
-    return;
-  }
-
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Orders!A:N:append?valueInputOption=USER_ENTERED`;
-  
-  const row = [
-    data.timestamp,
-    data.orderId,
-    data.paymentId,
-    data.totalAmount,
-    data.subtotal,
-    data.shippingCost,
-    data.shippingMethod,
-    data.buyerName,
-    data.buyerEmail,
-    data.buyerPhone,
-    `${data.buyerAddress}, ${data.buyerCity}, ${data.buyerState} ${data.buyerPincode}`,
-    data.itemsSummary,
-    data.itemCount,
-    'PAID',
-  ];
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ values: [row] }),
-  });
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Sheets API error: ${err}`);
-  }
-
-  console.log('Order logged to Google Sheets successfully');
-}
-
-// ── Google OAuth2 JWT Token ──
-async function getGoogleAccessToken(credentials) {
-  const now = Math.floor(Date.now() / 1000);
-  const header = { alg: 'RS256', typ: 'JWT' };
-  const payload = {
-    iss: credentials.client_email,
-    scope: 'https://www.googleapis.com/auth/spreadsheets',
-    aud: 'https://oauth2.googleapis.com/token',
-    iat: now,
-    exp: now + 3600,
-  };
-
-  const headerB64 = btoa(JSON.stringify(header));
-  const payloadB64 = btoa(JSON.stringify(payload));
-  const unsignedToken = `${headerB64}.${payloadB64}`;
-
-  const pemContent = credentials.private_key
-    .replace('-----BEGIN PRIVATE KEY-----', '')
-    .replace('-----END PRIVATE KEY-----', '')
-    .replace(/\s/g, '');
-
-  const keyData = Uint8Array.from(atob(pemContent), c => c.charCodeAt(0));
-  const key = await crypto.subtle.importKey(
-    'pkcs8', keyData,
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    false, ['sign']
-  );
-
-  const encoder = new TextEncoder();
-  const signatureBuffer = await crypto.subtle.sign(
-    'RSASSA-PKCS1-v1_5', key, encoder.encode(unsignedToken)
-  );
-
-  const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)));
-  const jwt = `${unsignedToken}.${signatureB64}`;
-
-  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
-  });
-
-  if (!tokenResponse.ok) {
-    throw new Error('Failed to get Google access token');
-  }
-
-  const tokenData = await tokenResponse.json();
-  return tokenData.access_token;
-}
 
 // ═══════════════════════════════════════════════════════════════
 // Helpers
