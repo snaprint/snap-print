@@ -3,10 +3,43 @@
    Gallery, specs, dual CTAs, trust row, embedded FAQ
    ═══════════════════════════════════════════════════════════════ */
 
+import { marked } from 'marked';
 import {
   getSampleProducts, CONFIG, fetchCSV, normalizeProduct, addToCart, clearCart,
   formatCurrency, getDiscountPercent, showToast, resolveImageUrl,
 } from './utils.js';
+
+// ── Marked Configuration ──
+// Disable raw HTML passthrough so HTML typed in the Sheet cell is escaped,
+// not rendered (XSS-safe). Only Markdown syntax produces HTML output.
+marked.setOptions({
+  breaks: true,   // Convert single line breaks to <br> (matches Alt+Enter in Sheets)
+  gfm: true,      // GitHub Flavored Markdown (tables, strikethrough, etc.)
+});
+
+/**
+ * Parses a product description as Markdown → HTML.
+ * Returns safe, styled HTML or a plain-text fallback.
+ */
+function parseMarkdown(raw) {
+  if (!raw || !raw.trim()) {
+    return '<p class="product-info__desc-empty">No description available.</p>';
+  }
+  try {
+    // marked.parse() returns HTML from Markdown input.
+    // Any raw HTML in the input is escaped by default in marked v15+.
+    return marked.parse(raw);
+  } catch (err) {
+    console.warn('Markdown parse failed, falling back to plain text:', err);
+    // Escape HTML manually as a safe fallback
+    const escaped = raw
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+    return `<p>${escaped}</p>`;
+  }
+}
 
 let currentProduct = null;
 let allProducts = [];
@@ -117,7 +150,7 @@ function renderProduct(product) {
         ${!isOutOfStock && !isMadeToOrder && product.stock ? `<span class="badge badge-stock">In Stock (${product.stock} left)</span>` : ''}
       </div>
 
-      <p class="product-info__desc">${product.description || 'No description available.'}</p>
+      <div class="product-info__desc product-info__desc--rich">${parseMarkdown(product.description)}</div>
 
       <!-- Specs -->
       ${product.material || product.dimensions || product.weight_g ? `
