@@ -1,4 +1,13 @@
+# Snap Print — robots.txt
+
 User-agent: *
 Allow: /
+
+# Block internal/private pages from search engines
+Disallow: /seller-login.html
+Disallow: /seller-dashboard.html
+Disallow: /checkout.html
+Disallow: /cart.html
+Disallow: /thank-you.html
 
 Sitemap: https://snaprint.in/sitemap.xml
