@@ -639,7 +639,6 @@
 
   .product-gallery { position: static; }
   .product-gallery__nav { opacity: 1; width: 40px; height: 40px; }
-  .product-gallery__main img { touch-action: pan-y pinch-zoom; }
   .product-info__specs { grid-template-columns: 1fr; }
 
   .product-gallery__thumbs {

@@ -234,48 +234,6 @@ function renderProduct(product) {
     });
   });
 
-  // Touch swipe support on main gallery image
-  const galleryMain = layout.querySelector('.product-gallery__main');
-  if (galleryMain && images.length > 1) {
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let isSwiping = false;
-
-    galleryMain.addEventListener('touchstart', (e) => {
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-      isSwiping = false;
-    }, { passive: true });
-
-    galleryMain.addEventListener('touchmove', (e) => {
-      if (!touchStartX) return;
-      const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
-      const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
-      // Only treat as swipe if horizontal movement exceeds vertical
-      if (deltaX > deltaY && deltaX > 10) {
-        isSwiping = true;
-        e.preventDefault();
-      }
-    }, { passive: false });
-
-    galleryMain.addEventListener('touchend', (e) => {
-      if (!isSwiping) { touchStartX = 0; return; }
-      const touchEndX = e.changedTouches[0].clientX;
-      const diff = touchStartX - touchEndX;
-      const threshold = 40;
-
-      if (Math.abs(diff) >= threshold) {
-        if (diff > 0) {
-          selectGalleryImage(activeImageIndex + 1); // swipe left → next
-        } else {
-          selectGalleryImage(activeImageIndex - 1); // swipe right → previous
-        }
-      }
-      touchStartX = 0;
-      isSwiping = false;
-    }, { passive: true });
-  }
-
   // Fullscreen lightbox
   const openLightbox = () => {
     const overlay = document.createElement('div');
