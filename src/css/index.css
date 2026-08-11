@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
    SNAP PRINT — Design System
-   Clean, minimal, Shopify-style light theme
-   Product photos carry the color — chrome stays quiet
+   Warm, relaxing beige theme — "Warm Linen"
+   Product photos carry the color — chrome stays quiet & cozy
    ═══════════════════════════════════════════════════════════════ */
 
 /* ── Google Fonts ── */
@@ -9,39 +9,39 @@
 
 /* ── CSS Custom Properties ── */
 :root {
-  /* ─ Colors: Light Theme ─ */
-  --bg-body: #ffffff;
-  --bg-secondary: #f8f8f8;
-  --bg-muted: #f3f4f6;
-  --bg-card: #ffffff;
-  --bg-dark: #1a1a1a;
-  --bg-dark-secondary: #2d2d2d;
-  --bg-overlay: rgba(0, 0, 0, 0.45);
+  /* ─ Colors: Warm Beige Theme ─ */
+  --bg-body: #FAF6F1;
+  --bg-secondary: #F3EDE4;
+  --bg-muted: #EDE6DB;
+  --bg-card: #FFFCF8;
+  --bg-dark: #2C2520;
+  --bg-dark-secondary: #3D342D;
+  --bg-overlay: rgba(44, 37, 32, 0.45);
 
   /* ─ Brand ─ */
-  --brand-primary: #1a1a1a;
-  --brand-accent: #2563eb;
-  --brand-accent-hover: #1d4ed8;
-  --brand-sale: #dc2626;
-  --brand-sale-bg: #fef2f2;
-  --brand-success: #16a34a;
-  --brand-success-bg: #f0fdf4;
-  --brand-warning: #f59e0b;
+  --brand-primary: #5C4A3A;
+  --brand-accent: #B87333;
+  --brand-accent-hover: #9A5F28;
+  --brand-sale: #C0392B;
+  --brand-sale-bg: #FDF0EC;
+  --brand-success: #2D8A56;
+  --brand-success-bg: #ECF5EE;
+  --brand-warning: #D4880F;
 
   /* ─ Text ─ */
-  --text-primary: #1a1a1a;
-  --text-secondary: #6b7280;
-  --text-muted: #9ca3af;
-  --text-on-dark: #ffffff;
-  --text-on-dark-muted: #a1a1aa;
-  --text-link: #2563eb;
-  --text-sale: #dc2626;
+  --text-primary: #3B2F28;
+  --text-secondary: #7A6B5E;
+  --text-muted: #A89889;
+  --text-on-dark: #FAF6F1;
+  --text-on-dark-muted: #B5A99C;
+  --text-link: #B87333;
+  --text-sale: #C0392B;
 
   /* ─ Borders ─ */
-  --border-light: #e5e7eb;
-  --border-medium: #d1d5db;
-  --border-dark: #374151;
-  --border-focus: #2563eb;
+  --border-light: #DDD5CA;
+  --border-medium: #C4B9AB;
+  --border-dark: #4D3F35;
+  --border-focus: #B87333;
 
   /* ─ Typography ─ */
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -88,12 +88,12 @@
   --announcement-height: 36px;
   --header-total: calc(var(--navbar-height) + var(--announcement-height));
 
-  /* ─ Shadows ─ */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.03);
-  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.08);
-  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.1);
+  /* ─ Shadows (warm-tinted) ─ */
+  --shadow-xs: 0 1px 2px rgba(44, 37, 32, 0.05);
+  --shadow-sm: 0 1px 3px rgba(44, 37, 32, 0.07), 0 1px 2px rgba(44, 37, 32, 0.04);
+  --shadow-md: 0 4px 6px rgba(44, 37, 32, 0.06), 0 2px 4px rgba(44, 37, 32, 0.03);
+  --shadow-lg: 0 10px 25px rgba(44, 37, 32, 0.1);
+  --shadow-card-hover: 0 8px 24px rgba(44, 37, 32, 0.12);
 
   /* ─ Radius ─ */
   --radius-sm: 4px;
@@ -265,7 +265,7 @@ input, textarea, select {
 
 /* ── Selection ── */
 ::selection {
-  background: rgba(37, 99, 235, 0.15);
+  background: rgba(184, 115, 51, 0.15);
   color: var(--text-primary);
 }
 
