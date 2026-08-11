@@ -197,6 +197,8 @@
 .product-gallery {
   position: sticky;
   top: calc(var(--navbar-height) + var(--space-4));
+  min-width: 0;
+  overflow: hidden;
 }
 
 .product-gallery__main {
