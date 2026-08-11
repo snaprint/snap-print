@@ -214,6 +214,10 @@ function renderProduct(product) {
       const isActive = Number(thumb.dataset.index) === activeImageIndex;
       thumb.classList.toggle('active', isActive);
       thumb.setAttribute('aria-current', String(isActive));
+      // Auto-scroll the active thumbnail into view
+      if (isActive) {
+        thumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
     });
   };
 
