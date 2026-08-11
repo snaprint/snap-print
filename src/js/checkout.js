@@ -107,6 +107,65 @@ async function refreshShippingUI() {
   if (summaryShipping) summaryShipping.textContent = shippingCost === 0 ? 'Free' : formatCurrency(shippingCost);
   if (summaryTotal)    summaryTotal.textContent    = formatCurrency(itemTotal + shippingCost);
   if (payBtnText)      payBtnText.textContent      = `Pay ${formatCurrency(itemTotal + shippingCost)}`;
+
+  // ── Free Shipping Progress Bars ──
+  renderFreeShippingProgress(rates, itemTotal);
+}
+
+// ── Free Shipping Progress Bars ──
+const SHIPPING_ICONS = {
+  surface: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
+  air: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>`,
+  check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+};
+
+const SHIPPING_LABELS = {
+  surface: 'Surface',
+  air: 'Air',
+};
+
+function renderFreeShippingProgress(rates, cartTotal) {
+  const container = document.getElementById('free-shipping-progress');
+  if (!container) return;
+
+  const methods = ['surface', 'air'];
+  const bars = [];
+
+  for (const method of methods) {
+    const row = rates.find(r => r.method?.trim().toLowerCase() === method);
+    if (!row) continue;
+
+    const threshold = Number(row.item_total);
+    if (isNaN(threshold) || threshold <= 0) continue;
+
+    const isFree = cartTotal >= threshold;
+    const remaining = Math.max(0, threshold - cartTotal);
+    const progress = Math.min(100, (cartTotal / threshold) * 100);
+    const label = SHIPPING_LABELS[method] || method;
+
+    bars.push(`
+      <div class="free-shipping-bar ${isFree ? 'free-shipping-bar--complete' : ''}">
+        <div class="free-shipping-bar__header">
+          <span class="free-shipping-bar__label">
+            ${isFree ? SHIPPING_ICONS.check : SHIPPING_ICONS[method] || ''}
+            ${isFree ? `Free ${label} shipping!` : `${label}`}
+          </span>
+          <span class="free-shipping-bar__remaining">
+            ${isFree ? '✓ Unlocked' : `Add ${formatCurrency(remaining)} more`}
+          </span>
+        </div>
+        <div class="free-shipping-bar__track">
+          <div class="free-shipping-bar__fill" style="width: ${progress}%"></div>
+        </div>
+      </div>
+    `);
+  }
+
+  if (bars.length > 0) {
+    container.innerHTML = `<div class="free-shipping-progress">${bars.join('')}</div>`;
+  } else {
+    container.innerHTML = '';
+  }
 }
 
 // ── Shipping Selector ──
