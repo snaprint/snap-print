@@ -337,7 +337,7 @@ function buildCategoryTiles() {
   const categories = Object.values(categoryMap);
 
   scroll.innerHTML = `
-    <a href="/?category=all" class="category-tile active" data-category="all">
+    <a href="/?category=all" class="category-tile category-tile--compact active" data-category="all">
       <div class="category-tile__image">
         <svg viewBox="0 0 100 100" style="width:100%;height:100%;background:var(--bg-muted);"><text x="50" y="55" font-family="sans-serif" font-size="28" fill="var(--text-secondary)" text-anchor="middle">All</text></svg>
       </div>
