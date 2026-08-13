@@ -24,6 +24,8 @@ export default defineConfig({
         'seller-login': resolve(__dirname, 'src/seller-login.html'),
         'seller-dashboard': resolve(__dirname, 'src/seller-dashboard.html'),
         'cancel-order': resolve(__dirname, 'src/cancel-order.html'),
+        faq: resolve(__dirname, 'src/faq.html'),
+        contact: resolve(__dirname, 'src/contact.html'),
       },
     },
   },
