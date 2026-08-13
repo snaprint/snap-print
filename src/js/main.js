@@ -299,6 +299,34 @@ function initScrollAnimations() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Footer — Dynamic Shop Category Links (all pages)
+// ═══════════════════════════════════════════════════════════════
+async function populateFooterShopLinks() {
+  const footerLinks = document.getElementById('footer-shop-links');
+  if (!footerLinks) return;
+
+  try {
+    const products = await fetchActiveProducts();
+    const categories = extractCategories(products);
+
+    // Insert category links before the "Custom Parts" link
+    const customPartsLink = footerLinks.querySelector('a[href="/quote.html"]');
+    categories.forEach(cat => {
+      if (cat.name === 'engineering') return; // skip — already covered by Custom Parts
+      // Avoid duplicates (home page catalog.js may also add these)
+      if (footerLinks.querySelector(`a[href="/?category=${cat.name}"]`)) return;
+      const link = document.createElement('a');
+      link.href = `/?category=${cat.name}`;
+      link.className = 'footer__link';
+      link.textContent = cat.label;
+      footerLinks.insertBefore(link, customPartsLink);
+    });
+  } catch (err) {
+    console.warn('[Footer] Could not load categories:', err);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Init
 // ═══════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
@@ -308,6 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initShopDropdown();
   initScrollAnimations();
   updateCartBadge();
+  populateFooterShopLinks();
 });
 
 // Sync cart badge across tabs

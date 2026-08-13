@@ -361,20 +361,6 @@ function buildCategoryTiles() {
   `;
 
   initCategoryTiles();
-
-  // Also populate footer shop links
-  const footerLinks = document.getElementById('footer-shop-links');
-  if (footerLinks) {
-    const customPartsLink = footerLinks.querySelector('a[href="/quote.html"]');
-    categories.forEach(cat => {
-      if (cat.name === 'engineering') return;
-      const link = document.createElement('a');
-      link.href = `/?category=${cat.name}`;
-      link.className = 'footer__link';
-      link.textContent = cat.label;
-      footerLinks.insertBefore(link, customPartsLink);
-    });
-  }
 }
 
 function updateCategoryTiles() {
