@@ -214,7 +214,11 @@ function sortProducts(products, sortKey) {
       products.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
       break;
     default:
-      // No sort — keep CSV order
+      // Fisher-Yates shuffle — random product showcase on every visit
+      for (let i = products.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [products[i], products[j]] = [products[j], products[i]];
+      }
       break;
   }
 }
