@@ -735,11 +735,31 @@ a.navbar__track-btn.btn:hover {
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: var(--space-2);
-  scrollbar-width: none;
+  padding-bottom: var(--space-3);
+  /* Slim styled scrollbar for desktop */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-medium) transparent;
 }
 
-.category-scroll::-webkit-scrollbar { display: none; }
+/* Styled scrollbar track + thumb (Webkit — Chrome, Safari, Edge) */
+.category-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.category-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: var(--radius-full);
+}
+
+.category-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-medium);
+  border-radius: var(--radius-full);
+  transition: background var(--duration-fast) var(--ease);
+}
+
+.category-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
 
 .category-tile {
   flex: 0 0 auto;
@@ -752,6 +772,16 @@ a.navbar__track-btn.btn:hover {
 
 .category-tile:hover {
   transform: translateY(-2px);
+}
+
+/* Compact "All" tile — smaller than image tiles */
+.category-tile--compact {
+  width: 80px;
+}
+
+.category-tile--compact .category-tile__image {
+  width: 80px;
+  height: 80px;
 }
 
 .category-tile__image {
@@ -784,9 +814,21 @@ a.navbar__track-btn.btn:hover {
   letter-spacing: var(--tracking-wide);
 }
 
+/* Hide scrollbar on mobile (finger swipe is natural) */
+@media (max-width: 768px) {
+  .category-scroll {
+    scrollbar-width: none;
+  }
+  .category-scroll::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @media (max-width: 480px) {
   .category-tile { width: 110px; }
   .category-tile__image { width: 110px; height: 110px; }
+  .category-tile--compact { width: 70px; }
+  .category-tile--compact .category-tile__image { width: 70px; height: 70px; }
 }
 
 /* ── Search Bar ── */
