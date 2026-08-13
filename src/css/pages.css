@@ -637,6 +637,132 @@
   margin-top: 2px;
 }
 
+/* ── Bulk Pricing Table ── */
+.bulk-pricing {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.bulk-pricing__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-muted);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.bulk-pricing__header-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--brand-accent);
+  flex-shrink: 0;
+}
+
+.bulk-pricing__title {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-secondary);
+}
+
+.bulk-pricing__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.bulk-pricing__table th {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-muted);
+  text-align: left;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.bulk-pricing__table th:last-child {
+  text-align: right;
+}
+
+.bulk-pricing__table td {
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border-light);
+  transition: background var(--duration-fast) var(--ease),
+              color var(--duration-fast) var(--ease);
+}
+
+.bulk-pricing__table tr:last-child td {
+  border-bottom: none;
+}
+
+.bulk-pricing__table td:last-child {
+  text-align: right;
+}
+
+.bulk-pricing__table td:first-child {
+  font-weight: 500;
+}
+
+/* Active tier row — matches the currently selected quantity */
+.bulk-pricing__row--active td {
+  background: var(--brand-sale-bg);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.bulk-pricing__row--active td:first-child {
+  position: relative;
+}
+
+.bulk-pricing__row--active td:first-child::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--brand-accent);
+  border-radius: 0 2px 2px 0;
+}
+
+.bulk-pricing__save {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--brand-sale);
+}
+
+.bulk-pricing__price--compare {
+  text-decoration: line-through;
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: var(--text-xs);
+  margin-right: var(--space-2);
+}
+
+/* Cart bulk discount indicator */
+.cart-item__bulk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--brand-success);
+  background: var(--brand-success-bg);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  margin-top: 2px;
+}
+
+.cart-item__bulk-badge svg {
+  width: 10px;
+  height: 10px;
+}
+
 /* Dual CTAs */
 .product-info__ctas {
   display: flex;

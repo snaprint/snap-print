@@ -6,6 +6,7 @@
 import {
   getSampleProducts, CONFIG, fetchCSV, normalizeProduct, addToCart, clearCart,
   formatCurrency, getDiscountPercent, showToast, resolveImageUrl,
+  parseBulkPricing, getBulkPrice, hasBulkPricing,
 } from './utils.js';
 
 let currentProduct = null;
@@ -37,6 +38,56 @@ async function loadProduct() {
     console.error('Failed to load product:', err);
     showToast('Failed to load product details', 'error');
   }
+}
+
+/**
+ * Renders the bulk pricing table HTML for the product detail page.
+ * Returns empty string if the product has no bulk pricing.
+ */
+function renderBulkPricingTable(product, currentQty = 1) {
+  const tiers = parseBulkPricing(product.bulk_pricing);
+  if (!tiers) return '';
+
+  const basePrice = Number(product.price);
+  const actualPrice = Number(product.actual_price) || basePrice;
+
+  const rows = tiers.map(tier => {
+    const isActive = currentQty >= tier.min && currentQty <= tier.max;
+    const rangeLabel = tier.max === Infinity
+      ? `${tier.min}+`
+      : tier.min === tier.max
+        ? `${tier.min}`
+        : `${tier.min} – ${tier.max}`;
+
+    const savingsVsActual = actualPrice > tier.price
+      ? Math.round(((actualPrice - tier.price) / actualPrice) * 100)
+      : 0;
+
+    return `
+      <tr data-tier data-tier-min="${tier.min}" data-tier-max="${tier.max}"
+          class="${isActive ? 'bulk-pricing__row--active' : ''}">
+        <td>${rangeLabel}</td>
+        <td>
+          ${actualPrice > tier.price ? `<span class="bulk-pricing__price--compare">${formatCurrency(actualPrice)}</span>` : ''}
+          ${formatCurrency(tier.price)}
+        </td>
+        <td>${savingsVsActual > 0 ? `<span class="bulk-pricing__save">Save ${savingsVsActual}%</span>` : '—'}</td>
+      </tr>`;
+  }).join('');
+
+  return `
+    <div class="bulk-pricing" id="bulk-pricing-section">
+      <div class="bulk-pricing__header">
+        <svg class="bulk-pricing__header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        <span class="bulk-pricing__title">Bulk Pricing — Order More, Save More</span>
+      </div>
+      <table class="bulk-pricing__table" id="bulk-pricing-table">
+        <thead>
+          <tr><th>Quantity</th><th>Price / Item</th><th>Savings</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
 }
 
 function renderProduct(product) {
@@ -102,13 +153,16 @@ function renderProduct(product) {
       </div>
 
       <!-- Pricing -->
-      <div class="product-info__pricing">
-        <span class="product-info__price">${formatCurrency(product.price)}</span>
+      <div class="product-info__pricing" id="product-pricing">
+        <span class="product-info__price" id="product-price-display">${formatCurrency(product.price)}</span>
         ${discount > 0 ? `
-          <span class="product-info__compare-price">${formatCurrency(product.actual_price)}</span>
-          <span class="product-info__discount">Save ${discount}%</span>
+          <span class="product-info__compare-price" id="product-compare-price">${formatCurrency(product.actual_price)}</span>
+          <span class="product-info__discount" id="product-discount-badge">Save ${discount}%</span>
         ` : ''}
       </div>
+
+      <!-- Bulk Pricing Table -->
+      ${renderBulkPricingTable(product, 1)}
 
       <!-- Badges -->
       <div class="flex gap-2" style="flex-wrap:wrap;">
@@ -321,14 +375,75 @@ function renderProduct(product) {
     }
   });
 
-  // Quantity
+  // Quantity + dynamic bulk price
   let quantity = 1;
   const qtyValue = document.getElementById('qty-value');
+  const bulkTiers = parseBulkPricing(product.bulk_pricing);
+
+  const updatePriceForQuantity = (qty) => {
+    if (!bulkTiers) return;
+
+    const effectivePrice = getBulkPrice(bulkTiers, qty, product.price);
+    const priceDisplay = document.getElementById('product-price-display');
+    if (priceDisplay) priceDisplay.textContent = formatCurrency(effectivePrice);
+
+    // Update compare price and discount badge
+    const actualPrice = Number(product.actual_price) || Number(product.price);
+    const newDiscount = getDiscountPercent(effectivePrice, actualPrice);
+    const pricingContainer = document.getElementById('product-pricing');
+
+    // Ensure compare price and discount elements exist
+    let compareEl = document.getElementById('product-compare-price');
+    let discountEl = document.getElementById('product-discount-badge');
+
+    if (newDiscount > 0) {
+      if (!compareEl) {
+        compareEl = document.createElement('span');
+        compareEl.className = 'product-info__compare-price';
+        compareEl.id = 'product-compare-price';
+        pricingContainer.appendChild(compareEl);
+      }
+      compareEl.textContent = formatCurrency(actualPrice);
+
+      if (!discountEl) {
+        discountEl = document.createElement('span');
+        discountEl.className = 'product-info__discount';
+        discountEl.id = 'product-discount-badge';
+        pricingContainer.appendChild(discountEl);
+      }
+      discountEl.textContent = `Save ${newDiscount}%`;
+    } else {
+      if (compareEl) compareEl.remove();
+      if (discountEl) discountEl.remove();
+    }
+
+    // Update bulk pricing table active row
+    const table = document.getElementById('bulk-pricing-table');
+    if (table) {
+      table.querySelectorAll('tr[data-tier]').forEach(row => {
+        const tierMin = Number(row.dataset.tierMin);
+        const tierMax = row.dataset.tierMax === 'Infinity' ? Infinity : Number(row.dataset.tierMax);
+        const isActive = qty >= tierMin && qty <= tierMax;
+        // If qty exceeds all tiers, highlight the last tier
+        row.classList.toggle('bulk-pricing__row--active', isActive);
+      });
+
+      // If no row is active (qty exceeds all tiers), activate the last row
+      const activeRows = table.querySelectorAll('.bulk-pricing__row--active');
+      if (activeRows.length === 0) {
+        const allRows = table.querySelectorAll('tr[data-tier]');
+        if (allRows.length > 0) {
+          allRows[allRows.length - 1].classList.add('bulk-pricing__row--active');
+        }
+      }
+    }
+  };
+
   document.getElementById('qty-decrease')?.addEventListener('click', () => {
-    if (quantity > 1) { quantity--; qtyValue.textContent = quantity; }
+    if (quantity > 1) { quantity--; qtyValue.textContent = quantity; updatePriceForQuantity(quantity); }
   });
   document.getElementById('qty-increase')?.addEventListener('click', () => {
-    quantity++; qtyValue.textContent = quantity;
+    quantity++; qtyValue.textContent = quantity; updatePriceForQuantity(quantity);
   });
 
   // Add to Cart

@@ -80,6 +80,62 @@ function parseCSVLine(line) {
   return result;
 }
 
+// ── Bulk Pricing (server-side, tamper-proof) ──
+// Duplicated from src/js/utils.js because Pages Functions can't import ES modules.
+function parseBulkPricing(bulkString) {
+  if (!bulkString || typeof bulkString !== 'string') return null;
+  const trimmed = bulkString.trim();
+  if (!trimmed) return null;
+
+  const tiers = [];
+  const segments = trimmed.split('|');
+
+  for (const segment of segments) {
+    const [rangeStr, priceStr] = segment.split(':');
+    if (!rangeStr || !priceStr) continue;
+
+    const price = Number(priceStr.trim());
+    if (isNaN(price) || price < 0) continue;
+
+    const range = rangeStr.trim();
+
+    if (range.endsWith('+')) {
+      const min = Number(range.slice(0, -1));
+      if (isNaN(min) || min < 1) continue;
+      tiers.push({ min, max: Infinity, price });
+    } else if (range.includes('-')) {
+      const [minStr, maxStr] = range.split('-');
+      const min = Number(minStr.trim());
+      const max = Number(maxStr.trim());
+      if (isNaN(min) || isNaN(max) || min < 1 || max < min) continue;
+      tiers.push({ min, max, price });
+    } else {
+      const qty = Number(range);
+      if (isNaN(qty) || qty < 1) continue;
+      tiers.push({ min: qty, max: qty, price });
+    }
+  }
+
+  if (tiers.length === 0) return null;
+  return tiers.sort((a, b) => a.min - b.min);
+}
+
+function getBulkPrice(tiers, quantity, basePrice) {
+  if (!tiers || !Array.isArray(tiers) || tiers.length === 0) return Number(basePrice);
+  const qty = Number(quantity);
+
+  for (const tier of tiers) {
+    if (qty >= tier.min && qty <= tier.max) {
+      return tier.price;
+    }
+  }
+
+  const lastTier = tiers[tiers.length - 1];
+  if (qty >= lastTier.min) return lastTier.price;
+
+  return Number(basePrice);
+}
+
 export async function onRequestPost(context) {
   const { env } = context;
 
@@ -144,7 +200,7 @@ export async function onRequestPost(context) {
         return jsonError(`Engineering parts require a quote — cannot checkout directly`, 400);
       }
 
-      const price = Number(product.price);
+      const basePrice = Number(product.price);
       const quantity = Math.max(1, Math.min(100, Number(cartItem.quantity)));
 
       // Check stock (skip for made-to-order)
@@ -158,11 +214,16 @@ export async function onRequestPost(context) {
         }
       }
 
-      subtotal += price * quantity;
+      // Compute effective per-unit price using bulk pricing tiers
+      const bulkTiers = parseBulkPricing(product.bulk_pricing);
+      const effectivePrice = getBulkPrice(bulkTiers, quantity, basePrice);
+
+      subtotal += effectivePrice * quantity;
       resolvedItems.push({
         id: product.id,
         name: product.name,
-        price,
+        price: effectivePrice,
+        basePrice,
         quantity,
       });
     }

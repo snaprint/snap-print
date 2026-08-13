@@ -20,6 +20,82 @@ export function getDiscountPercent(sellingPrice, actualPrice) {
   return Math.round(((actual - selling) / actual) * 100);
 }
 
+// ── Bulk Pricing ──
+/**
+ * Parses a pipe-delimited bulk pricing string from the Google Sheet.
+ * Format: "1-2:499|3-5:449|6-10:399|11+:349"
+ * Returns an array of { min, max, price } tier objects, sorted by min ascending.
+ * Returns null if the string is empty or invalid.
+ */
+export function parseBulkPricing(bulkString) {
+  if (!bulkString || typeof bulkString !== 'string') return null;
+  const trimmed = bulkString.trim();
+  if (!trimmed) return null;
+
+  const tiers = [];
+  const segments = trimmed.split('|');
+
+  for (const segment of segments) {
+    const [rangeStr, priceStr] = segment.split(':');
+    if (!rangeStr || !priceStr) continue;
+
+    const price = Number(priceStr.trim());
+    if (isNaN(price) || price < 0) continue;
+
+    const range = rangeStr.trim();
+
+    if (range.endsWith('+')) {
+      // Open-ended: "11+"
+      const min = Number(range.slice(0, -1));
+      if (isNaN(min) || min < 1) continue;
+      tiers.push({ min, max: Infinity, price });
+    } else if (range.includes('-')) {
+      // Range: "3-5"
+      const [minStr, maxStr] = range.split('-');
+      const min = Number(minStr.trim());
+      const max = Number(maxStr.trim());
+      if (isNaN(min) || isNaN(max) || min < 1 || max < min) continue;
+      tiers.push({ min, max, price });
+    } else {
+      // Single value: "1" (treated as exact quantity)
+      const qty = Number(range);
+      if (isNaN(qty) || qty < 1) continue;
+      tiers.push({ min: qty, max: qty, price });
+    }
+  }
+
+  if (tiers.length === 0) return null;
+  return tiers.sort((a, b) => a.min - b.min);
+}
+
+/**
+ * Returns the applicable per-unit price for a given quantity.
+ * Falls back to basePrice if no tier matches.
+ */
+export function getBulkPrice(tiers, quantity, basePrice) {
+  if (!tiers || !Array.isArray(tiers) || tiers.length === 0) return Number(basePrice);
+  const qty = Number(quantity);
+
+  for (const tier of tiers) {
+    if (qty >= tier.min && qty <= tier.max) {
+      return tier.price;
+    }
+  }
+
+  // If quantity exceeds all defined tiers, use the last (highest) tier
+  const lastTier = tiers[tiers.length - 1];
+  if (qty >= lastTier.min) return lastTier.price;
+
+  return Number(basePrice);
+}
+
+/**
+ * Quick check: does this product have valid bulk pricing?
+ */
+export function hasBulkPricing(product) {
+  return parseBulkPricing(product?.bulk_pricing) !== null;
+}
+
 // ── Cart ──
 export function getCart() {
   try { return JSON.parse(localStorage.getItem(CART_KEY)) || []; } catch { return []; }
@@ -36,6 +112,8 @@ export function addToCart(product, quantity = 1) {
   const existing = cart.find(item => item.id === product.id);
   if (existing) {
     existing.quantity += quantity;
+    // Update bulk_pricing in case it changed in the sheet
+    if (product.bulk_pricing) existing.bulk_pricing = product.bulk_pricing;
   } else {
     cart.push({
       id: product.id,
@@ -45,6 +123,7 @@ export function addToCart(product, quantity = 1) {
       weight_g: Number(product.weight_g) || 0,
       image: product.image_urls ? resolveImageUrl(product.image_urls.split(',')[0].trim()) : '',
       material: product.material || '',
+      bulk_pricing: product.bulk_pricing || '',
       quantity,
     });
   }
@@ -70,7 +149,11 @@ export function getCartCount() {
 }
 
 export function getCartSubtotal() {
-  return getCart().reduce((sum, item) => sum + item.price * item.quantity, 0);
+  return getCart().reduce((sum, item) => {
+    const tiers = parseBulkPricing(item.bulk_pricing);
+    const unitPrice = getBulkPrice(tiers, item.quantity, item.price);
+    return sum + unitPrice * item.quantity;
+  }, 0);
 }
 
 export function getCartWeight() {

@@ -8,6 +8,7 @@ import {
   formatCurrency, getSampleShippingRates, getShippingCostPreview,
   isValidEmail, isValidPhone, showToast, CONFIG, fetchCSV, lookupPIN,
   showPageLoader, hidePageLoader,
+  parseBulkPricing, getBulkPrice,
 } from './utils.js';
 
 let selectedMethod = 'surface';
@@ -51,7 +52,11 @@ function renderOrderSummary() {
       <h2 class="summary-card__title">Order Summary</h2>
 
       <div class="flex flex-col gap-3" style="margin-bottom:var(--space-4);">
-        ${cart.map(item => `
+        ${cart.map(item => {
+          const tiers = parseBulkPricing(item.bulk_pricing);
+          const effectivePrice = getBulkPrice(tiers, item.quantity, item.price);
+          const lineTotal = effectivePrice * item.quantity;
+          return `
           <div class="flex items-center gap-3">
             <div style="width:48px;height:48px;border-radius:var(--radius-md);overflow:hidden;background:var(--bg-muted);flex-shrink:0;position:relative;">
               <img src="${item.image}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;"
@@ -61,9 +66,9 @@ function renderOrderSummary() {
             <div style="flex:1;min-width:0;">
               <div style="font-size:var(--text-sm);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name}</div>
             </div>
-            <span style="font-size:var(--text-sm);font-weight:600;white-space:nowrap;">${formatCurrency(item.price * item.quantity)}</span>
-          </div>
-        `).join('')}
+            <span style="font-size:var(--text-sm);font-weight:600;white-space:nowrap;">${formatCurrency(lineTotal)}</span>
+          </div>`;
+        }).join('')}
       </div>
 
       <div class="divider"></div>

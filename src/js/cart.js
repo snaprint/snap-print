@@ -1,17 +1,54 @@
 /* ═══════════════════════════════════════════════════════════════
    SNAP PRINT — Cart
-   Renders cart items, quantity controls, summary, checkout link
+   Renders cart items, quantity controls, summary, checkout link.
+   Fetches live bulk pricing from the products sheet on load.
    ═══════════════════════════════════════════════════════════════ */
 
 import {
   getCart,
+  setCart,
   removeFromCart,
   updateQuantity,
   getCartSubtotal,
   getCartCount,
   formatCurrency,
   showToast,
+  fetchActiveProducts,
+  parseBulkPricing,
+  getBulkPrice,
 } from './utils.js';
+
+// Live product data (fetched from Google Sheets) keyed by product ID
+let liveProductMap = {};
+
+/**
+ * Fetches the latest product data from Sheets and updates
+ * the cart's stored bulk_pricing strings to stay in sync.
+ */
+async function refreshBulkPricingFromSheet() {
+  try {
+    const products = await fetchActiveProducts();
+    liveProductMap = {};
+    products.forEach(p => { if (p.id) liveProductMap[p.id] = p; });
+
+    // Sync bulk_pricing strings in the stored cart
+    const cart = getCart();
+    let changed = false;
+    cart.forEach(item => {
+      const live = liveProductMap[item.id];
+      if (live) {
+        const newBulk = live.bulk_pricing || '';
+        if (item.bulk_pricing !== newBulk) {
+          item.bulk_pricing = newBulk;
+          changed = true;
+        }
+      }
+    });
+    if (changed) setCart(cart);
+  } catch (err) {
+    console.warn('[Cart] Could not refresh bulk pricing from sheet:', err);
+  }
+}
 
 function renderCart() {
   const itemsContainer = document.getElementById('cart-items');
@@ -42,7 +79,13 @@ function renderCart() {
   }
 
   // Cart items
-  itemsContainer.innerHTML = cart.map(item => `
+  itemsContainer.innerHTML = cart.map(item => {
+    const tiers = parseBulkPricing(item.bulk_pricing);
+    const effectivePrice = getBulkPrice(tiers, item.quantity, item.price);
+    const isBulkDiscounted = tiers && effectivePrice < item.price;
+    const lineTotal = effectivePrice * item.quantity;
+
+    return `
     <div class="cart-item animate-fade-in" data-id="${item.id}">
       <div class="cart-item__image">
         <img src="${item.image}" alt="${item.name}" loading="lazy"
@@ -50,7 +93,13 @@ function renderCart() {
       </div>
       <div class="cart-item__info">
         <a href="/product.html?id=${item.id}" class="cart-item__name">${item.name}</a>
-        <span class="cart-item__meta">${item.material ? item.material : ''} · ${formatCurrency(item.price)} each</span>
+        <span class="cart-item__meta">${item.material ? item.material : ''} · ${formatCurrency(effectivePrice)} each</span>
+        ${isBulkDiscounted ? `
+          <span class="cart-item__bulk-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            Bulk Discount
+          </span>
+        ` : ''}
       </div>
       <div class="qty-selector">
         <button class="qty-selector__btn qty-decrease" data-id="${item.id}" aria-label="Decrease quantity">
@@ -62,13 +111,13 @@ function renderCart() {
         </button>
       </div>
       <div class="flex items-center gap-3">
-        <span class="cart-item__price">${formatCurrency(item.price * item.quantity)}</span>
+        <span class="cart-item__price">${formatCurrency(lineTotal)}</span>
         <button class="cart-item__remove remove-btn" data-id="${item.id}" aria-label="Remove ${item.name}">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 
   // Summary sidebar
   const subtotal = getCartSubtotal();
@@ -143,4 +192,8 @@ function attachCartEvents() {
 // Re-render on cart updates from other components
 window.addEventListener('cart-updated', renderCart);
 
-document.addEventListener('DOMContentLoaded', renderCart);
+document.addEventListener('DOMContentLoaded', async () => {
+  // Fetch live bulk pricing from Sheets, then render
+  await refreshBulkPricingFromSheet();
+  renderCart();
+});
