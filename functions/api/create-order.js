@@ -203,8 +203,12 @@ export async function onRequestPost(context) {
       const basePrice = Number(product.price);
       const quantity = Math.max(1, Math.min(100, Number(cartItem.quantity)));
 
-      // Check stock (skip for made-to-order)
-      if (product.made_to_order !== 'yes') {
+      // Compute effective per-unit price using bulk pricing tiers
+      const bulkTiers = parseBulkPricing(product.bulk_pricing);
+      const hasBulk = bulkTiers !== null;
+
+      // Check stock (skip for made-to-order AND bulk-priced products — bulk orders are manufactured after confirmation)
+      if (product.made_to_order !== 'yes' && !hasBulk) {
         const stock = Number(product.stock);
         if (stock <= 0) {
           return jsonError(`${product.name} is out of stock`, 400);
@@ -214,8 +218,6 @@ export async function onRequestPost(context) {
         }
       }
 
-      // Compute effective per-unit price using bulk pricing tiers
-      const bulkTiers = parseBulkPricing(product.bulk_pricing);
       const effectivePrice = getBulkPrice(bulkTiers, quantity, basePrice);
 
       subtotal += effectivePrice * quantity;
