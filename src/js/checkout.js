@@ -20,6 +20,8 @@ import {
   signOutUser,
   onAuthChange,
   getCurrentUser,
+  getBuyerProfile,
+  saveBuyerProfile,
 } from './firebase.js';
 
 let selectedMethod = 'surface';
@@ -225,6 +227,34 @@ async function showCheckoutForm(user) {
   // Show user email in status bar
   if (authUserEmail) {
     authUserEmail.textContent = user.email || 'Signed in';
+  }
+
+  // Pre-fill from Firestore buyer profile (Step 4)
+  try {
+    const profile = await getBuyerProfile(user.uid);
+    if (profile) {
+      const fieldMap = {
+        'buyer-fullname':  profile.name  || '',
+        'buyer-phone':     profile.phone || '',
+        'buyer-address':   profile.address || '',
+        'buyer-apartment': profile.apartment || '',
+        'buyer-city':      profile.city || '',
+        'buyer-pincode':   profile.pincode || '',
+        'buyer-maps-link': profile.mapsLink || '',
+      };
+      for (const [id, value] of Object.entries(fieldMap)) {
+        const el = document.getElementById(id);
+        if (el && value) el.value = value;
+      }
+      // State is a <select>, set separately
+      const stateSelect = document.getElementById('buyer-state');
+      if (stateSelect && profile.state) {
+        stateSelect.value = profile.state;
+      }
+    }
+  } catch (err) {
+    console.warn('[Checkout] Failed to load buyer profile:', err);
+    // Non-blocking — buyer can still fill the form manually
   }
 
   // Init the rest of the checkout form (once)
@@ -607,6 +637,21 @@ function openRazorpay(orderId, amount, buyer, keyId) {
     },
     theme: { color: '#1a1a1a' },
     handler() {
+      // Save/update buyer profile to Firestore (fire-and-forget, Step 5)
+      const currentUser = getCurrentUser();
+      if (currentUser) {
+        saveBuyerProfile(currentUser.uid, {
+          name:      buyer.fullName,
+          phone:     buyer.phone,
+          address:   buyer.address,
+          apartment: buyer.apartment,
+          city:      buyer.city,
+          state:     buyer.state,
+          pincode:   buyer.pincode,
+          email:     buyer.email,
+          mapsLink:  buyer.mapsLink,
+        }).catch(err => console.warn('[Checkout] Profile save failed:', err));
+      }
       clearCart();
       window.location.href = `/thank-you.html?order=${orderId}`;
     },
