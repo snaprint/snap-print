@@ -45,174 +45,239 @@
 
         <div class="checkout-page__layout">
           <!-- Form Column -->
-          <div class="checkout-form" id="checkout-form">
+          <div class="checkout-form-col">
 
-            <!-- Contact -->
-            <div class="checkout-section">
-              <h2 class="checkout-section__title">Contact</h2>
-              <div class="form-group">
-                <label class="form-label" for="buyer-email">Email <span class="required">*</span></label>
-                <input class="form-input" type="email" id="buyer-email" placeholder="john@example.com" required autocomplete="email" />
-                <span class="form-error">Please enter a valid email address</span>
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="buyer-email-confirm">Confirm Email <span class="required">*</span></label>
-                <input class="form-input" type="email" id="buyer-email-confirm" placeholder="john@example.com" required autocomplete="off" />
-                <span class="form-error">Emails do not match</span>
+            <!-- ═══ LOGIN GATE (shown when NOT signed in) ═══ -->
+            <div class="auth-gate" id="checkout-login-gate">
+              <div class="auth-gate__card">
+                <div class="auth-gate__header">
+                  <svg class="auth-gate__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  <h2 class="auth-gate__title">Sign in to checkout</h2>
+                  <p class="auth-gate__subtitle">Sign in with Google or create an account to continue</p>
+                </div>
+
+                <!-- Google Sign-In -->
+                <button class="auth-google-btn" id="auth-google-btn" type="button">
+                  <svg class="auth-google-btn__icon" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                  <span>Continue with Google</span>
+                </button>
+
+                <!-- Divider -->
+                <div class="auth-divider">
+                  <span>or</span>
+                </div>
+
+                <!-- Tab Switcher -->
+                <div class="auth-tabs" id="auth-tabs">
+                  <button class="auth-tab active" data-tab="signup" type="button">Create Account</button>
+                  <button class="auth-tab" data-tab="login" type="button">Log In</button>
+                </div>
+
+                <!-- Sign Up Form -->
+                <form class="auth-form" id="auth-signup-form">
+                  <div class="form-group">
+                    <label class="form-label" for="auth-signup-email">Email</label>
+                    <input class="form-input" type="email" id="auth-signup-email" placeholder="you@example.com" required autocomplete="email" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="auth-signup-password">Password</label>
+                    <input class="form-input" type="password" id="auth-signup-password" placeholder="At least 6 characters" required autocomplete="new-password" minlength="6" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="auth-signup-password-confirm">Confirm Password</label>
+                    <input class="form-input" type="password" id="auth-signup-password-confirm" placeholder="Confirm your password" required autocomplete="new-password" minlength="6" />
+                  </div>
+                  <button class="btn btn-primary btn-lg btn-full" type="submit" id="auth-signup-btn">
+                    <span id="auth-signup-btn-text">Create Account</span>
+                  </button>
+                </form>
+
+                <!-- Log In Form -->
+                <form class="auth-form" id="auth-login-form" style="display:none;">
+                  <div class="form-group">
+                    <label class="form-label" for="auth-login-email">Email</label>
+                    <input class="form-input" type="email" id="auth-login-email" placeholder="you@example.com" required autocomplete="email" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="auth-login-password">Password</label>
+                    <input class="form-input" type="password" id="auth-login-password" placeholder="Your password" required autocomplete="current-password" />
+                  </div>
+                  <button class="btn btn-primary btn-lg btn-full" type="submit" id="auth-login-btn">
+                    <span id="auth-login-btn-text">Log In</span>
+                  </button>
+                  <button class="auth-forgot-link" type="button" id="auth-forgot-btn">Forgot password?</button>
+                </form>
+
+                <!-- Auth Error -->
+                <div class="auth-error" id="auth-error"></div>
               </div>
             </div>
 
-            <!-- Delivery -->
-            <div class="checkout-section">
-              <h2 class="checkout-section__title">Delivery</h2>
+            <!-- ═══ CHECKOUT FORM (shown when signed in) ═══ -->
+            <div class="checkout-form" id="checkout-form" style="display:none;">
 
-              <!-- Name -->
-              <div class="form-group">
-                <label class="form-label" for="buyer-fullname">Full Name <span class="required">*</span></label>
-                <input class="form-input" type="text" id="buyer-fullname" placeholder="John Doe" required autocomplete="name" />
-                <span class="form-error">Required</span>
-              </div>
-
-              <!-- Address with search -->
-              <div class="form-group" style="position: relative;">
-                <label class="form-label" for="buyer-address">Address <span class="required">*</span></label>
-                <div style="position: relative;">
-                  <input class="form-input" type="text" id="buyer-address" placeholder="Start typing your address..." required autocomplete="address-line1" />
-                  <svg style="position:absolute;right:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-muted);pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <!-- Signed-in status bar -->
+              <div class="auth-status-bar" id="auth-status-bar">
+                <div class="auth-status-bar__user">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;flex-shrink:0;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  <span id="auth-user-email">user@example.com</span>
                 </div>
-                <div class="address-suggestions" id="address-suggestions"></div>
-                <span class="form-error">Please enter your address</span>
+                <button class="auth-status-bar__logout" id="auth-logout-btn" type="button">Sign out</button>
               </div>
 
-              <!-- Apartment -->
-              <div class="form-group">
-                <label class="form-label" for="buyer-apartment">Apartment, suite, etc. (optional)</label>
-                <input class="form-input" type="text" id="buyer-apartment" placeholder="Apt 4B, Floor 2, etc." autocomplete="address-line2" />
-              </div>
-
-              <!-- City / State / PIN -->
-              <div class="address-grid address-grid--3col">
+              <!-- Contact (email is read-only, comes from Firebase Auth) -->
+              <div class="checkout-section">
+                <h2 class="checkout-section__title">Contact</h2>
                 <div class="form-group">
-                  <label class="form-label" for="buyer-city">City <span class="required">*</span></label>
-                  <input class="form-input" type="text" id="buyer-city" placeholder="Mumbai" required autocomplete="address-level2" />
+                  <label class="form-label" for="buyer-email">Email</label>
+                  <input class="form-input" type="email" id="buyer-email" readonly tabindex="-1" style="opacity:0.7;cursor:default;" />
+                </div>
+              </div>
+
+              <!-- Delivery -->
+              <div class="checkout-section">
+                <h2 class="checkout-section__title">Delivery</h2>
+
+                <!-- Name -->
+                <div class="form-group">
+                  <label class="form-label" for="buyer-fullname">Full Name <span class="required">*</span></label>
+                  <input class="form-input" type="text" id="buyer-fullname" placeholder="John Doe" required autocomplete="name" />
                   <span class="form-error">Required</span>
                 </div>
-                <div class="form-group">
-                  <label class="form-label" for="buyer-state">State <span class="required">*</span></label>
-                  <select class="form-select" id="buyer-state" required autocomplete="address-level1">
-                    <option value="">Select State</option>
-                    <option value="AN">Andaman and Nicobar Islands</option>
-                    <option value="AP">Andhra Pradesh</option>
-                    <option value="AR">Arunachal Pradesh</option>
-                    <option value="AS">Assam</option>
-                    <option value="BR">Bihar</option>
-                    <option value="CH">Chandigarh</option>
-                    <option value="CT">Chhattisgarh</option>
-                    <option value="DN">Dadra and Nagar Haveli</option>
-                    <option value="DD">Daman and Diu</option>
-                    <option value="DL">Delhi</option>
-                    <option value="GA">Goa</option>
-                    <option value="GJ">Gujarat</option>
-                    <option value="HR">Haryana</option>
-                    <option value="HP">Himachal Pradesh</option>
-                    <option value="JK">Jammu and Kashmir</option>
-                    <option value="JH">Jharkhand</option>
-                    <option value="KA">Karnataka</option>
-                    <option value="KL">Kerala</option>
-                    <option value="LA">Ladakh</option>
-                    <option value="LD">Lakshadweep</option>
-                    <option value="MP">Madhya Pradesh</option>
-                    <option value="MH">Maharashtra</option>
-                    <option value="MN">Manipur</option>
-                    <option value="ML">Meghalaya</option>
-                    <option value="MZ">Mizoram</option>
-                    <option value="NL">Nagaland</option>
-                    <option value="OR">Odisha</option>
-                    <option value="PY">Puducherry</option>
-                    <option value="PB">Punjab</option>
-                    <option value="RJ">Rajasthan</option>
-                    <option value="SK">Sikkim</option>
-                    <option value="TN">Tamil Nadu</option>
-                    <option value="TG">Telangana</option>
-                    <option value="TR">Tripura</option>
-                    <option value="UP">Uttar Pradesh</option>
-                    <option value="UT">Uttarakhand</option>
-                    <option value="WB">West Bengal</option>
-                  </select>
-                  <span class="form-error">Required</span>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="buyer-pincode">PIN Code <span class="required">*</span></label>
-                  <input class="form-input" type="text" id="buyer-pincode" placeholder="XXXXXX" required autocomplete="postal-code" maxlength="6" inputmode="numeric" />
-                  <span class="form-error">Enter 6-digit PIN</span>
-                </div>
-              </div>
 
-              <!-- Phone -->
-              <div class="form-group">
-                <label class="form-label" for="buyer-phone">Phone <span class="required">*</span></label>
-                <input class="form-input" type="tel" id="buyer-phone" placeholder="98765 43210" required autocomplete="tel" inputmode="tel" />
-                <span class="form-error">Enter a valid 10-digit phone number</span>
-              </div>
-
-              <!-- Confirm Phone -->
-              <div class="form-group">
-                <label class="form-label" for="buyer-phone-confirm">Confirm Phone <span class="required">*</span></label>
-                <input class="form-input" type="tel" id="buyer-phone-confirm" placeholder="98765 43210" required autocomplete="off" inputmode="tel" />
-                <span class="form-error">Phone numbers do not match</span>
-              </div>
-
-              <!-- Maps Link (optional) -->
-              <div class="form-group">
-                <label class="form-label" for="buyer-maps-link">
-                  Google Maps Link
-                  <span style="font-weight:400;color:var(--text-muted);font-size:var(--text-xs);margin-left:4px;">(optional)</span>
-                </label>
-                <div style="position:relative;">
-                  <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-muted);pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                  <input class="form-input" type="url" id="buyer-maps-link" placeholder="https://maps.google.com/..." autocomplete="off" style="padding-left:36px;" />
-                </div>
-                <span style="font-size:var(--text-xs);color:var(--text-muted);margin-top:4px;display:block;">Paste your Google Maps location link to help us deliver accurately.</span>
-              </div>
-            </div>
-
-
-            <!-- Shipping Method -->
-            <div class="checkout-section">
-              <h2 class="checkout-section__title">Shipping Method</h2>
-              <div id="free-shipping-progress"></div>
-              <div class="shipping-selector" id="shipping-selector">
-                <label class="shipping-option selected" id="shipping-surface">
-                  <input type="radio" name="shipping" value="surface" checked />
-                  <div class="shipping-option__info">
-                    <span class="shipping-option__name">Ship Rocket Surface</span>
-                    <span class="shipping-option__desc">Est. 5–7 business days</span>
+                <!-- Address with search -->
+                <div class="form-group" style="position: relative;">
+                  <label class="form-label" for="buyer-address">Address <span class="required">*</span></label>
+                  <div style="position: relative;">
+                    <input class="form-input" type="text" id="buyer-address" placeholder="Start typing your address..." required autocomplete="address-line1" />
+                    <svg style="position:absolute;right:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-muted);pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                   </div>
-                  <span class="shipping-option__price" id="shipping-surface-price">₹XX</span>
-                </label>
-                <label class="shipping-option" id="shipping-air">
-                  <input type="radio" name="shipping" value="air" />
-                  <div class="shipping-option__info">
-                    <span class="shipping-option__name">Ship Rocket Air</span>
-                    <span class="shipping-option__desc">Est. 2–4 business days</span>
+                  <div class="address-suggestions" id="address-suggestions"></div>
+                  <span class="form-error">Please enter your address</span>
+                </div>
+
+                <!-- Apartment -->
+                <div class="form-group">
+                  <label class="form-label" for="buyer-apartment">Apartment, suite, etc. (optional)</label>
+                  <input class="form-input" type="text" id="buyer-apartment" placeholder="Apt 4B, Floor 2, etc." autocomplete="address-line2" />
+                </div>
+
+                <!-- City / State / PIN -->
+                <div class="address-grid address-grid--3col">
+                  <div class="form-group">
+                    <label class="form-label" for="buyer-city">City <span class="required">*</span></label>
+                    <input class="form-input" type="text" id="buyer-city" placeholder="Mumbai" required autocomplete="address-level2" />
+                    <span class="form-error">Required</span>
                   </div>
-                  <span class="shipping-option__price" id="shipping-air-price">₹XX</span>
-                </label>
+                  <div class="form-group">
+                    <label class="form-label" for="buyer-state">State <span class="required">*</span></label>
+                    <select class="form-select" id="buyer-state" required autocomplete="address-level1">
+                      <option value="">Select State</option>
+                      <option value="AN">Andaman and Nicobar Islands</option>
+                      <option value="AP">Andhra Pradesh</option>
+                      <option value="AR">Arunachal Pradesh</option>
+                      <option value="AS">Assam</option>
+                      <option value="BR">Bihar</option>
+                      <option value="CH">Chandigarh</option>
+                      <option value="CT">Chhattisgarh</option>
+                      <option value="DN">Dadra and Nagar Haveli</option>
+                      <option value="DD">Daman and Diu</option>
+                      <option value="DL">Delhi</option>
+                      <option value="GA">Goa</option>
+                      <option value="GJ">Gujarat</option>
+                      <option value="HR">Haryana</option>
+                      <option value="HP">Himachal Pradesh</option>
+                      <option value="JK">Jammu and Kashmir</option>
+                      <option value="JH">Jharkhand</option>
+                      <option value="KA">Karnataka</option>
+                      <option value="KL">Kerala</option>
+                      <option value="LA">Ladakh</option>
+                      <option value="LD">Lakshadweep</option>
+                      <option value="MP">Madhya Pradesh</option>
+                      <option value="MH">Maharashtra</option>
+                      <option value="MN">Manipur</option>
+                      <option value="ML">Meghalaya</option>
+                      <option value="MZ">Mizoram</option>
+                      <option value="NL">Nagaland</option>
+                      <option value="OR">Odisha</option>
+                      <option value="PY">Puducherry</option>
+                      <option value="PB">Punjab</option>
+                      <option value="RJ">Rajasthan</option>
+                      <option value="SK">Sikkim</option>
+                      <option value="TN">Tamil Nadu</option>
+                      <option value="TG">Telangana</option>
+                      <option value="TR">Tripura</option>
+                      <option value="UP">Uttar Pradesh</option>
+                      <option value="UT">Uttarakhand</option>
+                      <option value="WB">West Bengal</option>
+                    </select>
+                    <span class="form-error">Required</span>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="buyer-pincode">PIN Code <span class="required">*</span></label>
+                    <input class="form-input" type="text" id="buyer-pincode" placeholder="XXXXXX" required autocomplete="postal-code" maxlength="6" inputmode="numeric" />
+                    <span class="form-error">Enter 6-digit PIN</span>
+                  </div>
+                </div>
+
+                <!-- Phone -->
+                <div class="form-group">
+                  <label class="form-label" for="buyer-phone">Phone <span class="required">*</span></label>
+                  <input class="form-input" type="tel" id="buyer-phone" placeholder="98765 43210" required autocomplete="tel" inputmode="tel" />
+                  <span class="form-error">Enter a valid 10-digit phone number</span>
+                </div>
+
+                <!-- Maps Link (optional) -->
+                <div class="form-group">
+                  <label class="form-label" for="buyer-maps-link">
+                    Google Maps Link
+                    <span style="font-weight:400;color:var(--text-muted);font-size:var(--text-xs);margin-left:4px;">(optional)</span>
+                  </label>
+                  <div style="position:relative;">
+                    <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text-muted);pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <input class="form-input" type="url" id="buyer-maps-link" placeholder="https://maps.google.com/..." autocomplete="off" style="padding-left:36px;" />
+                  </div>
+                  <span style="font-size:var(--text-xs);color:var(--text-muted);margin-top:4px;display:block;">Paste your Google Maps location link to help us deliver accurately.</span>
+                </div>
               </div>
-              <p style="margin-top:var(--space-2);font-size:var(--text-xs);color:var(--text-muted);display:flex;align-items:flex-start;gap:6px;">
-                <svg style="width:14px;height:14px;flex-shrink:0;margin-top:1px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                <span>Shipping rates may vary. Any overpaid shipping cost will be refunded.</span>
+
+
+              <!-- Shipping Method -->
+              <div class="checkout-section">
+                <h2 class="checkout-section__title">Shipping Method</h2>
+                <div id="free-shipping-progress"></div>
+                <div class="shipping-selector" id="shipping-selector">
+                  <label class="shipping-option selected" id="shipping-surface">
+                    <input type="radio" name="shipping" value="surface" checked />
+                    <div class="shipping-option__info">
+                      <span class="shipping-option__name">Ship Rocket Surface</span>
+                      <span class="shipping-option__desc">Est. 5–7 business days</span>
+                    </div>
+                    <span class="shipping-option__price" id="shipping-surface-price">₹XX</span>
+                  </label>
+                  <label class="shipping-option" id="shipping-air">
+                    <input type="radio" name="shipping" value="air" />
+                    <div class="shipping-option__info">
+                      <span class="shipping-option__name">Ship Rocket Air</span>
+                      <span class="shipping-option__desc">Est. 2–4 business days</span>
+                    </div>
+                    <span class="shipping-option__price" id="shipping-air-price">₹XX</span>
+                  </label>
+                </div>
+                <p style="margin-top:var(--space-2);font-size:var(--text-xs);color:var(--text-muted);display:flex;align-items:flex-start;gap:6px;">
+                  <svg style="width:14px;height:14px;flex-shrink:0;margin-top:1px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  <span>Shipping rates may vary. Any overpaid shipping cost will be refunded.</span>
+                </p>
+              </div>
+
+              <!-- Pay Button -->
+              <button class="btn btn-primary btn-lg btn-full" id="pay-btn">
+                <span id="pay-btn-text">Pay Now</span>
+              </button>
+              <p style="text-align:center;margin-top:var(--space-2);">
+                <small style="color:var(--text-muted);">🔒 Secured by Razorpay</small>
               </p>
             </div>
-
-            <!-- Pay Button -->
-            <button class="btn btn-primary btn-lg btn-full" id="pay-btn">
-              <span id="pay-btn-text">Pay Now</span>
-            </button>
-            <p style="text-align:center;margin-top:var(--space-2);">
-              <small style="color:var(--text-muted);">🔒 Secured by Razorpay</small>
-            </p>
-          </div>
 
           <!-- Order Summary Sidebar -->
           <div id="order-summary"></div>

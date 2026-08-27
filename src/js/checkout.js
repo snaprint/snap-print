@@ -1,18 +1,41 @@
 /* ═══════════════════════════════════════════════════════════════
    SNAP PRINT — Checkout
-   Split address, PIN auto-fill, shipping, Razorpay flow
+   Firebase Auth gate + split address, PIN auto-fill, shipping,
+   Razorpay flow
    ═══════════════════════════════════════════════════════════════ */
 
 import {
   getCart, getCartSubtotal, getCartCount, clearCart,
   formatCurrency, getSampleShippingRates, getShippingCostPreview,
-  isValidEmail, isValidPhone, showToast, CONFIG, fetchCSV, lookupPIN,
+  isValidPhone, showToast, CONFIG, fetchCSV, lookupPIN,
   showPageLoader, hidePageLoader,
   parseBulkPricing, getBulkPrice,
 } from './utils.js';
 
+import {
+  signInWithGoogle,
+  signUpWithEmail,
+  signInWithEmail,
+  resetPassword,
+  signOutUser,
+  onAuthChange,
+  getCurrentUser,
+} from './firebase.js';
+
 let selectedMethod = 'surface';
 let shippingCost = 0;
+
+// ── DOM refs (auth gate) ──
+const loginGate       = document.getElementById('checkout-login-gate');
+const checkoutForm    = document.getElementById('checkout-form');
+const authGoogleBtn   = document.getElementById('auth-google-btn');
+const authTabs        = document.getElementById('auth-tabs');
+const signupForm      = document.getElementById('auth-signup-form');
+const loginForm       = document.getElementById('auth-login-form');
+const authError       = document.getElementById('auth-error');
+const authUserEmail   = document.getElementById('auth-user-email');
+const authLogoutBtn   = document.getElementById('auth-logout-btn');
+const authForgotBtn   = document.getElementById('auth-forgot-btn');
 
 // ── Fetch shipping rates fresh from Sheets (or fall back to sample) ──
 async function fetchShippingRates() {
@@ -32,14 +55,234 @@ async function init() {
   if (cart.length === 0) { window.location.href = '/cart.html'; return; }
 
   renderOrderSummary();
-  initShippingSelector();
-  initPINLookup();
-  initFormValidation();
-  initPayButton();
-  await refreshShippingUI();
+  initAuthGate();
+
+  // Auth state drives everything — form init happens after sign-in
+  onAuthChange(async (user) => {
+    if (user) {
+      showCheckoutForm(user);
+    } else {
+      showLoginGate();
+    }
+  });
 }
 
-// ── Order Summary ──
+// ═══════════════════════════════════════════════════════════
+// AUTH GATE LOGIC
+// ═══════════════════════════════════════════════════════════
+
+function initAuthGate() {
+  // Google Sign-In
+  authGoogleBtn?.addEventListener('click', handleGoogleSignIn);
+
+  // Tab switching
+  authTabs?.querySelectorAll('.auth-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const targetTab = tab.dataset.tab;
+      authTabs.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      if (targetTab === 'signup') {
+        signupForm.style.display = '';
+        loginForm.style.display = 'none';
+      } else {
+        signupForm.style.display = 'none';
+        loginForm.style.display = '';
+      }
+      hideAuthError();
+    });
+  });
+
+  // Sign Up form
+  signupForm?.addEventListener('submit', handleEmailSignUp);
+
+  // Log In form
+  loginForm?.addEventListener('submit', handleEmailLogin);
+
+  // Forgot Password
+  authForgotBtn?.addEventListener('click', handleForgotPassword);
+
+  // Sign Out
+  authLogoutBtn?.addEventListener('click', handleSignOut);
+}
+
+async function handleGoogleSignIn() {
+  hideAuthError();
+  authGoogleBtn.disabled = true;
+  try {
+    await signInWithGoogle();
+    // onAuthChange will handle the UI switch
+  } catch (err) {
+    console.error('[Auth] Google sign-in failed:', err);
+    showAuthError(friendlyAuthError(err));
+  } finally {
+    authGoogleBtn.disabled = false;
+  }
+}
+
+async function handleEmailSignUp(e) {
+  e.preventDefault();
+  hideAuthError();
+
+  const email    = document.getElementById('auth-signup-email').value.trim();
+  const password = document.getElementById('auth-signup-password').value;
+  const confirm  = document.getElementById('auth-signup-password-confirm').value;
+
+  if (password !== confirm) {
+    showAuthError('Passwords do not match.');
+    return;
+  }
+
+  if (password.length < 6) {
+    showAuthError('Password must be at least 6 characters.');
+    return;
+  }
+
+  const btn = document.getElementById('auth-signup-btn');
+  const btnText = document.getElementById('auth-signup-btn-text');
+  btn.disabled = true;
+  btnText.textContent = 'Creating account…';
+
+  try {
+    await signUpWithEmail(email, password);
+    // onAuthChange handles UI
+  } catch (err) {
+    console.error('[Auth] Email signup failed:', err);
+    showAuthError(friendlyAuthError(err));
+  } finally {
+    btn.disabled = false;
+    btnText.textContent = 'Create Account';
+  }
+}
+
+async function handleEmailLogin(e) {
+  e.preventDefault();
+  hideAuthError();
+
+  const email    = document.getElementById('auth-login-email').value.trim();
+  const password = document.getElementById('auth-login-password').value;
+
+  const btn = document.getElementById('auth-login-btn');
+  const btnText = document.getElementById('auth-login-btn-text');
+  btn.disabled = true;
+  btnText.textContent = 'Logging in…';
+
+  try {
+    await signInWithEmail(email, password);
+    // onAuthChange handles UI
+  } catch (err) {
+    console.error('[Auth] Email login failed:', err);
+    showAuthError(friendlyAuthError(err));
+  } finally {
+    btn.disabled = false;
+    btnText.textContent = 'Log In';
+  }
+}
+
+async function handleForgotPassword() {
+  hideAuthError();
+  const email = document.getElementById('auth-login-email')?.value.trim();
+  if (!email) {
+    showAuthError('Enter your email address above, then click "Forgot password?"');
+    return;
+  }
+
+  try {
+    await resetPassword(email);
+    showToast('Password reset email sent — check your inbox.', 'success', 5000);
+  } catch (err) {
+    console.error('[Auth] Password reset failed:', err);
+    showAuthError(friendlyAuthError(err));
+  }
+}
+
+async function handleSignOut() {
+  try {
+    await signOutUser();
+    clearCheckoutFields();
+    // onAuthChange handles UI
+  } catch (err) {
+    console.error('[Auth] Sign-out failed:', err);
+    showToast('Sign out failed. Please try again.', 'error');
+  }
+}
+
+// ── Show / hide auth gate vs checkout form ──
+function showLoginGate() {
+  if (loginGate)    loginGate.style.display = '';
+  if (checkoutForm) checkoutForm.style.display = 'none';
+}
+
+async function showCheckoutForm(user) {
+  if (loginGate)    loginGate.style.display = 'none';
+  if (checkoutForm) checkoutForm.style.display = '';
+
+  // Set email from Firebase Auth (read-only)
+  const emailInput = document.getElementById('buyer-email');
+  if (emailInput && user.email) {
+    emailInput.value = user.email;
+  }
+
+  // Show user email in status bar
+  if (authUserEmail) {
+    authUserEmail.textContent = user.email || 'Signed in';
+  }
+
+  // Init the rest of the checkout form (once)
+  if (!checkoutForm._initialized) {
+    checkoutForm._initialized = true;
+    initShippingSelector();
+    initPINLookup();
+    initFormValidation();
+    initPayButton();
+    await refreshShippingUI();
+  }
+}
+
+function clearCheckoutFields() {
+  const fieldIds = ['buyer-fullname', 'buyer-address', 'buyer-apartment', 'buyer-city', 'buyer-pincode', 'buyer-phone', 'buyer-maps-link'];
+  fieldIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const stateSelect = document.getElementById('buyer-state');
+  if (stateSelect) stateSelect.value = '';
+}
+
+// ── Auth error helpers ──
+function showAuthError(msg) {
+  if (!authError) return;
+  authError.textContent = msg;
+  authError.classList.add('visible');
+}
+
+function hideAuthError() {
+  if (!authError) return;
+  authError.classList.remove('visible');
+}
+
+/** Map Firebase error codes to user-friendly messages */
+function friendlyAuthError(err) {
+  const code = err?.code || '';
+  const map = {
+    'auth/email-already-in-use':    'This email is already registered. Try logging in instead.',
+    'auth/invalid-email':           'Please enter a valid email address.',
+    'auth/user-not-found':          'No account found with this email.',
+    'auth/wrong-password':          'Incorrect password. Try again or reset your password.',
+    'auth/invalid-credential':      'Incorrect email or password.',
+    'auth/weak-password':           'Password must be at least 6 characters.',
+    'auth/too-many-requests':       'Too many attempts. Please wait a moment and try again.',
+    'auth/popup-closed-by-user':    'Sign-in popup was closed. Please try again.',
+    'auth/popup-blocked':           'Sign-in popup was blocked. Please allow popups for this site.',
+    'auth/network-request-failed':  'Network error. Please check your connection.',
+    'auth/user-disabled':           'This account has been disabled. Contact support.',
+  };
+  return map[code] || err?.message || 'Something went wrong. Please try again.';
+}
+
+// ═══════════════════════════════════════════════════════════
+// ORDER SUMMARY
+// ═══════════════════════════════════════════════════════════
+
 function renderOrderSummary() {
   const container = document.getElementById('order-summary');
   if (!container) return;
@@ -89,8 +332,10 @@ function renderOrderSummary() {
   `;
 }
 
-// ── Shipping Prices ──
-// Fetches fresh rates from Sheets, updates the UI, and stores current shippingCost.
+// ═══════════════════════════════════════════════════════════
+// SHIPPING
+// ═══════════════════════════════════════════════════════════
+
 async function refreshShippingUI() {
   const rates = await fetchShippingRates();
   const itemTotal = getCartSubtotal();
@@ -178,24 +423,21 @@ function initShippingSelector() {
   const selector = document.getElementById('shipping-selector');
   if (!selector) return;
 
-  // Listen on the radio <input> directly instead of the parent <label>.
-  // On iOS Safari, clicking a <label> fires the click event TWICE (once for
-  // the label, once auto-forwarded to the inner input), which caused
-  // refreshShippingUI() to race against itself on mobile.
-  // The `change` event fires exactly once when the selection actually changes.
   selector.querySelectorAll('input[type="radio"]').forEach(radio => {
     radio.addEventListener('change', async () => {
-      if (!radio.checked) return; // guard: only act on the newly-selected input
+      if (!radio.checked) return;
       selectedMethod = radio.value;
       selector.querySelectorAll('.shipping-option').forEach(o => o.classList.remove('selected'));
       radio.closest('.shipping-option')?.classList.add('selected');
-      // Re-fetch from Sheets every time a method is chosen
       await refreshShippingUI();
     });
   });
 }
 
-// ── PIN Code → Auto-fill City/State ──
+// ═══════════════════════════════════════════════════════════
+// PIN CODE LOOKUP
+// ═══════════════════════════════════════════════════════════
+
 function initPINLookup() {
   const pinInput = document.getElementById('buyer-pincode');
   const stateSelect = document.getElementById('buyer-state');
@@ -216,17 +458,17 @@ function initPINLookup() {
   });
 }
 
-// ── Form Validation ──
+// ═══════════════════════════════════════════════════════════
+// FORM VALIDATION (confirm fields removed)
+// ═══════════════════════════════════════════════════════════
+
 const FIELDS = [
-  { id: 'buyer-email',         validate: isValidEmail },
-  { id: 'buyer-email-confirm', validate: v => v.trim() === document.getElementById('buyer-email')?.value.trim() && v.trim().length > 0 },
   { id: 'buyer-fullname',      validate: v => v.trim().length >= 1 },
   { id: 'buyer-address',       validate: v => v.trim().length >= 5 },
   { id: 'buyer-city',          validate: v => v.trim().length >= 2 },
   { id: 'buyer-state',         validate: v => v.trim().length >= 1 },
   { id: 'buyer-pincode',       validate: v => /^\d{6}$/.test(v.trim()) },
   { id: 'buyer-phone',         validate: isValidPhone },
-  { id: 'buyer-phone-confirm', validate: v => v.trim() === document.getElementById('buyer-phone')?.value.trim() && v.trim().length > 0 },
 ];
 
 function initFormValidation() {
@@ -258,7 +500,10 @@ function validateAllFields() {
   return allValid;
 }
 
-// ── Pay Button ──
+// ═══════════════════════════════════════════════════════════
+// PAY BUTTON + RAZORPAY
+// ═══════════════════════════════════════════════════════════
+
 function initPayButton() {
   const payBtn = document.getElementById('pay-btn');
   if (!payBtn) return;

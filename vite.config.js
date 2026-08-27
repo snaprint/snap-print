@@ -27,6 +27,11 @@ export default defineConfig({
         faq: resolve(__dirname, 'src/faq.html'),
         contact: resolve(__dirname, 'src/contact.html'),
       },
+      output: {
+        manualChunks: {
+          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+        },
+      },
     },
   },
   server: {

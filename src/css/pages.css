@@ -1002,6 +1002,228 @@
   .address-grid--3col { grid-template-columns: 1fr 1fr; }
 }
 
+/* ── Auth Login Gate (Checkout) ── */
+.checkout-form-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.auth-gate__card {
+  padding: var(--space-8);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  animation: fadeInUp var(--duration-slow) var(--ease) both;
+}
+
+.auth-gate__header {
+  text-align: center;
+  margin-bottom: var(--space-6);
+}
+
+.auth-gate__icon {
+  width: 40px;
+  height: 40px;
+  color: var(--brand-accent);
+  margin: 0 auto var(--space-3);
+}
+
+.auth-gate__title {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  margin-bottom: var(--space-2);
+}
+
+.auth-gate__subtitle {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* Google Sign-In Button */
+.auth-google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 12px var(--space-5);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--bg-body);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease);
+}
+
+.auth-google-btn:hover {
+  border-color: var(--border-dark);
+  box-shadow: var(--shadow-sm);
+}
+
+.auth-google-btn:active {
+  transform: scale(0.99);
+}
+
+.auth-google-btn__icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Divider */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: var(--space-5) 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-light);
+}
+
+.auth-divider span {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  font-weight: 500;
+}
+
+/* Tab Switcher */
+.auth-tabs {
+  display: flex;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: var(--space-5);
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 10px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--bg-body);
+  border: none;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease);
+}
+
+.auth-tab:not(:last-child) {
+  border-right: 1px solid var(--border-light);
+}
+
+.auth-tab.active {
+  background: var(--brand-primary);
+  color: var(--text-on-dark);
+}
+
+.auth-tab:not(.active):hover {
+  background: var(--bg-muted);
+  color: var(--text-primary);
+}
+
+/* Auth Forms */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Forgot Password Link */
+.auth-forgot-link {
+  display: block;
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--text-link);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-top: calc(-1 * var(--space-2));
+}
+
+.auth-forgot-link:hover {
+  text-decoration: underline;
+}
+
+/* Auth Error */
+.auth-error {
+  display: none;
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--brand-sale-bg);
+  color: var(--brand-sale);
+  font-size: var(--text-sm);
+  animation: fadeIn var(--duration-fast) var(--ease);
+}
+
+.auth-error.visible {
+  display: block;
+}
+
+/* Auth Status Bar (shown when signed in) */
+.auth-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--brand-success-bg);
+  animation: fadeIn var(--duration-fast) var(--ease);
+}
+
+.auth-status-bar__user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--brand-success);
+  min-width: 0;
+}
+
+.auth-status-bar__user span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-status-bar__logout {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color var(--duration-fast) var(--ease);
+}
+
+.auth-status-bar__logout:hover {
+  color: var(--brand-sale);
+}
+
+@media (max-width: 640px) {
+  .auth-gate__card {
+    padding: var(--space-5);
+  }
+}
+
 /* ── Quote Page ── */
 .quote-page {
   padding: var(--space-8) 0 var(--space-16);
