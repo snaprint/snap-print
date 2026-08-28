@@ -123,6 +123,7 @@ export async function onRequestPost(context) {
       subtotal: Number(notes.subtotal) || totalAmount,
       shippingCost: Number(notes.shipping_cost) || 0,
       shippingMethod: notes.shipping_method || 'normal',
+      buyerUid: notes.buyer_uid || '',
       buyerName: notes.buyer_name || '',
       buyerEmail: notes.buyer_email || '',
       buyerPhone: notes.buyer_phone || '',
@@ -332,6 +333,7 @@ async function sendConfirmationEmails(env, data) {
             <tr><td style="padding:6px 0;color:#666;">City</td><td style="padding:6px 0;">${escapeHtml(data.buyerCity)}</td></tr>
             <tr><td style="padding:6px 0;color:#666;">State</td><td style="padding:6px 0;">${escapeHtml(data.buyerState)}</td></tr>
             <tr><td style="padding:6px 0;color:#666;">Pincode</td><td style="padding:6px 0;">${escapeHtml(data.buyerPincode)}</td></tr>
+            ${data.buyerUid ? `<tr><td style="padding:6px 0;color:#666;">User ID</td><td style="padding:6px 0;font-size:12px;font-family:monospace;">${escapeHtml(data.buyerUid)}</td></tr>` : ''}
           </table>
 
           <p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #eee;padding-top:16px;">Automated notification from Snap Print webhook</p>

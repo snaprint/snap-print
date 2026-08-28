@@ -549,6 +549,7 @@ function initPayButton() {
     if (cart.length === 0) { showToast('Your cart is empty', 'error'); return; }
 
     const buyer = {
+      uid:       getCurrentUser()?.uid || '',
       email:     document.getElementById('buyer-email').value.trim(),
       fullName:  document.getElementById('buyer-fullname').value.trim(),
       address:   document.getElementById('buyer-address').value.trim(),
