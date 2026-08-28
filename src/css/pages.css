@@ -1226,14 +1226,15 @@
 
 /* ── Account Icon (navbar) ── */
 .account-icon-btn {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-full);
-  color: var(--text-primary);
-  transition: all var(--duration-fast) var(--ease);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  color: var(--text-on-dark-muted);
+  transition: color var(--duration-fast) var(--ease);
 }
 
 .account-icon-btn svg {
@@ -1242,8 +1243,7 @@
 }
 
 .account-icon-btn:hover {
-  background: var(--bg-muted);
-  color: var(--brand-accent);
+  color: var(--text-on-dark);
 }
 
 /* ── Account Page ── */
