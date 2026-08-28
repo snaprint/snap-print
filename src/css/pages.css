@@ -1387,6 +1387,28 @@
   background: var(--brand-success-bg);
 }
 
+.order-status--processing {
+  color: #b45309;
+  background: #fef3c7;
+}
+
+.order-status--in-transit {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.order-status--delivered {
+  color: #15803d;
+  background: #dcfce7;
+}
+
+/* Disabled track button */
+.order-track-btn--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 /* Empty state */
 .account-empty {
   text-align: center;

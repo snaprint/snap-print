@@ -105,7 +105,17 @@ export async function signOutUser() {
  * @returns {import('firebase/auth').Unsubscribe}
  */
 export function onAuthChange(callback) {
-  return onAuthStateChanged(auth, callback);
+  return onAuthStateChanged(auth, (user) => {
+    // Set a lightweight flag for non-Firebase pages (e.g. main.js navbar redirect)
+    try {
+      if (user) {
+        localStorage.setItem('snaprint_logged_in', '1');
+      } else {
+        localStorage.removeItem('snaprint_logged_in');
+      }
+    } catch { /* localStorage may be unavailable */ }
+    callback(user);
+  });
 }
 
 /**

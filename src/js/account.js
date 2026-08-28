@@ -3,7 +3,7 @@
    Auth gate + Profile management + Order history
    ═══════════════════════════════════════════════════════════════ */
 
-import { showToast } from './utils.js';
+import { showToast, CONFIG, fetchCSV } from './utils.js';
 import {
   signInWithGoogle,
   signUpWithEmail,
@@ -290,7 +290,11 @@ async function handleProfileSave(e) {
 async function loadOrders(uid) {
   if (ordersLoading) ordersLoading.style.display = 'flex';
 
-  const orders = await getBuyerOrders(uid);
+  // Fetch Firestore orders + Google Sheets tracking data in parallel
+  const [orders, trackingRows] = await Promise.all([
+    getBuyerOrders(uid),
+    fetchTrackingData(),
+  ]);
 
   if (ordersLoading) ordersLoading.style.display = 'none';
 
@@ -307,6 +311,13 @@ async function loadOrders(uid) {
     return;
   }
 
+  // Build a lookup map: order_id → tracking row
+  const trackingMap = {};
+  for (const row of trackingRows) {
+    const id = (row.order_id || '').trim();
+    if (id) trackingMap[id] = row;
+  }
+
   ordersListEl.innerHTML = orders.map(order => {
     const date = order.createdAt?.toDate
       ? order.createdAt.toDate().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -320,25 +331,75 @@ async function loadOrders(uid) {
       ? `₹${Number(order.total).toLocaleString('en-IN')}`
       : '—';
 
-    const statusClass = order.status === 'paid' ? 'order-status--paid' : '';
+    // Match with Google Sheets tracking data by order_id
+    const orderId = order.orderId || order.id;
+    const tracking = trackingMap[orderId] || null;
+
+    // Determine live status: Sheets > Firestore > default
+    const liveStatus = tracking?.order_status?.trim().toLowerCase() || 'processing';
+    const trackingLink = tracking?.tracking_link?.trim() || '';
+
+    // Status badge styling
+    const statusInfo = getStatusInfo(liveStatus);
+
+    // Track button: only clickable when in_transit AND has a tracking link
+    const canTrack = liveStatus === 'in_transit' && trackingLink;
+    const trackBtnClass = canTrack ? 'btn btn-ghost btn-sm' : 'btn btn-ghost btn-sm order-track-btn--disabled';
+    const trackBtnHref = canTrack ? ensureUrl(trackingLink) : '#';
+    const trackBtnTarget = canTrack ? ' target="_blank" rel="noopener noreferrer"' : '';
+    const trackBtnClick = canTrack ? '' : ' onclick="return false;"';
 
     return `
       <div class="order-card">
         <div class="order-card__header">
           <div>
-            <span class="order-card__id">${order.orderId || order.id}</span>
+            <span class="order-card__id">${orderId}</span>
             <span class="order-card__date">${date}</span>
           </div>
           <span class="order-card__total">${total}</span>
         </div>
         <div class="order-card__items">${itemsSummary || 'No items recorded'}</div>
         <div class="order-card__footer">
-          <span class="order-status ${statusClass}">${order.status || 'unknown'}</span>
-          <a href="/track-order.html?order=${order.orderId || order.id}" class="btn btn-ghost btn-sm">Track Order →</a>
+          <span class="order-status ${statusInfo.cssClass}">${statusInfo.label}</span>
+          <a href="${trackBtnHref}" class="${trackBtnClass}"${trackBtnTarget}${trackBtnClick}>${canTrack ? 'Track Order →' : 'Track Order'}</a>
         </div>
       </div>
     `;
   }).join('');
+
+  // Scroll to orders section if URL hash is #orders
+  if (window.location.hash === '#orders') {
+    document.getElementById('orders-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+/** Fetch tracking data from Google Sheets (fire-and-forget on error) */
+async function fetchTrackingData() {
+  if (!CONFIG.ORDER_TRACKING_CSV_URL) return [];
+  try {
+    return await fetchCSV(CONFIG.ORDER_TRACKING_CSV_URL);
+  } catch (err) {
+    console.warn('[Account] Failed to fetch tracking data:', err);
+    return [];
+  }
+}
+
+/** Map status codes to display info */
+function getStatusInfo(status) {
+  const map = {
+    processing:  { label: 'Processing',  cssClass: 'order-status--processing' },
+    in_transit:  { label: 'In Transit',   cssClass: 'order-status--in-transit' },
+    delivered:   { label: 'Delivered',    cssClass: 'order-status--delivered' },
+    paid:        { label: 'Paid',         cssClass: 'order-status--paid' },
+  };
+  return map[status] || { label: status || 'Processing', cssClass: 'order-status--processing' };
+}
+
+/** Ensure a string is a valid URL with scheme */
+function ensureUrl(url) {
+  if (!url) return '#';
+  return /^https?:\/\//i.test(url) ? url : 'https://' + url;
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
