@@ -27,6 +27,7 @@ export default defineConfig({
         'cancel-order': resolve(__dirname, 'src/cancel-order.html'),
         faq: resolve(__dirname, 'src/faq.html'),
         contact: resolve(__dirname, 'src/contact.html'),
+        account: resolve(__dirname, 'src/account.html'),
       },
       output: {
         manualChunks: {

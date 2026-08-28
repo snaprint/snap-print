@@ -24,6 +24,10 @@ import {
   doc,
   getDoc,
   setDoc,
+  collection,
+  getDocs,
+  query,
+  orderBy,
   serverTimestamp,
 } from 'firebase/firestore';
 
@@ -145,6 +149,44 @@ export async function saveBuyerProfile(uid, data) {
     }, { merge: true });
   } catch (err) {
     console.warn('[Firebase] Failed to save buyer profile:', err);
+  }
+}
+
+// ── Firestore helpers (orders subcollection) ──
+
+/**
+ * Save an order record under buyers/{uid}/orders/{orderId}.
+ * @param {string} uid
+ * @param {string} orderId
+ * @param {object} data — order details (items, total, shipping, etc.)
+ */
+export async function saveBuyerOrder(uid, orderId, data) {
+  try {
+    await setDoc(doc(db, BUYERS_COLLECTION, uid, 'orders', orderId), {
+      ...data,
+      createdAt: serverTimestamp(),
+    });
+  } catch (err) {
+    console.warn('[Firebase] Failed to save order:', err);
+  }
+}
+
+/**
+ * Fetch all orders for a buyer, newest first.
+ * @param {string} uid
+ * @returns {Promise<object[]>} array of order objects
+ */
+export async function getBuyerOrders(uid) {
+  try {
+    const q = query(
+      collection(db, BUYERS_COLLECTION, uid, 'orders'),
+      orderBy('createdAt', 'desc')
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.warn('[Firebase] Failed to read orders:', err);
+    return [];
   }
 }
 

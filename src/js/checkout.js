@@ -22,6 +22,7 @@ import {
   getCurrentUser,
   getBuyerProfile,
   saveBuyerProfile,
+  saveBuyerOrder,
 } from './firebase.js';
 
 let selectedMethod = 'surface';
@@ -637,8 +638,8 @@ function openRazorpay(orderId, amount, buyer, keyId) {
       maps_link: buyer.mapsLink || '',
     },
     theme: { color: '#1a1a1a' },
-    handler() {
-      // Save/update buyer profile to Firestore (fire-and-forget, Step 5)
+    handler(response) {
+      // Save/update buyer profile to Firestore (fire-and-forget)
       const currentUser = getCurrentUser();
       if (currentUser) {
         saveBuyerProfile(currentUser.uid, {
@@ -652,6 +653,26 @@ function openRazorpay(orderId, amount, buyer, keyId) {
           email:     buyer.email,
           mapsLink:  buyer.mapsLink,
         }).catch(err => console.warn('[Checkout] Profile save failed:', err));
+
+        // Save order record to Firestore (fire-and-forget)
+        const cart = getCart();
+        saveBuyerOrder(currentUser.uid, orderId, {
+          orderId,
+          paymentId: response.razorpay_payment_id || '',
+          items: cart.map(item => ({
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            image: item.image || '',
+          })),
+          subtotal: getCartSubtotal(),
+          shippingCost,
+          shippingMethod: selectedMethod,
+          total: getCartSubtotal() + shippingCost,
+          buyerEmail: buyer.email,
+          status: 'paid',
+        }).catch(err => console.warn('[Checkout] Order save failed:', err));
       }
       clearCart();
       window.location.href = `/thank-you.html?order=${orderId}`;
