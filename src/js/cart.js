@@ -192,8 +192,13 @@ function attachCartEvents() {
 // Re-render on cart updates from other components
 window.addEventListener('cart-updated', renderCart);
 
-document.addEventListener('DOMContentLoaded', async () => {
-  // Fetch live bulk pricing from Sheets, then render
-  await refreshBulkPricingFromSheet();
+document.addEventListener('DOMContentLoaded', () => {
+  // 1. Render immediately from localStorage (instant, no network)
   renderCart();
+
+  // 2. Refresh bulk pricing from Sheets in the background,
+  //    then silently re-render if prices changed
+  refreshBulkPricingFromSheet().then(() => {
+    renderCart();
+  });
 });
