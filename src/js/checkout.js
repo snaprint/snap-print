@@ -22,8 +22,11 @@ import {
   getCurrentUser,
   getBuyerProfile,
   saveBuyerProfile,
+  addBuyerAddress,
   saveBuyerOrder,
 } from './firebase.js';
+
+let selectedAddressId = null; // tracks which saved address is selected
 
 let selectedMethod = 'surface';
 let shippingCost = 0;
@@ -230,27 +233,20 @@ async function showCheckoutForm(user) {
     authUserEmail.textContent = user.email || 'Signed in';
   }
 
-  // Pre-fill from Firestore buyer profile (Step 4)
+  // Pre-fill from Firestore buyer profile
   try {
     const profile = await getBuyerProfile(user.uid);
     if (profile) {
-      const fieldMap = {
-        'buyer-fullname':  profile.name  || '',
-        'buyer-phone':     profile.phone || '',
-        'buyer-address':   profile.address || '',
-        'buyer-apartment': profile.apartment || '',
-        'buyer-city':      profile.city || '',
-        'buyer-pincode':   profile.pincode || '',
-        'buyer-maps-link': profile.mapsLink || '',
-      };
-      for (const [id, value] of Object.entries(fieldMap)) {
-        const el = document.getElementById(id);
-        if (el && value) el.value = value;
-      }
-      // State is a <select>, set separately
-      const stateSelect = document.getElementById('buyer-state');
-      if (stateSelect && profile.state) {
-        stateSelect.value = profile.state;
+      // Pre-fill name and phone
+      const nameEl = document.getElementById('buyer-fullname');
+      const phoneEl = document.getElementById('buyer-phone');
+      if (nameEl && profile.name) nameEl.value = profile.name;
+      if (phoneEl && profile.phone) phoneEl.value = profile.phone;
+
+      // Render address picker if user has saved addresses
+      const addresses = profile.addresses || [];
+      if (addresses.length > 0) {
+        renderAddressPicker(addresses);
       }
     }
   } catch (err) {
@@ -269,8 +265,111 @@ async function showCheckoutForm(user) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// Address Picker (for logged-in users with saved addresses)
+// ═══════════════════════════════════════════════════════════════
+
+function renderAddressPicker(addresses) {
+  const section = document.getElementById('address-picker-section');
+  const picker = document.getElementById('address-picker');
+  if (!section || !picker) return;
+
+  section.style.display = '';
+
+  const states = {
+    AN:'Andaman & Nicobar', AP:'Andhra Pradesh', AR:'Arunachal Pradesh', AS:'Assam',
+    BR:'Bihar', CH:'Chandigarh', CT:'Chhattisgarh', DN:'Dadra & Nagar Haveli',
+    DD:'Daman & Diu', DL:'Delhi', GA:'Goa', GJ:'Gujarat', HR:'Haryana',
+    HP:'Himachal Pradesh', JK:'Jammu & Kashmir', JH:'Jharkhand', KA:'Karnataka',
+    KL:'Kerala', LA:'Ladakh', LD:'Lakshadweep', MP:'Madhya Pradesh', MH:'Maharashtra',
+    MN:'Manipur', ML:'Meghalaya', MZ:'Mizoram', NL:'Nagaland', OR:'Odisha',
+    PY:'Puducherry', PB:'Punjab', RJ:'Rajasthan', SK:'Sikkim', TN:'Tamil Nadu',
+    TG:'Telangana', TR:'Tripura', UP:'Uttar Pradesh', UT:'Uttarakhand', WB:'West Bengal',
+  };
+
+  // Find default address
+  const defaultAddr = addresses.find(a => a.isDefault) || addresses[0];
+
+  picker.innerHTML = addresses.map(addr => {
+    const fullAddress = [addr.address, addr.apartment, addr.city, states[addr.state] || addr.state, addr.pincode]
+      .filter(Boolean).join(', ');
+    const isDefault = addr.id === defaultAddr.id;
+    return `
+      <label class="address-picker__option ${isDefault ? 'selected' : ''}" data-address-id="${addr.id}">
+        <input type="radio" name="checkout-address" value="${addr.id}" ${isDefault ? 'checked' : ''} />
+        <div class="address-picker__content">
+          <span class="address-picker__label">${addr.label || 'Address'}${addr.isDefault ? ' <small>(Default)</small>' : ''}</span>
+          <span class="address-picker__text">${fullAddress}</span>
+        </div>
+      </label>
+    `;
+  }).join('') + `
+    <label class="address-picker__option address-picker__new" data-address-id="new">
+      <input type="radio" name="checkout-address" value="new" />
+      <div class="address-picker__content">
+        <span class="address-picker__label">+ Add New Address</span>
+        <span class="address-picker__text">Enter a different delivery address</span>
+      </div>
+    </label>
+  `;
+
+  // Pre-select default address
+  selectAddress(defaultAddr);
+
+  // Listen for changes
+  picker.querySelectorAll('input[name="checkout-address"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      // Update visual selection
+      picker.querySelectorAll('.address-picker__option').forEach(opt => opt.classList.remove('selected'));
+      radio.closest('.address-picker__option').classList.add('selected');
+
+      if (radio.value === 'new') {
+        selectedAddressId = null;
+        clearAddressFields();
+        setAddressFieldsDisabled(false);
+      } else {
+        const addr = addresses.find(a => a.id === radio.value);
+        if (addr) selectAddress(addr);
+      }
+    });
+  });
+}
+
+function selectAddress(addr) {
+  selectedAddressId = addr.id;
+  const fieldMap = {
+    'buyer-address':   addr.address || '',
+    'buyer-apartment': addr.apartment || '',
+    'buyer-city':      addr.city || '',
+    'buyer-pincode':   addr.pincode || '',
+  };
+  for (const [id, value] of Object.entries(fieldMap)) {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  }
+  const stateSelect = document.getElementById('buyer-state');
+  if (stateSelect) stateSelect.value = addr.state || '';
+  setAddressFieldsDisabled(true);
+}
+
+function clearAddressFields() {
+  ['buyer-address', 'buyer-apartment', 'buyer-city', 'buyer-pincode'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const stateSelect = document.getElementById('buyer-state');
+  if (stateSelect) stateSelect.value = '';
+}
+
+function setAddressFieldsDisabled(disabled) {
+  ['buyer-address', 'buyer-apartment', 'buyer-city', 'buyer-pincode', 'buyer-state'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = disabled;
+  });
+}
+
 function clearCheckoutFields() {
-  const fieldIds = ['buyer-fullname', 'buyer-address', 'buyer-apartment', 'buyer-city', 'buyer-pincode', 'buyer-phone', 'buyer-maps-link'];
+  const fieldIds = ['buyer-fullname', 'buyer-address', 'buyer-apartment', 'buyer-city', 'buyer-pincode', 'buyer-phone'];
   fieldIds.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
@@ -559,7 +658,6 @@ function initPayButton() {
       state:     document.getElementById('buyer-state').value,
       pincode:   document.getElementById('buyer-pincode').value.trim(),
       phone:     document.getElementById('buyer-phone').value.trim(),
-      mapsLink:  document.getElementById('buyer-maps-link')?.value.trim() || '',
     };
 
     const items = cart.map(item => ({ id: item.id, quantity: item.quantity }));
@@ -634,25 +732,30 @@ function openRazorpay(orderId, amount, buyer, keyId) {
       email: buyer.email,
       contact: buyer.phone,
     },
-    notes: {
-      maps_link: buyer.mapsLink || '',
-    },
+    notes: {},
     theme: { color: '#1a1a1a' },
     handler(response) {
-      // Save/update buyer profile to Firestore (fire-and-forget)
+      // Save/update buyer profile + address to Firestore (fire-and-forget)
       const currentUser = getCurrentUser();
       if (currentUser) {
+        // Save name/phone/email
         saveBuyerProfile(currentUser.uid, {
-          name:      buyer.fullName,
-          phone:     buyer.phone,
-          address:   buyer.address,
-          apartment: buyer.apartment,
-          city:      buyer.city,
-          state:     buyer.state,
-          pincode:   buyer.pincode,
-          email:     buyer.email,
-          mapsLink:  buyer.mapsLink,
+          name:  buyer.fullName,
+          phone: buyer.phone,
+          email: buyer.email,
         }).catch(err => console.warn('[Checkout] Profile save failed:', err));
+
+        // If using a new address (not a saved one), add it to addresses array
+        if (!selectedAddressId) {
+          addBuyerAddress(currentUser.uid, {
+            label: 'Address',
+            address: buyer.address,
+            apartment: buyer.apartment,
+            city: buyer.city,
+            state: buyer.state,
+            pincode: buyer.pincode,
+          }).catch(err => console.warn('[Checkout] Address save failed:', err));
+        }
 
         // Save order record to Firestore (fire-and-forget)
         const cart = getCart();

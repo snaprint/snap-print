@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════
    SNAP PRINT — Account Page
-   Auth gate + Profile management + Order history
+   Auth gate + Profile (name/phone) + Multi-address + Order history
    ═══════════════════════════════════════════════════════════════ */
 
 import { showToast, CONFIG, fetchCSV } from './utils.js';
@@ -14,7 +14,12 @@ import {
   getCurrentUser,
   getBuyerProfile,
   saveBuyerProfile,
+  addBuyerAddress,
+  updateBuyerAddress,
+  deleteBuyerAddress,
+  setDefaultAddress,
   getBuyerOrders,
+  MAX_ADDRESSES,
 } from './firebase.js';
 
 // ── DOM refs ──
@@ -35,9 +40,19 @@ const profileForm      = document.getElementById('profile-form');
 const profileEditBtn   = document.getElementById('profile-edit-btn');
 const profileCancelBtn = document.getElementById('profile-cancel-btn');
 
+// Addresses
+const addressesListEl  = document.getElementById('addresses-list');
+const addressAddBtn    = document.getElementById('address-add-btn');
+const addressForm      = document.getElementById('address-form');
+const addressCancelBtn = document.getElementById('address-cancel-btn');
+const addressCounterEl = document.getElementById('address-counter');
+
 // Orders
 const ordersListEl   = document.getElementById('orders-list');
 const ordersLoading  = document.getElementById('orders-loading');
+
+// ── State ──
+let currentProfile = null;
 
 // ── Init ──
 function init() {
@@ -83,6 +98,11 @@ function initAuthGate() {
   profileEditBtn?.addEventListener('click', showProfileEdit);
   profileCancelBtn?.addEventListener('click', hideProfileEdit);
   profileForm?.addEventListener('submit', handleProfileSave);
+
+  // Address add/edit/cancel
+  addressAddBtn?.addEventListener('click', showAddressFormForNew);
+  addressCancelBtn?.addEventListener('click', hideAddressForm);
+  addressForm?.addEventListener('submit', handleAddressSave);
 }
 
 async function handleGoogleSignIn() {
@@ -172,9 +192,10 @@ async function showAccountContent(user) {
   if (accountContent) accountContent.style.display = '';
 
   // Load profile
-  const profile = await getBuyerProfile(user.uid);
-  renderProfileView(user, profile);
-  populateProfileForm(user, profile);
+  currentProfile = await getBuyerProfile(user.uid);
+  renderProfileView(user, currentProfile);
+  populateProfileForm(user, currentProfile);
+  renderAddressList(currentProfile);
 
   // Load orders
   loadOrders(user.uid);
@@ -210,7 +231,7 @@ function friendlyAuthError(err) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// PROFILE
+// PROFILE (name, phone, email only — addresses are separate)
 // ═══════════════════════════════════════════════════════════
 
 function renderProfileView(user, profile) {
@@ -221,10 +242,6 @@ function renderProfileView(user, profile) {
     { label: 'Email', value: user.email || '—' },
     { label: 'Name', value: p.name || '—' },
     { label: 'Phone', value: p.phone || '—' },
-    { label: 'Address', value: [p.address, p.apartment].filter(Boolean).join(', ') || '—' },
-    { label: 'City', value: p.city || '—' },
-    { label: 'State', value: p.state || '—' },
-    { label: 'PIN Code', value: p.pincode || '—' },
   ];
 
   profileGrid.innerHTML = fields.map(f => `
@@ -240,10 +257,6 @@ function populateProfileForm(user, profile) {
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
   set('profile-name', p.name);
   set('profile-phone', p.phone);
-  set('profile-address', p.address);
-  set('profile-city', p.city);
-  set('profile-state', p.state);
-  set('profile-pincode', p.pincode);
 }
 
 function showProfileEdit() {
@@ -264,22 +277,199 @@ async function handleProfileSave(e) {
   if (!user) return;
 
   const data = {
-    name:    document.getElementById('profile-name')?.value.trim() || '',
-    phone:   document.getElementById('profile-phone')?.value.trim() || '',
-    address: document.getElementById('profile-address')?.value.trim() || '',
-    city:    document.getElementById('profile-city')?.value.trim() || '',
-    state:   document.getElementById('profile-state')?.value.trim() || '',
-    pincode: document.getElementById('profile-pincode')?.value.trim() || '',
-    email:   user.email,
+    name:  document.getElementById('profile-name')?.value.trim() || '',
+    phone: document.getElementById('profile-phone')?.value.trim() || '',
+    email: user.email,
   };
 
   try {
     await saveBuyerProfile(user.uid, data);
-    renderProfileView(user, data);
+    currentProfile = { ...currentProfile, ...data };
+    renderProfileView(user, currentProfile);
     hideProfileEdit();
     showToast('Profile updated!', 'success');
   } catch (err) {
     showToast('Failed to save profile. Please try again.', 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ADDRESSES
+// ═══════════════════════════════════════════════════════════
+
+function renderAddressList(profile) {
+  const addresses = profile?.addresses || [];
+  updateAddressCounter(addresses.length);
+
+  if (addresses.length === 0) {
+    addressesListEl.innerHTML = `
+      <div class="account-empty">
+        <p>No saved addresses</p>
+      </div>
+    `;
+    return;
+  }
+
+  addressesListEl.innerHTML = addresses.map(addr => {
+    const fullAddress = [addr.address, addr.apartment, addr.city, getStateName(addr.state), addr.pincode]
+      .filter(Boolean).join(', ');
+    const defaultBadge = addr.isDefault
+      ? '<span class="address-badge address-badge--default">Default</span>'
+      : '';
+    const labelText = addr.label || 'Address';
+
+    return `
+      <div class="address-card" data-address-id="${addr.id}">
+        <div class="address-card__header">
+          <span class="address-card__label">${labelText}</span>
+          ${defaultBadge}
+        </div>
+        <p class="address-card__text">${fullAddress}</p>
+        <div class="address-card__actions">
+          ${!addr.isDefault ? `<button class="btn btn-ghost btn-xs" data-action="set-default" data-id="${addr.id}">Set Default</button>` : ''}
+          <button class="btn btn-ghost btn-xs" data-action="edit" data-id="${addr.id}">Edit</button>
+          <button class="btn btn-ghost btn-xs address-card__delete" data-action="delete" data-id="${addr.id}">Delete</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Attach event listeners
+  addressesListEl.querySelectorAll('[data-action]').forEach(btn => {
+    btn.addEventListener('click', handleAddressAction);
+  });
+}
+
+function updateAddressCounter(count) {
+  if (addressCounterEl) {
+    addressCounterEl.textContent = `(${count}/${MAX_ADDRESSES})`;
+  }
+  // Hide add button if at max
+  if (addressAddBtn) {
+    addressAddBtn.style.display = count >= MAX_ADDRESSES ? 'none' : '';
+  }
+}
+
+function getStateName(code) {
+  const states = {
+    AN:'Andaman & Nicobar', AP:'Andhra Pradesh', AR:'Arunachal Pradesh', AS:'Assam',
+    BR:'Bihar', CH:'Chandigarh', CT:'Chhattisgarh', DN:'Dadra & Nagar Haveli',
+    DD:'Daman & Diu', DL:'Delhi', GA:'Goa', GJ:'Gujarat', HR:'Haryana',
+    HP:'Himachal Pradesh', JK:'Jammu & Kashmir', JH:'Jharkhand', KA:'Karnataka',
+    KL:'Kerala', LA:'Ladakh', LD:'Lakshadweep', MP:'Madhya Pradesh', MH:'Maharashtra',
+    MN:'Manipur', ML:'Meghalaya', MZ:'Mizoram', NL:'Nagaland', OR:'Odisha',
+    PY:'Puducherry', PB:'Punjab', RJ:'Rajasthan', SK:'Sikkim', TN:'Tamil Nadu',
+    TG:'Telangana', TR:'Tripura', UP:'Uttar Pradesh', UT:'Uttarakhand', WB:'West Bengal',
+  };
+  return states[code] || code || '';
+}
+
+// ── Address form show/hide ──
+function showAddressFormForNew() {
+  document.getElementById('address-form-id').value = '';
+  document.getElementById('address-form-title').textContent = 'Add New Address';
+  document.getElementById('address-save-btn').textContent = 'Save Address';
+  addressForm.reset();
+  addressForm.style.display = '';
+  addressForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function showAddressFormForEdit(addr) {
+  document.getElementById('address-form-id').value = addr.id;
+  document.getElementById('address-form-title').textContent = 'Edit Address';
+  document.getElementById('address-save-btn').textContent = 'Update Address';
+  document.getElementById('address-label').value = addr.label || '';
+  document.getElementById('address-street').value = addr.address || '';
+  document.getElementById('address-apartment').value = addr.apartment || '';
+  document.getElementById('address-city').value = addr.city || '';
+  document.getElementById('address-state').value = addr.state || '';
+  document.getElementById('address-pincode').value = addr.pincode || '';
+  addressForm.style.display = '';
+  addressForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function hideAddressForm() {
+  addressForm.style.display = 'none';
+  addressForm.reset();
+  document.getElementById('address-form-id').value = '';
+}
+
+async function handleAddressSave(e) {
+  e.preventDefault();
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const editId = document.getElementById('address-form-id').value;
+  const data = {
+    label:     document.getElementById('address-label')?.value.trim() || 'Address',
+    address:   document.getElementById('address-street')?.value.trim() || '',
+    apartment: document.getElementById('address-apartment')?.value.trim() || '',
+    city:      document.getElementById('address-city')?.value.trim() || '',
+    state:     document.getElementById('address-state')?.value || '',
+    pincode:   document.getElementById('address-pincode')?.value.trim() || '',
+  };
+
+  if (!data.address || !data.city || !data.state || !data.pincode) {
+    showToast('Please fill in all required fields.', 'error');
+    return;
+  }
+
+  const saveBtn = document.getElementById('address-save-btn');
+  saveBtn.disabled = true;
+
+  try {
+    if (editId) {
+      await updateBuyerAddress(user.uid, editId, data);
+      showToast('Address updated!', 'success');
+    } else {
+      const newId = await addBuyerAddress(user.uid, data);
+      if (!newId) {
+        showToast(`Maximum ${MAX_ADDRESSES} addresses reached.`, 'error');
+        saveBtn.disabled = false;
+        return;
+      }
+      showToast('Address saved!', 'success');
+    }
+
+    // Reload profile to refresh list
+    currentProfile = await getBuyerProfile(user.uid);
+    renderAddressList(currentProfile);
+    hideAddressForm();
+  } catch (err) {
+    showToast('Failed to save address.', 'error');
+  } finally {
+    saveBtn.disabled = false;
+  }
+}
+
+async function handleAddressAction(e) {
+  const action = e.currentTarget.dataset.action;
+  const id = e.currentTarget.dataset.id;
+  const user = getCurrentUser();
+  if (!user || !id) return;
+
+  if (action === 'edit') {
+    const addr = currentProfile?.addresses?.find(a => a.id === id);
+    if (addr) showAddressFormForEdit(addr);
+  } else if (action === 'delete') {
+    if (!confirm('Delete this address?')) return;
+    try {
+      await deleteBuyerAddress(user.uid, id);
+      currentProfile = await getBuyerProfile(user.uid);
+      renderAddressList(currentProfile);
+      showToast('Address deleted.', 'success');
+    } catch (err) {
+      showToast('Failed to delete address.', 'error');
+    }
+  } else if (action === 'set-default') {
+    try {
+      await setDefaultAddress(user.uid, id);
+      currentProfile = await getBuyerProfile(user.uid);
+      renderAddressList(currentProfile);
+      showToast('Default address updated.', 'success');
+    } catch (err) {
+      showToast('Failed to set default address.', 'error');
+    }
   }
 }
 
@@ -402,4 +592,3 @@ function ensureUrl(url) {
 }
 
 document.addEventListener('DOMContentLoaded', init);
-

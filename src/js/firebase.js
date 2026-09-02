@@ -129,16 +129,30 @@ export function getCurrentUser() {
 // ── Firestore helpers (buyers collection) ──
 
 const BUYERS_COLLECTION = 'buyers';
+const MAX_ADDRESSES = 16;
 
 /**
  * Fetch the buyer profile for a given uid.
+ * Auto-migrates flat address fields → addresses[] array on read.
  * @param {string} uid
  * @returns {Promise<object|null>} profile data or null if not found
  */
 export async function getBuyerProfile(uid) {
   try {
     const snap = await getDoc(doc(db, BUYERS_COLLECTION, uid));
-    return snap.exists() ? snap.data() : null;
+    if (!snap.exists()) return null;
+    const data = snap.data();
+
+    // Auto-migrate: if flat address fields exist but no addresses array
+    if (!data.addresses && data.address) {
+      const migrated = migrateFlatProfile(data);
+      // Fire-and-forget save of migrated data
+      setDoc(doc(db, BUYERS_COLLECTION, uid), migrated, { merge: true })
+        .catch(err => console.warn('[Firebase] Migration save failed:', err));
+      return { ...data, ...migrated };
+    }
+
+    return data;
   } catch (err) {
     console.warn('[Firebase] Failed to read buyer profile:', err);
     return null;
@@ -146,10 +160,27 @@ export async function getBuyerProfile(uid) {
 }
 
 /**
+ * Migrate a flat profile (old format) to the new addresses[] format.
+ */
+function migrateFlatProfile(data) {
+  const addr = {
+    id: generateAddressId(),
+    label: 'Home',
+    address: data.address || '',
+    apartment: data.apartment || '',
+    city: data.city || '',
+    state: data.state || '',
+    pincode: data.pincode || '',
+    isDefault: true,
+  };
+  return { addresses: [addr] };
+}
+
+/**
  * Save or update the buyer profile for a given uid.
  * Uses merge so partial updates don't wipe other fields.
  * @param {string} uid
- * @param {object} data — fields to save (name, phone, address, etc.)
+ * @param {object} data — fields to save (name, phone, email, addresses, etc.)
  */
 export async function saveBuyerProfile(uid, data) {
   try {
@@ -160,6 +191,114 @@ export async function saveBuyerProfile(uid, data) {
   } catch (err) {
     console.warn('[Firebase] Failed to save buyer profile:', err);
   }
+}
+
+// ── Address CRUD helpers ──
+
+/**
+ * Add a new address to the buyer's addresses array. Max 16.
+ * @param {string} uid
+ * @param {object} addressData — { label, address, apartment, city, state, pincode }
+ * @returns {Promise<string|null>} the new address id, or null if at max
+ */
+export async function addBuyerAddress(uid, addressData) {
+  try {
+    const profile = await getBuyerProfile(uid);
+    const addresses = profile?.addresses || [];
+    if (addresses.length >= MAX_ADDRESSES) return null;
+
+    const newAddr = {
+      id: generateAddressId(),
+      ...addressData,
+      isDefault: addresses.length === 0, // first address is default
+    };
+    addresses.push(newAddr);
+
+    await setDoc(doc(db, BUYERS_COLLECTION, uid), {
+      addresses,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+
+    return newAddr.id;
+  } catch (err) {
+    console.warn('[Firebase] Failed to add address:', err);
+    return null;
+  }
+}
+
+/**
+ * Update an existing address by its id.
+ * @param {string} uid
+ * @param {string} addressId
+ * @param {object} addressData — partial fields to update
+ */
+export async function updateBuyerAddress(uid, addressId, addressData) {
+  try {
+    const profile = await getBuyerProfile(uid);
+    const addresses = profile?.addresses || [];
+    const idx = addresses.findIndex(a => a.id === addressId);
+    if (idx === -1) return;
+
+    addresses[idx] = { ...addresses[idx], ...addressData };
+
+    await setDoc(doc(db, BUYERS_COLLECTION, uid), {
+      addresses,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (err) {
+    console.warn('[Firebase] Failed to update address:', err);
+  }
+}
+
+/**
+ * Delete an address by its id.
+ * @param {string} uid
+ * @param {string} addressId
+ */
+export async function deleteBuyerAddress(uid, addressId) {
+  try {
+    const profile = await getBuyerProfile(uid);
+    let addresses = (profile?.addresses || []).filter(a => a.id !== addressId);
+
+    // Ensure at least one is default
+    if (addresses.length > 0 && !addresses.some(a => a.isDefault)) {
+      addresses[0].isDefault = true;
+    }
+
+    await setDoc(doc(db, BUYERS_COLLECTION, uid), {
+      addresses,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (err) {
+    console.warn('[Firebase] Failed to delete address:', err);
+  }
+}
+
+/**
+ * Set a specific address as the default.
+ * @param {string} uid
+ * @param {string} addressId
+ */
+export async function setDefaultAddress(uid, addressId) {
+  try {
+    const profile = await getBuyerProfile(uid);
+    const addresses = (profile?.addresses || []).map(a => ({
+      ...a,
+      isDefault: a.id === addressId,
+    }));
+
+    await setDoc(doc(db, BUYERS_COLLECTION, uid), {
+      addresses,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (err) {
+    console.warn('[Firebase] Failed to set default address:', err);
+  }
+}
+
+/** Generate a short random ID for addresses */
+function generateAddressId() {
+  return 'addr_' + Math.random().toString(36).slice(2, 10);
 }
 
 // ── Firestore helpers (orders subcollection) ──
@@ -200,4 +339,5 @@ export async function getBuyerOrders(uid) {
   }
 }
 
-export { auth, db };
+export { auth, db, MAX_ADDRESSES };
+
