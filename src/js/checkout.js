@@ -299,6 +299,7 @@ function renderAddressPicker(addresses) {
         <input type="radio" name="checkout-address" value="${addr.id}" ${isDefault ? 'checked' : ''} />
         <div class="address-picker__content">
           <span class="address-picker__label">${addr.label || 'Address'}${addr.isDefault ? ' <small>(Default)</small>' : ''}</span>
+          <span class="address-picker__recipient">${addr.name || ''}${addr.phone ? ' · ' + addr.phone : ''}</span>
           <span class="address-picker__text">${fullAddress}</span>
         </div>
       </label>
@@ -338,6 +339,8 @@ function renderAddressPicker(addresses) {
 function selectAddress(addr) {
   selectedAddressId = addr.id;
   const fieldMap = {
+    'buyer-fullname':  addr.name || '',
+    'buyer-phone':     addr.phone || '',
     'buyer-address':   addr.address || '',
     'buyer-apartment': addr.apartment || '',
     'buyer-city':      addr.city || '',
@@ -353,7 +356,7 @@ function selectAddress(addr) {
 }
 
 function clearAddressFields() {
-  ['buyer-address', 'buyer-apartment', 'buyer-city', 'buyer-pincode'].forEach(id => {
+  ['buyer-fullname', 'buyer-phone', 'buyer-address', 'buyer-apartment', 'buyer-city', 'buyer-pincode'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -362,7 +365,7 @@ function clearAddressFields() {
 }
 
 function setAddressFieldsDisabled(disabled) {
-  ['buyer-address', 'buyer-apartment', 'buyer-city', 'buyer-pincode', 'buyer-state'].forEach(id => {
+  ['buyer-fullname', 'buyer-phone', 'buyer-address', 'buyer-apartment', 'buyer-city', 'buyer-pincode', 'buyer-state'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = disabled;
   });
@@ -749,6 +752,8 @@ function openRazorpay(orderId, amount, buyer, keyId) {
         if (!selectedAddressId) {
           addBuyerAddress(currentUser.uid, {
             label: 'Address',
+            name: buyer.fullName,
+            phone: buyer.phone,
             address: buyer.address,
             apartment: buyer.apartment,
             city: buyer.city,

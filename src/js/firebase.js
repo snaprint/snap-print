@@ -166,6 +166,8 @@ function migrateFlatProfile(data) {
   const addr = {
     id: generateAddressId(),
     label: 'Home',
+    name: data.name || '',
+    phone: data.phone || '',
     address: data.address || '',
     apartment: data.apartment || '',
     city: data.city || '',

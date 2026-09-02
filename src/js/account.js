@@ -324,6 +324,7 @@ function renderAddressList(profile) {
           <span class="address-card__label">${labelText}</span>
           ${defaultBadge}
         </div>
+        <p class="address-card__recipient">${addr.name || '—'}${addr.phone ? ' · ' + addr.phone : ''}</p>
         <p class="address-card__text">${fullAddress}</p>
         <div class="address-card__actions">
           ${!addr.isDefault ? `<button class="btn btn-ghost btn-xs" data-action="set-default" data-id="${addr.id}">Set Default</button>` : ''}
@@ -379,6 +380,8 @@ function showAddressFormForEdit(addr) {
   document.getElementById('address-form-title').textContent = 'Edit Address';
   document.getElementById('address-save-btn').textContent = 'Update Address';
   document.getElementById('address-label').value = addr.label || '';
+  document.getElementById('address-name').value = addr.name || '';
+  document.getElementById('address-phone').value = addr.phone || '';
   document.getElementById('address-street').value = addr.address || '';
   document.getElementById('address-apartment').value = addr.apartment || '';
   document.getElementById('address-city').value = addr.city || '';
@@ -402,6 +405,8 @@ async function handleAddressSave(e) {
   const editId = document.getElementById('address-form-id').value;
   const data = {
     label:     document.getElementById('address-label')?.value.trim() || 'Address',
+    name:      document.getElementById('address-name')?.value.trim() || '',
+    phone:     document.getElementById('address-phone')?.value.trim() || '',
     address:   document.getElementById('address-street')?.value.trim() || '',
     apartment: document.getElementById('address-apartment')?.value.trim() || '',
     city:      document.getElementById('address-city')?.value.trim() || '',
@@ -409,7 +414,7 @@ async function handleAddressSave(e) {
     pincode:   document.getElementById('address-pincode')?.value.trim() || '',
   };
 
-  if (!data.address || !data.city || !data.state || !data.pincode) {
+  if (!data.name || !data.address || !data.city || !data.state || !data.pincode) {
     showToast('Please fill in all required fields.', 'error');
     return;
   }

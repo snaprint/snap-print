@@ -142,6 +142,14 @@
               <div class="checkout-section">
                 <h2 class="checkout-section__title">Delivery</h2>
 
+                <!-- Saved Address Picker (populated by JS for logged-in users) -->
+                <div id="address-picker-section" style="display:none;">
+                  <div class="checkout-section__label">Select a saved address or add a new one:</div>
+                  <div class="address-picker" id="address-picker">
+                    <!-- Populated by JS -->
+                  </div>
+                </div>
+
                 <!-- Name -->
                 <div class="form-group">
                   <label class="form-label" for="buyer-fullname">Full Name <span class="required">*</span></label>
@@ -229,14 +237,6 @@
                   <label class="form-label" for="buyer-phone">Phone <span class="required">*</span></label>
                   <input class="form-input" type="tel" id="buyer-phone" placeholder="98765 43210" required autocomplete="tel" inputmode="tel" />
                   <span class="form-error">Enter a valid 10-digit phone number</span>
-                </div>
-
-                <!-- Saved Address Picker (populated by JS for logged-in users) -->
-                <div id="address-picker-section" style="display:none;">
-                  <div class="checkout-section__label">Select a saved address or add a new one:</div>
-                  <div class="address-picker" id="address-picker">
-                    <!-- Populated by JS -->
-                  </div>
                 </div>
               </div>
 
