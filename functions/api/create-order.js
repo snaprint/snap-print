@@ -268,6 +268,7 @@ export async function onRequestPost(context) {
         currency: 'INR',
         receipt: `order_${Date.now()}`,
         notes: {
+          buyer_uid: buyer.uid || '',
           buyer_name: buyer.fullName || '',
           buyer_email: buyer.email,
           buyer_phone: buyer.phone,

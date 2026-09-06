@@ -4,7 +4,12 @@ dist/
 .wrangler/
 .dev.vars
 razorpay_test_key/
+# Planning & brief documents
+docs/
 project-context-version1.md
+ecommerce-site-plan.md
+snap-print-login-agent-kickoff-brief.md
+snap-print-login-setup-brief.md
 public/images/products_png/
 public/images/hero_png/
 public/images/raw_downloaded_images/

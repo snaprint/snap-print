@@ -327,6 +327,22 @@ async function populateFooterShopLinks() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Track Order → Account redirect (logged-in users)
+// ═══════════════════════════════════════════════════════════════
+function initTrackOrderRedirect() {
+  try {
+    if (!localStorage.getItem('snaprint_logged_in')) return;
+  } catch { return; }
+
+  // Redirect all Track Order links to the account orders section
+  document.querySelectorAll('a[href="/track-order.html"], a[href*="track-order.html"]').forEach(link => {
+    // Skip if already on the account page
+    if (window.location.pathname === '/account.html') return;
+    link.setAttribute('href', '/account.html#orders');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Init
 // ═══════════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
@@ -337,6 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initScrollAnimations();
   updateCartBadge();
   populateFooterShopLinks();
+  initTrackOrderRedirect();
 });
 
 // Sync cart badge across tabs

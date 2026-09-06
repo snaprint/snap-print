@@ -1,18 +1,47 @@
 /* ═══════════════════════════════════════════════════════════════
    SNAP PRINT — Checkout
-   Split address, PIN auto-fill, shipping, Razorpay flow
+   Firebase Auth gate + split address, PIN auto-fill, shipping,
+   Razorpay flow
    ═══════════════════════════════════════════════════════════════ */
 
 import {
   getCart, getCartSubtotal, getCartCount, clearCart,
   formatCurrency, getSampleShippingRates, getShippingCostPreview,
-  isValidEmail, isValidPhone, showToast, CONFIG, fetchCSV, lookupPIN,
+  isValidPhone, showToast, CONFIG, fetchCSV, lookupPIN,
   showPageLoader, hidePageLoader,
   parseBulkPricing, getBulkPrice,
 } from './utils.js';
 
+import {
+  signInWithGoogle,
+  signUpWithEmail,
+  signInWithEmail,
+  resetPassword,
+  signOutUser,
+  onAuthChange,
+  getCurrentUser,
+  getBuyerProfile,
+  saveBuyerProfile,
+  addBuyerAddress,
+  saveBuyerOrder,
+} from './firebase.js';
+
+let selectedAddressId = null; // tracks which saved address is selected
+
 let selectedMethod = 'surface';
 let shippingCost = 0;
+
+// ── DOM refs (auth gate) ──
+const loginGate       = document.getElementById('checkout-login-gate');
+const checkoutForm    = document.getElementById('checkout-form');
+const authGoogleBtn   = document.getElementById('auth-google-btn');
+const authTabs        = document.getElementById('auth-tabs');
+const signupForm      = document.getElementById('auth-signup-form');
+const loginForm       = document.getElementById('auth-login-form');
+const authError       = document.getElementById('auth-error');
+const authUserEmail   = document.getElementById('auth-user-email');
+const authLogoutBtn   = document.getElementById('auth-logout-btn');
+const authForgotBtn   = document.getElementById('auth-forgot-btn');
 
 // ── Fetch shipping rates fresh from Sheets (or fall back to sample) ──
 async function fetchShippingRates() {
@@ -32,14 +61,361 @@ async function init() {
   if (cart.length === 0) { window.location.href = '/cart.html'; return; }
 
   renderOrderSummary();
-  initShippingSelector();
-  initPINLookup();
-  initFormValidation();
-  initPayButton();
-  await refreshShippingUI();
+  initAuthGate();
+
+  // Auth state drives everything — form init happens after sign-in
+  onAuthChange(async (user) => {
+    if (user) {
+      showCheckoutForm(user);
+    } else {
+      showLoginGate();
+    }
+  });
 }
 
-// ── Order Summary ──
+// ═══════════════════════════════════════════════════════════
+// AUTH GATE LOGIC
+// ═══════════════════════════════════════════════════════════
+
+function initAuthGate() {
+  // Google Sign-In
+  authGoogleBtn?.addEventListener('click', handleGoogleSignIn);
+
+  // Tab switching
+  authTabs?.querySelectorAll('.auth-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const targetTab = tab.dataset.tab;
+      authTabs.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      if (targetTab === 'signup') {
+        signupForm.style.display = '';
+        loginForm.style.display = 'none';
+      } else {
+        signupForm.style.display = 'none';
+        loginForm.style.display = '';
+      }
+      hideAuthError();
+    });
+  });
+
+  // Sign Up form
+  signupForm?.addEventListener('submit', handleEmailSignUp);
+
+  // Log In form
+  loginForm?.addEventListener('submit', handleEmailLogin);
+
+  // Forgot Password
+  authForgotBtn?.addEventListener('click', handleForgotPassword);
+
+  // Sign Out
+  authLogoutBtn?.addEventListener('click', handleSignOut);
+}
+
+async function handleGoogleSignIn() {
+  hideAuthError();
+  authGoogleBtn.disabled = true;
+  try {
+    await signInWithGoogle();
+    // onAuthChange will handle the UI switch
+  } catch (err) {
+    console.error('[Auth] Google sign-in failed:', err);
+    showAuthError(friendlyAuthError(err));
+  } finally {
+    authGoogleBtn.disabled = false;
+  }
+}
+
+async function handleEmailSignUp(e) {
+  e.preventDefault();
+  hideAuthError();
+
+  const email    = document.getElementById('auth-signup-email').value.trim();
+  const password = document.getElementById('auth-signup-password').value;
+  const confirm  = document.getElementById('auth-signup-password-confirm').value;
+
+  if (password !== confirm) {
+    showAuthError('Passwords do not match.');
+    return;
+  }
+
+  if (password.length < 6) {
+    showAuthError('Password must be at least 6 characters.');
+    return;
+  }
+
+  const btn = document.getElementById('auth-signup-btn');
+  const btnText = document.getElementById('auth-signup-btn-text');
+  btn.disabled = true;
+  btnText.textContent = 'Creating account…';
+
+  try {
+    await signUpWithEmail(email, password);
+    // onAuthChange handles UI
+  } catch (err) {
+    console.error('[Auth] Email signup failed:', err);
+    showAuthError(friendlyAuthError(err));
+  } finally {
+    btn.disabled = false;
+    btnText.textContent = 'Create Account';
+  }
+}
+
+async function handleEmailLogin(e) {
+  e.preventDefault();
+  hideAuthError();
+
+  const email    = document.getElementById('auth-login-email').value.trim();
+  const password = document.getElementById('auth-login-password').value;
+
+  const btn = document.getElementById('auth-login-btn');
+  const btnText = document.getElementById('auth-login-btn-text');
+  btn.disabled = true;
+  btnText.textContent = 'Logging in…';
+
+  try {
+    await signInWithEmail(email, password);
+    // onAuthChange handles UI
+  } catch (err) {
+    console.error('[Auth] Email login failed:', err);
+    showAuthError(friendlyAuthError(err));
+  } finally {
+    btn.disabled = false;
+    btnText.textContent = 'Log In';
+  }
+}
+
+async function handleForgotPassword() {
+  hideAuthError();
+  const email = document.getElementById('auth-login-email')?.value.trim();
+  if (!email) {
+    showAuthError('Enter your email address above, then click "Forgot password?"');
+    return;
+  }
+
+  try {
+    await resetPassword(email);
+    showToast('Password reset email sent — check your inbox.', 'success', 5000);
+  } catch (err) {
+    console.error('[Auth] Password reset failed:', err);
+    showAuthError(friendlyAuthError(err));
+  }
+}
+
+async function handleSignOut() {
+  try {
+    await signOutUser();
+    clearCheckoutFields();
+    // onAuthChange handles UI
+  } catch (err) {
+    console.error('[Auth] Sign-out failed:', err);
+    showToast('Sign out failed. Please try again.', 'error');
+  }
+}
+
+// ── Show / hide auth gate vs checkout form ──
+function showLoginGate() {
+  if (loginGate)    loginGate.style.display = '';
+  if (checkoutForm) checkoutForm.style.display = 'none';
+}
+
+async function showCheckoutForm(user) {
+  if (loginGate)    loginGate.style.display = 'none';
+  if (checkoutForm) checkoutForm.style.display = '';
+
+  // Set email from Firebase Auth (read-only)
+  const emailInput = document.getElementById('buyer-email');
+  if (emailInput && user.email) {
+    emailInput.value = user.email;
+  }
+
+  // Show user email in status bar
+  if (authUserEmail) {
+    authUserEmail.textContent = user.email || 'Signed in';
+  }
+
+  // Pre-fill from Firestore buyer profile
+  try {
+    const profile = await getBuyerProfile(user.uid);
+    if (profile) {
+      // Pre-fill name and phone
+      const nameEl = document.getElementById('buyer-fullname');
+      const phoneEl = document.getElementById('buyer-phone');
+      if (nameEl && profile.name) nameEl.value = profile.name;
+      if (phoneEl && profile.phone) phoneEl.value = profile.phone;
+
+      // Render address picker if user has saved addresses
+      const addresses = profile.addresses || [];
+      if (addresses.length > 0) {
+        renderAddressPicker(addresses);
+      }
+    }
+  } catch (err) {
+    console.warn('[Checkout] Failed to load buyer profile:', err);
+    // Non-blocking — buyer can still fill the form manually
+  }
+
+  // Init the rest of the checkout form (once)
+  if (!checkoutForm._initialized) {
+    checkoutForm._initialized = true;
+    initShippingSelector();
+    initPINLookup();
+    initFormValidation();
+    initPayButton();
+    await refreshShippingUI();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Address Picker (for logged-in users with saved addresses)
+// ═══════════════════════════════════════════════════════════════
+
+function renderAddressPicker(addresses) {
+  const section = document.getElementById('address-picker-section');
+  const picker = document.getElementById('address-picker');
+  if (!section || !picker) return;
+
+  section.style.display = '';
+
+  const states = {
+    AN:'Andaman & Nicobar', AP:'Andhra Pradesh', AR:'Arunachal Pradesh', AS:'Assam',
+    BR:'Bihar', CH:'Chandigarh', CT:'Chhattisgarh', DN:'Dadra & Nagar Haveli',
+    DD:'Daman & Diu', DL:'Delhi', GA:'Goa', GJ:'Gujarat', HR:'Haryana',
+    HP:'Himachal Pradesh', JK:'Jammu & Kashmir', JH:'Jharkhand', KA:'Karnataka',
+    KL:'Kerala', LA:'Ladakh', LD:'Lakshadweep', MP:'Madhya Pradesh', MH:'Maharashtra',
+    MN:'Manipur', ML:'Meghalaya', MZ:'Mizoram', NL:'Nagaland', OR:'Odisha',
+    PY:'Puducherry', PB:'Punjab', RJ:'Rajasthan', SK:'Sikkim', TN:'Tamil Nadu',
+    TG:'Telangana', TR:'Tripura', UP:'Uttar Pradesh', UT:'Uttarakhand', WB:'West Bengal',
+  };
+
+  // Find default address
+  const defaultAddr = addresses.find(a => a.isDefault) || addresses[0];
+
+  picker.innerHTML = addresses.map(addr => {
+    const fullAddress = [addr.address, addr.apartment, addr.city, states[addr.state] || addr.state, addr.pincode]
+      .filter(Boolean).join(', ');
+    const isDefault = addr.id === defaultAddr.id;
+    return `
+      <label class="address-picker__option ${isDefault ? 'selected' : ''}" data-address-id="${addr.id}">
+        <input type="radio" name="checkout-address" value="${addr.id}" ${isDefault ? 'checked' : ''} />
+        <div class="address-picker__content">
+          <span class="address-picker__label">${addr.label || 'Address'}${addr.isDefault ? ' <small>(Default)</small>' : ''}</span>
+          <span class="address-picker__recipient">${addr.name || ''}${addr.phone ? ' · ' + addr.phone : ''}</span>
+          <span class="address-picker__text">${fullAddress}</span>
+        </div>
+      </label>
+    `;
+  }).join('') + `
+    <label class="address-picker__option address-picker__new" data-address-id="new">
+      <input type="radio" name="checkout-address" value="new" />
+      <div class="address-picker__content">
+        <span class="address-picker__label">+ Add New Address</span>
+        <span class="address-picker__text">Enter a different delivery address</span>
+      </div>
+    </label>
+  `;
+
+  // Pre-select default address
+  selectAddress(defaultAddr);
+
+  // Listen for changes
+  picker.querySelectorAll('input[name="checkout-address"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      // Update visual selection
+      picker.querySelectorAll('.address-picker__option').forEach(opt => opt.classList.remove('selected'));
+      radio.closest('.address-picker__option').classList.add('selected');
+
+      if (radio.value === 'new') {
+        selectedAddressId = null;
+        clearAddressFields();
+        setAddressFieldsDisabled(false);
+      } else {
+        const addr = addresses.find(a => a.id === radio.value);
+        if (addr) selectAddress(addr);
+      }
+    });
+  });
+}
+
+function selectAddress(addr) {
+  selectedAddressId = addr.id;
+  const fieldMap = {
+    'buyer-fullname':  addr.name || '',
+    'buyer-phone':     addr.phone || '',
+    'buyer-address':   addr.address || '',
+    'buyer-apartment': addr.apartment || '',
+    'buyer-city':      addr.city || '',
+    'buyer-pincode':   addr.pincode || '',
+  };
+  for (const [id, value] of Object.entries(fieldMap)) {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  }
+  const stateSelect = document.getElementById('buyer-state');
+  if (stateSelect) stateSelect.value = addr.state || '';
+  setAddressFieldsDisabled(true);
+}
+
+function clearAddressFields() {
+  ['buyer-fullname', 'buyer-phone', 'buyer-address', 'buyer-apartment', 'buyer-city', 'buyer-pincode'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const stateSelect = document.getElementById('buyer-state');
+  if (stateSelect) stateSelect.value = '';
+}
+
+function setAddressFieldsDisabled(disabled) {
+  ['buyer-fullname', 'buyer-phone', 'buyer-address', 'buyer-apartment', 'buyer-city', 'buyer-pincode', 'buyer-state'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = disabled;
+  });
+}
+
+function clearCheckoutFields() {
+  const fieldIds = ['buyer-fullname', 'buyer-address', 'buyer-apartment', 'buyer-city', 'buyer-pincode', 'buyer-phone'];
+  fieldIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const stateSelect = document.getElementById('buyer-state');
+  if (stateSelect) stateSelect.value = '';
+}
+
+// ── Auth error helpers ──
+function showAuthError(msg) {
+  if (!authError) return;
+  authError.textContent = msg;
+  authError.classList.add('visible');
+}
+
+function hideAuthError() {
+  if (!authError) return;
+  authError.classList.remove('visible');
+}
+
+/** Map Firebase error codes to user-friendly messages */
+function friendlyAuthError(err) {
+  const code = err?.code || '';
+  const map = {
+    'auth/email-already-in-use':    'This email is already registered. Try logging in instead.',
+    'auth/invalid-email':           'Please enter a valid email address.',
+    'auth/user-not-found':          'No account found with this email.',
+    'auth/wrong-password':          'Incorrect password. Try again or reset your password.',
+    'auth/invalid-credential':      'Incorrect email or password.',
+    'auth/weak-password':           'Password must be at least 6 characters.',
+    'auth/too-many-requests':       'Too many attempts. Please wait a moment and try again.',
+    'auth/popup-closed-by-user':    'Sign-in popup was closed. Please try again.',
+    'auth/popup-blocked':           'Sign-in popup was blocked. Please allow popups for this site.',
+    'auth/network-request-failed':  'Network error. Please check your connection.',
+    'auth/user-disabled':           'This account has been disabled. Contact support.',
+  };
+  return map[code] || err?.message || 'Something went wrong. Please try again.';
+}
+
+// ═══════════════════════════════════════════════════════════
+// ORDER SUMMARY
+// ═══════════════════════════════════════════════════════════
+
 function renderOrderSummary() {
   const container = document.getElementById('order-summary');
   if (!container) return;
@@ -89,8 +465,10 @@ function renderOrderSummary() {
   `;
 }
 
-// ── Shipping Prices ──
-// Fetches fresh rates from Sheets, updates the UI, and stores current shippingCost.
+// ═══════════════════════════════════════════════════════════
+// SHIPPING
+// ═══════════════════════════════════════════════════════════
+
 async function refreshShippingUI() {
   const rates = await fetchShippingRates();
   const itemTotal = getCartSubtotal();
@@ -178,24 +556,21 @@ function initShippingSelector() {
   const selector = document.getElementById('shipping-selector');
   if (!selector) return;
 
-  // Listen on the radio <input> directly instead of the parent <label>.
-  // On iOS Safari, clicking a <label> fires the click event TWICE (once for
-  // the label, once auto-forwarded to the inner input), which caused
-  // refreshShippingUI() to race against itself on mobile.
-  // The `change` event fires exactly once when the selection actually changes.
   selector.querySelectorAll('input[type="radio"]').forEach(radio => {
     radio.addEventListener('change', async () => {
-      if (!radio.checked) return; // guard: only act on the newly-selected input
+      if (!radio.checked) return;
       selectedMethod = radio.value;
       selector.querySelectorAll('.shipping-option').forEach(o => o.classList.remove('selected'));
       radio.closest('.shipping-option')?.classList.add('selected');
-      // Re-fetch from Sheets every time a method is chosen
       await refreshShippingUI();
     });
   });
 }
 
-// ── PIN Code → Auto-fill City/State ──
+// ═══════════════════════════════════════════════════════════
+// PIN CODE LOOKUP
+// ═══════════════════════════════════════════════════════════
+
 function initPINLookup() {
   const pinInput = document.getElementById('buyer-pincode');
   const stateSelect = document.getElementById('buyer-state');
@@ -216,17 +591,17 @@ function initPINLookup() {
   });
 }
 
-// ── Form Validation ──
+// ═══════════════════════════════════════════════════════════
+// FORM VALIDATION (confirm fields removed)
+// ═══════════════════════════════════════════════════════════
+
 const FIELDS = [
-  { id: 'buyer-email',         validate: isValidEmail },
-  { id: 'buyer-email-confirm', validate: v => v.trim() === document.getElementById('buyer-email')?.value.trim() && v.trim().length > 0 },
   { id: 'buyer-fullname',      validate: v => v.trim().length >= 1 },
   { id: 'buyer-address',       validate: v => v.trim().length >= 5 },
   { id: 'buyer-city',          validate: v => v.trim().length >= 2 },
   { id: 'buyer-state',         validate: v => v.trim().length >= 1 },
   { id: 'buyer-pincode',       validate: v => /^\d{6}$/.test(v.trim()) },
   { id: 'buyer-phone',         validate: isValidPhone },
-  { id: 'buyer-phone-confirm', validate: v => v.trim() === document.getElementById('buyer-phone')?.value.trim() && v.trim().length > 0 },
 ];
 
 function initFormValidation() {
@@ -258,7 +633,10 @@ function validateAllFields() {
   return allValid;
 }
 
-// ── Pay Button ──
+// ═══════════════════════════════════════════════════════════
+// PAY BUTTON + RAZORPAY
+// ═══════════════════════════════════════════════════════════
+
 function initPayButton() {
   const payBtn = document.getElementById('pay-btn');
   if (!payBtn) return;
@@ -274,6 +652,7 @@ function initPayButton() {
     if (cart.length === 0) { showToast('Your cart is empty', 'error'); return; }
 
     const buyer = {
+      uid:       getCurrentUser()?.uid || '',
       email:     document.getElementById('buyer-email').value.trim(),
       fullName:  document.getElementById('buyer-fullname').value.trim(),
       address:   document.getElementById('buyer-address').value.trim(),
@@ -282,7 +661,6 @@ function initPayButton() {
       state:     document.getElementById('buyer-state').value,
       pincode:   document.getElementById('buyer-pincode').value.trim(),
       phone:     document.getElementById('buyer-phone').value.trim(),
-      mapsLink:  document.getElementById('buyer-maps-link')?.value.trim() || '',
     };
 
     const items = cart.map(item => ({ id: item.id, quantity: item.quantity }));
@@ -357,11 +735,53 @@ function openRazorpay(orderId, amount, buyer, keyId) {
       email: buyer.email,
       contact: buyer.phone,
     },
-    notes: {
-      maps_link: buyer.mapsLink || '',
-    },
+    notes: {},
     theme: { color: '#1a1a1a' },
-    handler() {
+    handler(response) {
+      // Save/update buyer profile + address to Firestore (fire-and-forget)
+      const currentUser = getCurrentUser();
+      if (currentUser) {
+        // Save name/phone/email
+        saveBuyerProfile(currentUser.uid, {
+          name:  buyer.fullName,
+          phone: buyer.phone,
+          email: buyer.email,
+        }).catch(err => console.warn('[Checkout] Profile save failed:', err));
+
+        // If using a new address (not a saved one), add it to addresses array
+        if (!selectedAddressId) {
+          addBuyerAddress(currentUser.uid, {
+            label: 'Address',
+            name: buyer.fullName,
+            phone: buyer.phone,
+            address: buyer.address,
+            apartment: buyer.apartment,
+            city: buyer.city,
+            state: buyer.state,
+            pincode: buyer.pincode,
+          }).catch(err => console.warn('[Checkout] Address save failed:', err));
+        }
+
+        // Save order record to Firestore (fire-and-forget)
+        const cart = getCart();
+        saveBuyerOrder(currentUser.uid, orderId, {
+          orderId,
+          paymentId: response.razorpay_payment_id || '',
+          items: cart.map(item => ({
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            image: item.image || '',
+          })),
+          subtotal: getCartSubtotal(),
+          shippingCost,
+          shippingMethod: selectedMethod,
+          total: getCartSubtotal() + shippingCost,
+          buyerEmail: buyer.email,
+          status: 'paid',
+        }).catch(err => console.warn('[Checkout] Order save failed:', err));
+      }
       clearCart();
       window.location.href = `/thank-you.html?order=${orderId}`;
     },

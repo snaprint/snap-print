@@ -7,6 +7,7 @@ export default defineConfig({
   build: {
     outDir: '../dist',
     emptyOutDir: true,
+    chunkSizeWarningLimit: 700,
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'src/index.html'),
@@ -26,6 +27,12 @@ export default defineConfig({
         'cancel-order': resolve(__dirname, 'src/cancel-order.html'),
         faq: resolve(__dirname, 'src/faq.html'),
         contact: resolve(__dirname, 'src/contact.html'),
+        account: resolve(__dirname, 'src/account.html'),
+      },
+      output: {
+        manualChunks: {
+          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+        },
       },
     },
   },
