@@ -250,6 +250,9 @@ Only checks that a token **exists**. An expired token sends `seller-login` → d
 ### 🟡 F-19 Repo hygiene
 `.gitignore` lists `policy_pages/` but those files are tracked, so the rule has no effect. `.env.example` lacks `VITE_HERO_IMAGES_CSV_URL` / `VITE_ORDER_TRACKING_CSV_URL`. No tests, linter or formatter are configured.
 
+### 🟠 F-21 Local builds ignored `.env` — ✅ fixed 2026-11-17
+Found 2026-11-17. Vite reads `.env` from `envDir`, which defaults to `root` (`src/`), but `.env` lives in the project root. So `npm run dev`, `npm run dev:full` and a **local** `npm run deploy` built with no `VITE_*` values: sample (Unsplash) products, no shipping sheet, empty Firebase config. Cloudflare Pages builds were fine (dashboard env vars). **Fixed:** `envDir: __dirname` in `vite.config.js`. Verified the local build now contains the sheet URL and Firebase config.
+
 ## 8. Planned work (new IDs)
 
 - **R-1…R-5** Full redesign track (see `agents/TASKS.md`). The owner must approve the design direction (R-1) before building.

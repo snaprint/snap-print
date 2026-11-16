@@ -3,6 +3,10 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   root: 'src',
+  // F-21: read .env from the project root, not from `root` (src/). Without
+  // this, local builds/dev got no VITE_* values and silently used sample data.
+  // Cloudflare builds use real environment variables, which always win.
+  envDir: __dirname,
   publicDir: '../public',
   build: {
     outDir: '../dist',
