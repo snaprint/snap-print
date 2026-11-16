@@ -184,6 +184,7 @@ In the Razorpay `handler` ([checkout.js:740-786](src/js/checkout.js#L740-L786)) 
 
 ### 🟠 F-4 Firestore helpers swallow errors → false "saved!" toasts — ✅ fixed 2026-11-17
 **Fixed:** all helpers in `firebase.js` now throw (reads too). This also closes a data-loss path: a failed profile read used to look like "no addresses", and the next address save would have overwritten every saved address. `account.js` shows an error toast and keeps the form open on failure; a failed read shows "could not be loaded" instead of "No orders yet"/an empty list; a failed *reload after a successful save* says "Saved, but…".
+**Follow-up (same day, found by testing with Firestore unreachable):** offline, `getDocs` returns an empty result from the local cache instead of failing, and writes never settle. `getBuyerOrders` now throws when the result is empty *and* from cache, and the account page wraps reads/writes in `withTimeout` (15 s, `firebase.js`), then says "Saving is taking too long…". Browser-tested with a fake offline login (see WORKLOG).
 Every helper in `firebase.js` catches and only `console.warn`s (e.g. [firebase.js:194](src/js/firebase.js#L194), [:321](src/js/firebase.js#L321)). So `account.js` always shows "Profile updated!" ([account.js:290](src/js/account.js#L290)), "Address saved!", or "Address deleted." even when the write failed, and the `.catch()` handlers in `checkout.js` are dead code.
 **Fix:** let helpers re-throw (or return `{ok:false}`) and handle the result in callers.
 

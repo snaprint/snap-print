@@ -138,6 +138,20 @@ const BUYERS_COLLECTION = 'buyers';
 const MAX_ADDRESSES = 16;
 
 /**
+ * Firestore writes wait for the server and never settle while offline, so UI
+ * callers wrap them in withTimeout to tell the user instead of spinning.
+ * (A timed-out write may still be sent later if the connection returns.)
+ */
+export const FIRESTORE_TIMEOUT_MS = 15000;
+export function withTimeout(promise, ms = FIRESTORE_TIMEOUT_MS) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(Object.assign(new Error('Firestore request timed out'), { code: 'timeout' })), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+/**
  * Fetch the buyer profile for a given uid.
  * Auto-migrates flat address fields → addresses[] array on read.
  * @param {string} uid
@@ -292,6 +306,11 @@ export async function getBuyerOrders(uid) {
     orderBy('createdAt', 'desc')
   );
   const snap = await getDocs(q);
+  // Offline, getDocs answers from the (empty) local cache instead of failing;
+  // don't let that look like "no orders".
+  if (snap.empty && snap.metadata.fromCache) {
+    throw Object.assign(new Error('Orders could not be loaded (offline)'), { code: 'unavailable' });
+  }
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 

@@ -21,6 +21,7 @@ import {
   setDefaultAddress,
   getBuyerOrders,
   MAX_ADDRESSES,
+  withTimeout,
 } from './firebase.js';
 
 // ── DOM refs ──
@@ -57,6 +58,9 @@ let currentProfile = null;
 let profileLoadFailed = false;
 
 const SAVE_FAILED = 'Could not save your changes. Check your connection and try again.';
+const SAVE_TIMED_OUT = 'Saving is taking too long. Check your connection, then refresh the page to see whether the change was saved.';
+const saveErrorMessage = err => err?.code === 'timeout' ? SAVE_TIMED_OUT
+  : err?.message?.includes('no longer exists') ? err.message : SAVE_FAILED;
 
 /** Reload the profile after a successful write; a failed reload is not a failed save. */
 async function reloadAddresses(uid) {
@@ -210,7 +214,7 @@ async function showAccountContent(user) {
 
   // Load profile (F-4: a failed read shows an error instead of an empty profile)
   try {
-    currentProfile = await getBuyerProfile(user.uid);
+    currentProfile = await withTimeout(getBuyerProfile(user.uid));
     profileLoadFailed = false;
   } catch (err) {
     console.error('[Account] Failed to load profile:', err);
@@ -308,14 +312,14 @@ async function handleProfileSave(e) {
   };
 
   try {
-    await saveBuyerProfile(user.uid, data);
+    await withTimeout(saveBuyerProfile(user.uid, data));
     currentProfile = { ...currentProfile, ...data };
     renderProfileView(user, currentProfile);
     hideProfileEdit();
     showToast('Profile updated!', 'success');
   } catch (err) {
     console.error('[Account] Profile save failed:', err);
-    showToast(SAVE_FAILED, 'error', 6000);
+    showToast(saveErrorMessage(err), 'error', 8000);
   }
 }
 
@@ -460,10 +464,10 @@ async function handleAddressSave(e) {
 
   try {
     if (editId) {
-      await updateBuyerAddress(user.uid, editId, data);
+      await withTimeout(updateBuyerAddress(user.uid, editId, data));
       showToast('Address updated!', 'success');
     } else {
-      const newId = await addBuyerAddress(user.uid, data);
+      const newId = await withTimeout(addBuyerAddress(user.uid, data));
       if (!newId) {
         showToast(`Maximum ${MAX_ADDRESSES} addresses reached.`, 'error');
         saveBtn.disabled = false;
@@ -474,7 +478,7 @@ async function handleAddressSave(e) {
     hideAddressForm();
   } catch (err) {
     console.error('[Account] Address save failed:', err);
-    showToast(err?.message?.includes('no longer exists') ? err.message : SAVE_FAILED, 'error', 6000);
+    showToast(saveErrorMessage(err), 'error', 8000);
     return; // keep the form open with the user's input
   } finally {
     saveBtn.disabled = false;
@@ -495,7 +499,7 @@ async function handleAddressAction(e) {
   } else if (action === 'delete') {
     if (!confirm('Delete this address?')) return;
     try {
-      await deleteBuyerAddress(user.uid, id);
+      await withTimeout(deleteBuyerAddress(user.uid, id));
     } catch (err) {
       console.error('[Account] Address delete failed:', err);
       showToast('Could not delete the address. Check your connection and try again.', 'error', 6000);
@@ -505,7 +509,7 @@ async function handleAddressAction(e) {
     await reloadAddresses(user.uid);
   } else if (action === 'set-default') {
     try {
-      await setDefaultAddress(user.uid, id);
+      await withTimeout(setDefaultAddress(user.uid, id));
     } catch (err) {
       console.error('[Account] Set default failed:', err);
       showToast('Could not change the default address. Check your connection and try again.', 'error', 6000);
@@ -527,7 +531,7 @@ async function loadOrders(uid) {
   let orders, trackingRows;
   try {
     [orders, trackingRows] = await Promise.all([
-      getBuyerOrders(uid),
+      withTimeout(getBuyerOrders(uid)),
       fetchTrackingData(),
     ]);
   } catch (err) {
