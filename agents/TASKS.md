@@ -63,37 +63,42 @@ No new features this phase: B-14, B-16, B-17, B-18 wait. A shared module is crea
 
 ## Frontend (FE)
 
+**Current session order (owner instruction, 2026-11-17):** Part 1 = fixes that don't depend on the redesign, in the order below (one commit each). Part 2 = R-1 proposal, then **stop** for owner approval (O-9). R-2…R-5 wait for O-9.
+Skipped this session: F-1 (needs B-14, still `planned`), F-3 second half (needs B-16), F-14 (do with R-3).
+
+**Fixes**
+
+| # | ID | Task | Depends on | Status |
+|---|---|---|---|---|
+| 1 | F-2 | Remove "dev mode" fake success in checkout + quote; non-2xx shows server `message`, keeps input (MESSAGES #6) | — | todo |
+| 2 | F-5 | Track-order mobile menu double toggle | — | todo |
+| 3 | F-4 | Firestore helpers must surface errors | — | todo |
+| 4 | F-3a | Await post-payment writes; store the charged (bulk) price | — | todo |
+| 5 | F-7 + F-6 | Use `shared/products.js` everywhere; quantity caps (MESSAGES #3, #5) | B-2, B-10 | todo |
+| 6 | (#4) | Checkout `maxlength`s; show server 400 message (MESSAGES #4) | B-3 | todo |
+| 7 | (#10) | Quote upload limit 25 → 10 MB (MESSAGES #10) | B-8 | todo |
+| 8 | F-11 | Single delivery-time copy (MESSAGES #11) | owner decision (done) | todo |
+| 9 | F-12 | Escape all interpolated HTML (shared `escapeHtml`) | — | todo |
+| 10 | F-8 | Cart refreshes price/name/image; flags unavailable items | — | todo |
+| 10 | F-13 | Shuffle catalog once per load | — | todo |
+| 10 | F-15 | Use shared product cache; reduce CSV fetches | — | todo |
+| 10 | F-10 | Fix PIN → state auto-fill | — | todo |
+| 10 | F-9 | Render shipping options from the sheet | — | todo |
+| 10 | F-18 | Seller dashboard: check token expiry client-side | — | todo |
+| 11 | F-16 | Remove dead / duplicated code | — | todo |
+| 11 | F-17 | Move raw images out of `public/` | — | todo |
+| 11 | F-19 | Repo hygiene (`.gitignore`, `.env.example`) | — | todo |
+| 12 | F-20 | Turnstile widget on quote + cancel forms (only when `VITE_TURNSTILE_SITE_KEY` is set) | B-6, O-5 | todo |
+| — | F-3b | Remove the client order write | B-16 | blocked (B-16) |
+| — | F-1 | Track order + account statuses via `/api/track-order`; remove `VITE_ORDER_TRACKING_CSV_URL` | B-14 | blocked (B-14 planned) |
+| — | F-14 | Favicon, footer, nav, robots.txt consistency | R-3 | todo (with R-3) |
+
 **Redesign track**
 
 | ID | Task | Depends on | Status |
 |---|---|---|---|
-| R-1 | Propose design direction to owner (palette, type, layout, key mockups) | — | todo |
+| R-1 | Propose design direction to owner (palette, type, layout, key mockups in `agents/design/`) | Part 1 | todo |
 | R-2 | Publish `agents/DESIGN_TOKENS.md` (colours, fonts, logo URL, button style) for BE emails | O-9 | todo |
 | R-3 | De-duplicate navbar/footer (single source, e.g. Vite HTML partials or JS-injected) | O-9 | todo |
 | R-4 | Rebuild design system (`index.css` tokens, components) | O-9 | todo |
 | R-5 | Redesign pages: home/catalog → product → cart → checkout → account → remaining pages | R-4 | todo |
-
-**Fixes** (fold into the redesign where natural, but each must be done)
-
-| ID | Task | Depends on | Status |
-|---|---|---|---|
-| F-2 | Remove "dev mode" fake success in checkout + quote | — | todo |
-| F-5 | Track-order mobile menu double toggle | — | todo |
-| F-3 | Await post-payment writes; later remove the client order write | B-16 for removal | todo |
-| F-4 | Firestore helpers must surface errors | — | todo |
-| F-1 | Track order + account statuses via `/api/track-order`; remove `VITE_ORDER_TRACKING_CSV_URL` | B-14 | todo |
-| F-6 | Quantity caps in UI | B-2 | todo |
-| F-7 | Use shared `isPurchasable` everywhere | B-15 | todo |
-| F-8 | Cart refreshes price/name/image; flags inactive items | — | todo |
-| F-9 | Render shipping options from the sheet | — | todo |
-| F-10 | Fix PIN → state auto-fill | — | todo |
-| F-11 | Single delivery-time copy | owner decision | todo |
-| F-12 | Escape all interpolated HTML (shared `escapeHtml`) | — | todo |
-| F-13 | Shuffle catalog once per load | — | todo |
-| F-14 | Favicon, footer, nav, robots.txt consistency | R-3 | todo |
-| F-15 | Use shared product cache; reduce CSV fetches | — | todo |
-| F-16 | Remove dead / duplicated code | — | todo |
-| F-17 | Move raw images out of `public/` | — | todo |
-| F-18 | Seller dashboard: check token expiry client-side | — | todo |
-| F-19 | Repo hygiene (`.gitignore`, `.env.example`) | — | todo |
-| F-20 | Turnstile widget on quote + cancel forms | B-6, O-5 | todo |
