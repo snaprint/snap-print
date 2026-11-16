@@ -268,7 +268,7 @@ A 25 MB upload is held as `ArrayBuffer` + a binary JS string (UTF-16, about 50 M
 
 **Fixed:** all four now follow the written rule in §4.1, implemented once in `shared/products.js` and used by create-order. Also: `made_to_order` and `active` are now case-insensitive (`Yes` counts; previously `made_to_order=Yes` was treated as "no").
 
-### 🟡 B-11 Sitemap is stale
+### 🟡 B-11 Sitemap is stale — ✅ fixed 2026-11-17 (faq + contact added)
 `STATIC_PAGES` ([sitemap.xml.js:15](functions/sitemap.xml.js#L15)) is missing `/faq.html` and `/contact.html`.
 
 ### 🟡 B-12 Duplicated helpers, based on an incorrect assumption
