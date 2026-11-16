@@ -16,78 +16,8 @@ import {
   parseBulkPricing,
   getBulkPrice,
 } from '../../shared/products.js';
-
-// Simple CSV parser (no external deps in Pages Functions)
-// Handles multi-line quoted fields (e.g. descriptions with line breaks)
-function parseCSV(text) {
-  const lines = splitCSVRows(text);
-  if (lines.length === 0) return [];
-
-  const headers = parseCSVLine(lines[0]);
-  return lines.slice(1).map(line => {
-    const values = parseCSVLine(line);
-    const obj = {};
-    headers.forEach((h, i) => {
-      // Strip UTF-8 BOM from the first header (Google Sheets CSVs often include it)
-      const key = h.replace(/^\uFEFF/, '').trim();
-      obj[key] = (values[i] || '').trim();
-    });
-    return obj;
-  });
-}
-
-/**
- * Splits raw CSV text into rows, respecting quoted fields that contain newlines.
- * A newline inside a quoted field is part of the cell value, not a row boundary.
- */
-function splitCSVRows(text) {
-  const rows = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-
-    if (char === '"') {
-      inQuotes = !inQuotes;
-      current += char;
-    } else if ((char === '\n' || char === '\r') && !inQuotes) {
-      // Row boundary (only outside quotes)
-      if (char === '\r' && text[i + 1] === '\n') i++; // skip \r\n pair
-      if (current.trim()) rows.push(current);
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-
-  // Last row (may not end with newline)
-  if (current.trim()) rows.push(current);
-  return rows;
-}
-
-function parseCSVLine(line) {
-  const result = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
-      else { inQuotes = !inQuotes; }
-    } else if (char === ',' && !inQuotes) {
-      result.push(current);
-      current = '';
-    } else if (char === '\r') {
-      // skip
-    } else {
-      current += char;
-    }
-  }
-  result.push(current);
-  return result;
-}
+import { parseCSV } from '../_lib/csv.js';
+import { jsonError, jsonResponse } from '../_lib/http.js';
 
 // B-2: quantities are validated, never clamped. Max per product (MAX_QTY_PER_PRODUCT,
 // from shared/products.js) applies after merging duplicate lines.
@@ -231,7 +161,6 @@ export async function onRequestPost(context) {
       return jsonError(`Invalid shipping method. Valid options: ${validMethods.join(', ')}`, 400);
     }
 
-
     // Compute server-side total
     let subtotal = 0;
     const resolvedItems = [];
@@ -359,14 +288,11 @@ export async function onRequestPost(context) {
 
     const rzpOrder = await rzpResponse.json();
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       order_id: rzpOrder.id,
       amount: rzpOrder.amount,
       currency: rzpOrder.currency,
       key_id: razorpayKeyId,
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
     });
 
   } catch (err) {
@@ -375,9 +301,3 @@ export async function onRequestPost(context) {
   }
 }
 
-function jsonError(message, status = 400) {
-  return new Response(JSON.stringify({ error: true, message }), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

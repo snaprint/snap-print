@@ -15,6 +15,11 @@
    server-side by create-order.js), fetched via GET /v1/orders/{id};
    payment.notes is only a fallback. The amount comes from the payment.
    ═══════════════════════════════════════════════════════════════ */
+
+import { parseCSV } from '../_lib/csv.js';
+import { jsonResponse, jsonError } from '../_lib/http.js';
+import { sendEmailWithRetry, sleep, escapeHtml, isValidEmail, getSellerEmail, FROM_ORDERS, REPLY_TO_QUERIES } from '../_lib/email.js';
+
 // ═══════════════════════════════════════════════════════════════
 // Processing state (B-5)
 // KV key `payment:<id>` holds JSON { state: 'processing' | 'done', at, ... }.
@@ -410,53 +415,54 @@ async function sendConfirmationEmails(env, data) {
     // Permanent: retrying can't invent an address. The seller email still carries the order.
     console.error(`Order ${data.orderId}: no valid buyer email ("${data.buyerEmail}") — buyer confirmation skipped`);
     buyerEmailStatus = 'skipped_no_address';
-  } else try {
+  } else {
+    try {
+      await sendEmailWithRetry(resendApiKey, {
+        from: FROM_ORDERS,
+        to: data.buyerEmail,
+        reply_to: REPLY_TO_QUERIES,
+        subject: `Order Confirmed — ${data.orderId}`,
+        html: `
+          <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1a1a1a;">
+            <h2 style="margin:0 0 16px;">Thank you for your order! 🎉</h2>
+            <p>Hi ${escapeHtml(data.buyerName)},</p>
+            <p>Payment confirmed. We'll notify you with tracking details upon dispatch. Any excess shipping charges will be refunded based on the actual shipping cost.</p>
 
-    await sendEmailWithRetry(resendApiKey, {
-      from: 'Snap Print <orders@snaprint.in>',
-      to: data.buyerEmail,
-      reply_to: 'queries@snaprint.in',
-      subject: `Order Confirmed — ${data.orderId}`,
-      html: `
-        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1a1a1a;">
-          <h2 style="margin:0 0 16px;">Thank you for your order! 🎉</h2>
-          <p>Hi ${escapeHtml(data.buyerName)},</p>
-          <p>Payment confirmed. We'll notify you with tracking details upon dispatch. Any excess shipping charges will be refunded based on the actual shipping cost.</p>
+            <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;">
+              <thead>
+                <tr style="background:#f9fafb;">
+                  <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb;">Item</th>
+                  <th style="padding:8px 12px;text-align:center;border-bottom:2px solid #e5e7eb;">Qty</th>
+                  <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #e5e7eb;">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemRows}
+              </tbody>
+            </table>
 
-          <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;">
-            <thead>
-              <tr style="background:#f9fafb;">
-                <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb;">Item</th>
-                <th style="padding:8px 12px;text-align:center;border-bottom:2px solid #e5e7eb;">Qty</th>
-                <th style="padding:8px 12px;text-align:right;border-bottom:2px solid #e5e7eb;">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemRows}
-            </tbody>
-          </table>
+            <table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;">
+              <tr><td style="padding:4px 0;color:#666;">Subtotal</td><td style="padding:4px 0;text-align:right;">₹${data.subtotal.toLocaleString('en-IN')}</td></tr>
+              <tr><td style="padding:4px 0;color:#666;">${shippingLabel}</td><td style="padding:4px 0;text-align:right;">₹${data.shippingCost.toLocaleString('en-IN')}</td></tr>
+              <tr style="font-weight:700;font-size:15px;"><td style="padding:8px 0;border-top:2px solid #1a1a1a;">Total Paid</td><td style="padding:8px 0;text-align:right;border-top:2px solid #1a1a1a;">₹${data.totalAmount.toLocaleString('en-IN')}</td></tr>
+            </table>
 
-          <table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;">
-            <tr><td style="padding:4px 0;color:#666;">Subtotal</td><td style="padding:4px 0;text-align:right;">₹${data.subtotal.toLocaleString('en-IN')}</td></tr>
-            <tr><td style="padding:4px 0;color:#666;">${shippingLabel}</td><td style="padding:4px 0;text-align:right;">₹${data.shippingCost.toLocaleString('en-IN')}</td></tr>
-            <tr style="font-weight:700;font-size:15px;"><td style="padding:8px 0;border-top:2px solid #1a1a1a;">Total Paid</td><td style="padding:8px 0;text-align:right;border-top:2px solid #1a1a1a;">₹${data.totalAmount.toLocaleString('en-IN')}</td></tr>
-          </table>
+            <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
+              <tr><td style="padding:4px 0;color:#666;">Order ID</td><td style="padding:4px 0;">${data.orderId}</td></tr>
+              <tr><td style="padding:4px 0;color:#666;">Payment ID</td><td style="padding:4px 0;">${data.paymentId}</td></tr>
+              <tr><td style="padding:4px 0;color:#666;">Estimated Delivery</td><td style="padding:4px 0;font-weight:600;">${deliveryEstimate}</td></tr>
+            </table>
 
-          <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
-            <tr><td style="padding:4px 0;color:#666;">Order ID</td><td style="padding:4px 0;">${data.orderId}</td></tr>
-            <tr><td style="padding:4px 0;color:#666;">Payment ID</td><td style="padding:4px 0;">${data.paymentId}</td></tr>
-            <tr><td style="padding:4px 0;color:#666;">Estimated Delivery</td><td style="padding:4px 0;font-weight:600;">${deliveryEstimate}</td></tr>
-          </table>
-
-          <p style="margin-top:20px;">If you have any questions about your order, just reply to this email.</p>
-          <p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #eee;padding-top:16px;">— Team Snap Print<br>snaprint.in</p>
-        </div>
-      `,
-    }, 3, `order-confirmed/${data.paymentId}-buyer`);
-  } catch (buyerErr) {
-    buyerRetryable = isRetryableEmailError(buyerErr);
-    buyerEmailStatus = buyerRetryable ? 'failed_retry' : 'failed_permanent';
-    console.error(`Buyer confirmation email failed (${buyerRetryable ? 'will retry' : 'permanent, not retried'}):`, buyerErr);
+            <p style="margin-top:20px;">If you have any questions about your order, just reply to this email.</p>
+            <p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #eee;padding-top:16px;">— Team Snap Print<br>snaprint.in</p>
+          </div>
+        `,
+      }, { idempotencyKey: `order-confirmed/${data.paymentId}-buyer`, userAgent: 'SnapPrint-Webhook/1.0' });
+    } catch (buyerErr) {
+      buyerRetryable = isRetryableEmailError(buyerErr);
+      buyerEmailStatus = buyerRetryable ? 'failed_retry' : 'failed_permanent';
+      console.error(`Buyer confirmation email failed (${buyerRetryable ? 'will retry' : 'permanent, not retried'}):`, buyerErr);
+    }
   }
 
   // Space calls ≥500ms apart to stay under Resend's 2 req/s rate limit
@@ -467,7 +473,7 @@ async function sendConfirmationEmails(env, data) {
     await sendEmailWithRetry(resendApiKey, {
       from: 'Snap Print Orders <orders@snaprint.in>',
       to: sellerEmail,
-      reply_to: 'queries@snaprint.in',
+      reply_to: REPLY_TO_QUERIES,
       subject: `🆕 New Order — ${data.orderId} — ₹${data.totalAmount.toLocaleString('en-IN')}`,
       html: `
         <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;padding:24px;color:#1a1a1a;">
@@ -515,7 +521,7 @@ async function sendConfirmationEmails(env, data) {
           <p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #eee;padding-top:16px;">Automated notification from Snap Print webhook</p>
         </div>
       `,
-    }, 3, `order-received/${data.paymentId}-seller`);
+    }, { idempotencyKey: `order-received/${data.paymentId}-seller`, userAgent: 'SnapPrint-Webhook/1.0' });
   } catch (sellerErr) {
     // The seller email is what gets the order made: always retry it.
     console.error('Seller notification email failed (will retry):', sellerErr);
@@ -537,138 +543,7 @@ function isRetryableEmailError(err) {
   return false;
 }
 
-function isValidEmail(email) {
-  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-// ── Delay helper ──
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-// ── Resend API call with 429 retry-backoff ──
-// Retries up to maxRetries times on 429 rate-limit responses.
-// Reads the Retry-After header from Resend; falls back to exponential backoff.
-// Any non-429 error (4xx/5xx) is thrown immediately — no retry.
-// idempotencyKey: optional Resend Idempotency-Key header to prevent duplicate sends.
-async function sendEmailWithRetry(apiKey, emailData, maxRetries = 3, idempotencyKey = '') {
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const headers = {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      'User-Agent': 'SnapPrint-Webhook/1.0',
-    };
-
-    // Resend deduplicates requests with the same Idempotency-Key within 24 hours.
-    // This closes the TOCTOU race condition: even if two webhook workers both
-    // call Resend, only the first request's email is actually sent.
-    if (idempotencyKey) {
-      headers['Idempotency-Key'] = idempotencyKey;
-    }
-
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(emailData),
-    });
-
-    // Success
-    if (response.ok) {
-      console.log(`Email sent to ${emailData.to} (attempt ${attempt + 1}${idempotencyKey ? ', idempotency-key: ' + idempotencyKey : ''})`);
-      return;
-    }
-
-    // Rate limited — wait and retry
-    if (response.status === 429 && attempt < maxRetries) {
-      const retryAfter = response.headers.get('retry-after');
-      const waitMs = retryAfter
-        ? Number(retryAfter) * 1000          // Resend says "wait N seconds"
-        : 500 * Math.pow(2, attempt);        // exponential fallback: 500ms, 1s, 2s
-      console.warn(`Resend 429 for ${emailData.to} — waiting ${waitMs}ms before retry (attempt ${attempt + 1}/${maxRetries})`);
-      await sleep(waitMs);
-      continue;
-    }
-
-    const errText = await response.text();
-
-    // Same Idempotency-Key already used with a different payload → an earlier attempt
-    // was accepted by Resend, so this email has already been sent.
-    if (response.status === 409 && idempotencyKey && /invalid_idempotent_request/.test(errText)) {
-      console.warn(`Resend: ${idempotencyKey} already used — treating as sent`);
-      return;
-    }
-
-    // Any other error — throw immediately, no retry
-    const err = new Error(`Resend API error (${response.status}): ${errText}`);
-    err.status = response.status;
-    throw err;
-  }
-
-  throw new Error(`Resend rate limit: exhausted ${maxRetries} retries for ${emailData.to}`);
-}
-
-
-
 // ═══════════════════════════════════════════════════════════════
 // Helpers
 // ═══════════════════════════════════════════════════════════════
 
-// CSV parser — same as create-order.js (to be moved to a shared module in B-12)
-function parseCSV(text) {
-  const rows = [];
-  let current = '';
-  let inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    if (char === '"') { inQuotes = !inQuotes; current += char; }
-    else if ((char === '\n' || char === '\r') && !inQuotes) {
-      if (char === '\r' && text[i + 1] === '\n') i++;
-      if (current.trim()) rows.push(current);
-      current = '';
-    } else { current += char; }
-  }
-  if (current.trim()) rows.push(current);
-  if (rows.length === 0) return [];
-  const parseLine = line => {
-    const out = [];
-    let cur = '';
-    let q = false;
-    for (let i = 0; i < line.length; i++) {
-      const c = line[i];
-      if (c === '"') { if (q && line[i + 1] === '"') { cur += '"'; i++; } else { q = !q; } }
-      else if (c === ',' && !q) { out.push(cur); cur = ''; }
-      else if (c !== '\r') { cur += c; }
-    }
-    out.push(cur);
-    return out;
-  };
-  const headers = parseLine(rows[0]).map(h => h.replace(/^\uFEFF/, '').trim());
-  return rows.slice(1).map(line => {
-    const values = parseLine(line);
-    const obj = {};
-    headers.forEach((h, i) => { obj[h] = (values[i] || '').trim(); });
-    return obj;
-  });
-}
-
-function escapeHtml(text) {
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function jsonResponse(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
-
-function jsonError(message, status = 400) {
-  return new Response(JSON.stringify({ error: true, message }), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

@@ -9,6 +9,9 @@
    to crawl — no manual maintenance needed.
    ═══════════════════════════════════════════════════════════════ */
 
+import { parseCSV } from './_lib/csv.js';
+import { isActive, isEngineering } from '../shared/products.js';
+
 const SITE_URL = 'https://snaprint.in';
 
 // Static pages with their update frequency and priority
@@ -24,69 +27,6 @@ const STATIC_PAGES = [
   { path: '/terms.html',         changefreq: 'yearly',  priority: '0.3' },
   { path: '/privacy-policy.html', changefreq: 'yearly', priority: '0.3' },
 ];
-
-// ── CSV Parser (same as create-order.js — no cross-file imports in Pages Functions) ──
-
-function splitCSVRows(text) {
-  const rows = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    if (char === '"') {
-      inQuotes = !inQuotes;
-      current += char;
-    } else if ((char === '\n' || char === '\r') && !inQuotes) {
-      if (char === '\r' && text[i + 1] === '\n') i++;
-      if (current.trim()) rows.push(current);
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-  if (current.trim()) rows.push(current);
-  return rows;
-}
-
-function parseCSVLine(line) {
-  const result = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
-      else { inQuotes = !inQuotes; }
-    } else if (char === ',' && !inQuotes) {
-      result.push(current);
-      current = '';
-    } else if (char === '\r') {
-      // skip
-    } else {
-      current += char;
-    }
-  }
-  result.push(current);
-  return result;
-}
-
-function parseCSV(text) {
-  const lines = splitCSVRows(text);
-  if (lines.length === 0) return [];
-
-  const headers = parseCSVLine(lines[0]);
-  return lines.slice(1).map(line => {
-    const values = parseCSVLine(line);
-    const obj = {};
-    headers.forEach((h, i) => {
-      const key = h.replace(/^\uFEFF/, '').trim();
-      obj[key] = (values[i] || '').trim();
-    });
-    return obj;
-  });
-}
 
 // ── Sitemap Generation ──
 
@@ -142,7 +82,7 @@ export async function onRequestGet(context) {
         const csvText = await res.text();
         const allProducts = parseCSV(csvText);
         activeProducts = allProducts.filter(
-          p => p.active?.toLowerCase() === 'yes' && p.category?.toLowerCase() !== 'engineering'
+          p => isActive(p) && !isEngineering(p)
         );
       }
     }

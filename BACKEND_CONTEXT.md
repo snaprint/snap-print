@@ -30,6 +30,13 @@ There is no `wrangler.toml`; bindings (KV) and env vars are configured in the Cl
 ```
 functions/
 ├── sitemap.xml.js          GET  /sitemap.xml          dynamic sitemap (static pages + active products)
+├── _lib/                   helper modules, NOT routes (no onRequest* exports) — B-12
+│   ├── http.js             jsonResponse, jsonError (standard error shape)
+│   ├── email.js            sendEmailWithRetry (Resend, 429 retry, idempotency), escapeHtml, subjectText,
+│   │                       isValidEmail, sleep, FROM_ORDERS, REPLY_TO_QUERIES, getSellerEmail
+│   ├── csv.js              parseCSV (Google Sheets CSV)
+│   ├── seller-auth.js      seller accounts, password hashes, session tokens (B-7)
+│   └── turnstile.js        verifyTurnstile (B-6)
 └── api/
     ├── _middleware.js      ALL  /api/*                CORS + security headers
     ├── create-order.js     POST /api/create-order     server-side price calc → Razorpay order
@@ -48,7 +55,7 @@ shared/
 `shared/` is owned by BE; FE imports it from `src/js/` with a relative path (e.g. `import { getPurchasability } from '../../shared/products.js'`) and must not edit it.
 
 Pages Functions routing is file-based: `functions/api/foo.js` exporting `onRequestPost` = `POST /api/foo`.
-Each file currently re-implements its own helpers (`jsonError`, `escapeHtml`, `sleep`, `sendEmailWithRetry`, CSV parser, HMAC helpers) — see problem **B-12**.
+Shared code is imported with relative paths (`../_lib/email.js`, `../../shared/products.js`); Pages bundles functions with esbuild, so this works (verified with `wrangler pages functions build` and `wrangler pages dev`). Don't copy helpers into endpoint files.
 
 ---
 
@@ -271,14 +278,20 @@ A 25 MB upload is held as `ArrayBuffer` + a binary JS string (UTF-16, about 50 M
 ### 🟡 B-11 Sitemap is stale — ✅ fixed 2026-11-17 (faq + contact added)
 `STATIC_PAGES` ([sitemap.xml.js:15](functions/sitemap.xml.js#L15)) is missing `/faq.html` and `/contact.html`.
 
-### 🟡 B-12 Duplicated helpers, based on an incorrect assumption
+### 🟡 B-12 Duplicated helpers, based on an incorrect assumption — ✅ fixed 2026-11-17
 Comments in create-order, seller-login, send-shipment and sitemap say Pages Functions "can't import" other files. They can: Pages bundles functions with esbuild, so relative imports work. The duplicated CSV parser, bulk-pricing logic, HMAC/token code and `sendEmailWithRetry` (4 copies) can live in one shared module, e.g. `functions/_lib/*.js` (no handler exports) or a top-level `lib/`. The bulk-pricing logic is also duplicated with `src/js/utils.js`, and the two copies must stay identical or prices diverge.
+**Fixed:** helpers live in `functions/_lib/` (see file map) and `shared/products.js`; every endpoint imports them (≈450 duplicated lines removed). The FE copy of bulk pricing goes away with F-7 (MESSAGES #5). Verified that `/_lib/*` URLs are not routable.
 
 ### 🟡 B-13 Minor
 - Webhook email interpolates `orderId`/`paymentId` without `escapeHtml` (trusted Razorpay data after signature check; low risk).
 - `send-shipment` puts `trackingLink` into an `href` without scheme validation (`javascript:` possible; seller-only input).
 - `SELLER_EMAIL` defaults differ: `snaprint.orders@gmail.com` (webhook, cancel) vs `queries@snaprint.in` (quote).
 - Delivery estimates in the confirmation email (Air 3–5, Surface 5–10 days) disagree with `shipping-policy.html` (Air 2–3, Surface 5–7).
+
+### 🟡 B-19 `npm run dev:full` fails to start (local only)
+Found 2026-11-17. With no `wrangler.toml`, `wrangler pages dev` uses today's date as the compatibility date, and the bundled workerd (wrangler 4.120) rejects dates after 2026-08-08: *"This Worker requires compatibility date …, but the newest date supported by this server binary is 2026-08-08"*. Production/preview builds are unaffected (they use the dashboard's compatibility date).
+**Workaround (works today):** `npm run build && npx wrangler pages dev dist --port 8788 --compatibility-date 2026-08-01`.
+**Fix (needs a `package.json` edit, which this session wasn't allowed to make):** add `--compatibility-date 2026-08-01` to the `dev:full` script, or upgrade wrangler. Ideally match the date set in Pages → Settings → Functions → Compatibility date.
 
 ## 9. Planned work (new IDs, not existing bugs)
 

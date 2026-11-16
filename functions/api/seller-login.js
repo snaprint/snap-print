@@ -16,6 +16,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import { loadAccounts, checkCredentials, createSessionToken, getSigningSecret } from '../_lib/seller-auth.js';
+import { jsonError, jsonResponse } from '../_lib/http.js';
 
 export async function onRequestPost(context) {
   const { env, request } = context;
@@ -49,13 +50,10 @@ export async function onRequestPost(context) {
     const token = await createSessionToken(matchedUsername, env);
     console.log(`Seller "${matchedUsername}" logged in successfully`);
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       success: true,
       token,
       username: matchedUsername,
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
     });
 
   } catch (err) {
@@ -64,9 +62,3 @@ export async function onRequestPost(context) {
   }
 }
 
-function jsonError(message, status = 400) {
-  return new Response(JSON.stringify({ error: true, message }), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

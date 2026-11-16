@@ -11,6 +11,8 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import { verifyTurnstile } from '../_lib/turnstile.js';
+import { jsonError, jsonResponse } from '../_lib/http.js';
+import { sendEmailWithRetry, sleep, escapeHtml, subjectText, getSellerEmail, FROM_ORDERS, REPLY_TO_QUERIES } from '../_lib/email.js';
 
 export async function onRequestPost(context) {
   const { env, request } = context;
@@ -64,57 +66,52 @@ export async function onRequestPost(context) {
       return jsonError('Our quote service is temporarily unavailable. Please email your file to queries@snaprint.in.', 503);
     }
 
-    {
-      // Convert file to base64 for email attachment (chunked to avoid stack overflow)
-      const fileBuffer = await file.arrayBuffer();
-      const fileBase64 = uint8ArrayToBase64(new Uint8Array(fileBuffer));
-      const fileSizeFormatted = formatFileSize(file.size);
-      const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+    // Convert file to base64 for email attachment (chunked to avoid stack overflow)
+    const fileBuffer = await file.arrayBuffer();
+    const fileBase64 = uint8ArrayToBase64(new Uint8Array(fileBuffer));
+    const fileSizeFormatted = formatFileSize(file.size);
+    const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
 
-      // ── SELLER EMAIL (with attachment) ──
-      try {
-        await sendEmailWithRetry(resendApiKey, {
-          from: 'Snap Print <orders@snaprint.in>',
-          to: sellerEmail,
-          reply_to: email,
-          subject: `🔧 New Quote Request from ${escapeHtml(name)}`,
-          html: buildSellerEmail({ name, email, phone, material, notes, fileName: file.name, fileSizeFormatted, timestamp }),
-          attachments: [
-            {
-              filename: file.name,
-              content: fileBase64,
-            },
-          ],
-        });
-        console.log(`Quote notification sent to seller (${sellerEmail})`);
-      } catch (sellerErr) {
-        console.error('Seller email failed — returning 502:', sellerErr);
-        return jsonError("We couldn't submit your request right now. Please try again in a few minutes, or email your file to queries@snaprint.in.", 502);
-      }
-
-      // Rate-limit gap (Resend allows 2 req/s)
-      await sleep(500);
-
-      // ── CLIENT CONFIRMATION EMAIL ──
-      try {
-        await sendEmailWithRetry(resendApiKey, {
-          from: 'Snap Print <orders@snaprint.in>',
-          to: email,
-          reply_to: 'queries@snaprint.in',
-          subject: 'Quote Request Received — Snap Print',
-          html: buildClientEmail({ name, material, notes, fileName: file.name, fileSizeFormatted, timestamp }),
-        });
-        console.log(`Quote confirmation sent to client (${email})`);
-      } catch (clientErr) {
-        // The seller has the request; a failed confirmation must not make the user resubmit.
-        console.error('Client confirmation email failed (seller already notified):', clientErr);
-      }
+    // ── SELLER EMAIL (with attachment) ──
+    try {
+      await sendEmailWithRetry(resendApiKey, {
+        from: FROM_ORDERS,
+        to: sellerEmail,
+        reply_to: email,
+        subject: `🔧 New Quote Request from ${escapeHtml(name)}`,
+        html: buildSellerEmail({ name, email, phone, material, notes, fileName: file.name, fileSizeFormatted, timestamp }),
+        attachments: [
+          {
+            filename: file.name,
+            content: fileBase64,
+          },
+        ],
+      });
+      console.log(`Quote notification sent to seller (${sellerEmail})`);
+    } catch (sellerErr) {
+      console.error('Seller email failed — returning 502:', sellerErr);
+      return jsonError("We couldn't submit your request right now. Please try again in a few minutes, or email your file to queries@snaprint.in.", 502);
     }
 
-    return new Response(JSON.stringify({ success: true, message: 'Quote request submitted' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    // Rate-limit gap (Resend allows 2 req/s)
+    await sleep(500);
+
+    // ── CLIENT CONFIRMATION EMAIL ──
+    try {
+      await sendEmailWithRetry(resendApiKey, {
+        from: FROM_ORDERS,
+        to: email,
+        reply_to: REPLY_TO_QUERIES,
+        subject: 'Quote Request Received — Snap Print',
+        html: buildClientEmail({ name, material, notes, fileName: file.name, fileSizeFormatted, timestamp }),
+      });
+      console.log(`Quote confirmation sent to client (${email})`);
+    } catch (clientErr) {
+      // The seller has the request; a failed confirmation must not make the user resubmit.
+      console.error('Client confirmation email failed (seller already notified):', clientErr);
+    }
+
+    return jsonResponse({ success: true, message: 'Quote request submitted' });
 
   } catch (err) {
     console.error('Quote submission error:', err);
@@ -209,46 +206,10 @@ function buildClientEmail({ name, material, notes, fileName, fileSizeFormatted, 
 // ═══════════════════════════════════════════════════════════════
 // Resend API with retry (429 backoff)
 // ═══════════════════════════════════════════════════════════════
-async function sendEmailWithRetry(apiKey, emailData, maxRetries = 3) {
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'User-Agent': 'SnapPrint-Quote/1.0',
-      },
-      body: JSON.stringify(emailData),
-    });
-
-    if (response.ok) {
-      console.log(`Email sent to ${emailData.to} (attempt ${attempt + 1})`);
-      return;
-    }
-
-    if (response.status === 429 && attempt < maxRetries) {
-      const retryAfter = response.headers.get('retry-after');
-      const waitMs = retryAfter
-        ? Number(retryAfter) * 1000
-        : 500 * Math.pow(2, attempt);
-      console.warn(`Resend 429 for ${emailData.to} — waiting ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})`);
-      await sleep(waitMs);
-      continue;
-    }
-
-    const errText = await response.text();
-    throw new Error(`Resend API error (${response.status}): ${errText}`);
-  }
-
-  throw new Error(`Resend rate limit: exhausted ${maxRetries} retries for ${emailData.to}`);
-}
 
 // ═══════════════════════════════════════════════════════════════
 // Helpers
 // ═══════════════════════════════════════════════════════════════
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
 
 function formatFileSize(bytes) {
   if (bytes < 1024) return bytes + ' B';
@@ -256,17 +217,3 @@ function formatFileSize(bytes) {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
-function escapeHtml(text) {
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function jsonError(message, status = 400) {
-  return new Response(JSON.stringify({ error: true, message }), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

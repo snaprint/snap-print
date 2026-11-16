@@ -12,6 +12,8 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import { verifySessionToken } from '../_lib/seller-auth.js';
+import { jsonError, jsonResponse } from '../_lib/http.js';
+import { sendEmailWithRetry, escapeHtml, subjectText, isValidEmail, FROM_ORDERS, REPLY_TO_QUERIES } from '../_lib/email.js';
 
 export async function onRequestPost(context) {
   const { env, request } = context;
@@ -61,21 +63,18 @@ export async function onRequestPost(context) {
       : 'Your Order Has Been Shipped! 📦';
 
     await sendEmailWithRetry(resendApiKey, {
-      from: 'Snap Print <orders@snaprint.in>',
+      from: FROM_ORDERS,
       to: buyerEmail.trim(),
-      reply_to: 'queries@snaprint.in',
+      reply_to: REPLY_TO_QUERIES,
       subject,
       html: emailHtml,
     });
 
     console.log(`Shipment email sent to ${buyerEmail} by seller "${auth.username}"`);
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       success: true,
       message: `Shipment notification sent to ${buyerEmail}`,
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
     });
 
   } catch (err) {
@@ -162,63 +161,7 @@ function buildShipmentEmail({ buyerName, orderId, shipmentPartner, trackingLink,
 // Resend API with retry (429 backoff)
 // ═══════════════════════════════════════════════════════════════
 
-async function sendEmailWithRetry(apiKey, emailData, maxRetries = 3) {
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'User-Agent': 'SnapPrint-Shipment/1.0',
-      },
-      body: JSON.stringify(emailData),
-    });
-
-    if (response.ok) {
-      console.log(`Email sent to ${emailData.to} (attempt ${attempt + 1})`);
-      return;
-    }
-
-    if (response.status === 429 && attempt < maxRetries) {
-      const retryAfter = response.headers.get('retry-after');
-      const waitMs = retryAfter
-        ? Number(retryAfter) * 1000
-        : 500 * Math.pow(2, attempt);
-      console.warn(`Resend 429 for ${emailData.to} — waiting ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})`);
-      await sleep(waitMs);
-      continue;
-    }
-
-    const errText = await response.text();
-    throw new Error(`Resend API error (${response.status}): ${errText}`);
-  }
-
-  throw new Error(`Resend rate limit: exhausted ${maxRetries} retries for ${emailData.to}`);
-}
-
 // ═══════════════════════════════════════════════════════════════
 // Helpers
 // ═══════════════════════════════════════════════════════════════
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function escapeHtml(text) {
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-function jsonError(message, status = 400) {
-  return new Response(JSON.stringify({ error: true, message }), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

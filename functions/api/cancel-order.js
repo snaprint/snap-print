@@ -11,6 +11,8 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import { verifyTurnstile } from '../_lib/turnstile.js';
+import { jsonError, jsonResponse } from '../_lib/http.js';
+import { sendEmailWithRetry, sleep, escapeHtml, subjectText, isValidEmail, getSellerEmail, FROM_ORDERS, REPLY_TO_QUERIES } from '../_lib/email.js';
 
 const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024; // 5 MB
 
@@ -104,7 +106,7 @@ export async function onRequestPost(context) {
     // ── 5. Send seller notification email (with screenshot attachment) ──
     try {
       await sendEmailWithRetry(resendApiKey, {
-        from: 'Snap Print <orders@snaprint.in>',
+        from: FROM_ORDERS,
         to: sellerEmail,
         reply_to: email.trim(),
         subject: `⚠️ Cancellation Request — ${emailData.orderId}`,
@@ -116,7 +118,7 @@ export async function onRequestPost(context) {
             content_type: emailData.screenshot.contentType,
           },
         ],
-      }, 3, `cancel-seller/${emailData.orderId}-${emailData.email}`);
+      }, { idempotencyKey: `cancel-seller/${emailData.orderId}-${emailData.email}`, userAgent: 'SnapPrint-CancelOrder/1.0' });
     } catch (sellerErr) {
       // B-9: without the seller email the request is lost — tell the buyer.
       console.error('Seller cancellation email failed — returning 502:', sellerErr);
@@ -129,12 +131,12 @@ export async function onRequestPost(context) {
     // ── 6. Send buyer confirmation email ──
     try {
       await sendEmailWithRetry(resendApiKey, {
-        from: 'Snap Print <orders@snaprint.in>',
+        from: FROM_ORDERS,
         to: emailData.email,
-        reply_to: 'queries@snaprint.in',
+        reply_to: REPLY_TO_QUERIES,
         subject: `Cancellation Request Received — ${emailData.orderId}`,
         html: buildBuyerEmail(emailData),
-      }, 3, `cancel-buyer/${emailData.orderId}-${emailData.email}`);
+      }, { idempotencyKey: `cancel-buyer/${emailData.orderId}-${emailData.email}`, userAgent: 'SnapPrint-CancelOrder/1.0' });
     } catch (buyerErr) {
       // The seller has the request; a failed confirmation must not make the buyer resubmit.
       console.error('Buyer cancellation confirmation email failed (seller already notified):', buyerErr);
@@ -142,12 +144,9 @@ export async function onRequestPost(context) {
 
     console.log(`Cancellation request processed: ${emailData.orderId} by ${emailData.name} (${emailData.email})`);
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       success: true,
       message: 'Cancellation request submitted successfully',
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
     });
 
   } catch (err) {
@@ -222,69 +221,7 @@ function buildBuyerEmail(data) {
 // Resend API with retry (429 backoff)
 // ═══════════════════════════════════════════════════════════════
 
-async function sendEmailWithRetry(apiKey, emailData, maxRetries = 3, idempotencyKey = '') {
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const headers = {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      'User-Agent': 'SnapPrint-CancelOrder/1.0',
-    };
-
-    if (idempotencyKey) {
-      headers['Idempotency-Key'] = idempotencyKey;
-    }
-
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(emailData),
-    });
-
-    if (response.ok) {
-      console.log(`Email sent to ${emailData.to} (attempt ${attempt + 1})`);
-      return;
-    }
-
-    if (response.status === 429 && attempt < maxRetries) {
-      const retryAfter = response.headers.get('retry-after');
-      const waitMs = retryAfter
-        ? Number(retryAfter) * 1000
-        : 500 * Math.pow(2, attempt);
-      console.warn(`Resend 429 for ${emailData.to} — waiting ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})`);
-      await sleep(waitMs);
-      continue;
-    }
-
-    const errText = await response.text();
-    throw new Error(`Resend API error (${response.status}): ${errText}`);
-  }
-
-  throw new Error(`Resend rate limit: exhausted ${maxRetries} retries for ${emailData.to}`);
-}
-
 // ═══════════════════════════════════════════════════════════════
 // Helpers
 // ═══════════════════════════════════════════════════════════════
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function escapeHtml(text) {
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-function jsonError(message, status = 400) {
-  return new Response(JSON.stringify({ error: true, message }), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

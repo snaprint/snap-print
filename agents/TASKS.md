@@ -45,6 +45,7 @@ No new features this phase: B-14, B-16, B-17, B-18 wait. A shared module is crea
 | 9 | B-13 | Minor items (escaping, `SELLER_EMAIL` default, tracking-link scheme) | delivery copy: owner decision (F-11) | todo |
 | 10 | B-8 | Quote upload memory: owner chooses between options | owner decision | todo |
 | — | B-15 | `shared/` module for FE + BE (CSV, bulk pricing, `isPurchasable`) | done as part of B-10/B-12 | todo |
+| — | B-19 | `npm run dev:full` fails (compat date newer than local workerd); fix the script (package.json) | owner OK to edit package.json | todo |
 
 **Later (not this phase)**
 
