@@ -3,6 +3,8 @@
    Form validation, screenshot upload, base64 encoding, API call
    ═══════════════════════════════════════════════════════════════ */
 
+import { apiFetch, readApiError } from './helpers.js';
+
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
@@ -220,17 +222,16 @@ async function handleSubmit(e) {
       },
     };
 
-    const response = await fetch('/api/cancel-order', {
+    const response = await apiFetch('/api/cancel-order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      showToast(data.message || 'Something went wrong. Please try again.', true);
-      setLoading(false);
+    // MESSAGES #6: on any non-2xx keep the form filled and show the server's message.
+    if (!response.ok) {
+      showToast(await readApiError(response,
+        'We could not send your request. Please try again, or email queries@snaprint.in.'), true);
       return;
     }
 
@@ -244,7 +245,7 @@ async function handleSubmit(e) {
 
   } catch (err) {
     console.error('Cancel order error:', err);
-    showToast('Something went wrong. Please try again.', true);
+    showToast(err.message || 'Something went wrong. Please try again.', true);
   } finally {
     setLoading(false);
   }

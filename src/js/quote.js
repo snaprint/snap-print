@@ -4,6 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import { isValidEmail, isValidPhone, showToast, CONFIG, showPageLoader, hidePageLoader } from './utils.js';
+import { apiFetch, readApiError } from './helpers.js';
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 const ALLOWED_EXTENSIONS = ['.stl', '.step', '.stp'];
@@ -175,24 +176,17 @@ function initFormSubmission() {
       formData.append('email', email.value.trim());
       formData.append('phone', phone.value.trim());
 
-      try {
-        const response = await fetch(`${CONFIG.API_BASE}/quote`, {
-          method: 'POST',
-          body: formData,
-        });
+      // F-2 / MESSAGES #6: success is shown only for a 2xx answer. On any
+      // error (400/403/502/503, network) the form keeps everything the user
+      // entered so they can retry.
+      const response = await apiFetch(`${CONFIG.API_BASE}/quote`, {
+        method: 'POST',
+        body: formData,
+      });
 
-        if (!response.ok) {
-          const err = await response.json().catch(() => ({}));
-          throw new Error(err.message || 'Submission failed');
-        }
-      } catch (fetchErr) {
-        // If API is unreachable (dev mode without backend), simulate success
-        if (fetchErr instanceof TypeError && fetchErr.message.includes('fetch')) {
-          console.log('Dev mode: simulating quote submission');
-          await new Promise(resolve => setTimeout(resolve, 1500));
-        } else {
-          throw fetchErr;
-        }
+      if (!response.ok) {
+        throw new Error(await readApiError(response,
+          'We could not send your quote request. Please try again, or email queries@snaprint.in.'));
       }
 
       hidePageLoader();
@@ -203,7 +197,7 @@ function initFormSubmission() {
       document.getElementById('file-upload-zone').style.display = '';
     } catch (err) {
       console.error('Quote submission error:', err);
-      showToast(err.message || 'Failed to submit quote request. Please try again or email us directly.', 'error');
+      showToast(err.message || 'Failed to submit quote request. Please try again or email us directly.', 'error', 8000);
     } finally {
       hidePageLoader();
       submitBtn.disabled = false;

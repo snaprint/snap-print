@@ -70,7 +70,7 @@ Skipped this session: F-1 (needs B-14, still `planned`), F-3 second half (needs 
 
 | # | ID | Task | Depends on | Status |
 |---|---|---|---|---|
-| 1 | F-2 | Remove "dev mode" fake success in checkout + quote; non-2xx shows server `message`, keeps input (MESSAGES #6) | — | todo |
+| 1 | F-2 | Remove "dev mode" fake success in checkout + quote; non-2xx shows server `message`, keeps input (MESSAGES #6) | — | on preview |
 | 2 | F-5 | Track-order mobile menu double toggle | — | todo |
 | 3 | F-4 | Firestore helpers must surface errors | — | todo |
 | 4 | F-3a | Await post-payment writes; store the charged (bulk) price | — | todo |

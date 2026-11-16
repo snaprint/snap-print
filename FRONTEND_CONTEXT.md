@@ -170,7 +170,9 @@ Severity: 🔴 high · 🟠 medium · 🟡 low.
 `VITE_ORDER_TRACKING_CSV_URL` is compiled into the public JS bundle, and [track-order.js:68](src/js/track-order.js#L68) / [account.js:575](src/js/account.js#L575) download the **whole** sheet (`customer_name, customer_email, mobile, order_id, tracking_link`) to the browser. Anyone can open DevTools, copy the URL, and download every customer's name, email and phone. This is a privacy/DPDP-Act exposure and contradicts the privacy policy.
 **Fix:** unpublish the sheet; add a server function (e.g. `POST /api/track-order`) that reads the sheet with a non-public URL or service account and returns only the matching row's status and link. For the account page, filter by the authenticated user's order ids server-side (verify the Firebase ID token).
 
-### 🔴 F-2 "Dev mode" fallbacks fake success in production
+### 🔴 F-2 "Dev mode" fallbacks fake success in production — ✅ fixed 2026-11-17
+**Fixed:** the fallbacks are gone (not just hidden behind `DEV`). `src/js/helpers.js` has `apiFetch` (network failure → "Could not reach Snap Print…") and `readApiError` (server `message`, with a fallback for non-JSON pages). Checkout keeps the cart; quote and cancel-order keep every field and the file, and show success only on 2xx. For local work use `npm run dev:full`; `npm run dev` has no `/api` and now shows the network error.
+
 [checkout.js:690](src/js/checkout.js#L690): any `TypeError` mentioning "fetch" (offline, DNS failure, connection reset, ad-blocker) **clears the cart and redirects to the thank-you page with `DEV-<timestamp>`**, so a real customer believes an unpaid order was placed. [quote.js:190](src/js/quote.js#L190) likewise shows "Quote request submitted successfully!" when the request never reached the server.
 **Fix:** wrap both in `if (import.meta.env.DEV)`; in production show an error toast and keep the cart.
 

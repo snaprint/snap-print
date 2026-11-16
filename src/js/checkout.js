@@ -25,6 +25,7 @@ import {
   addBuyerAddress,
   saveBuyerOrder,
 } from './firebase.js';
+import { apiFetch, readApiError } from './helpers.js';
 
 let selectedAddressId = null; // tracks which saved address is selected
 
@@ -671,36 +672,23 @@ function initPayButton() {
     payBtnText.textContent = 'Processing…';
     showPageLoader('Preparing your order…');
 
+    // F-2: no "dev mode" fallback. Any failure keeps the cart and the form
+    // as they are and shows the server's message; nothing is ever faked.
     try {
-      try {
-        const response = await fetch(`${CONFIG.API_BASE}/create-order`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items, shippingMethod: selectedMethod, buyer }),
-        });
-        if (!response.ok) {
-          const err = await response.json().catch(() => ({}));
-          throw new Error(err.message || 'Failed to create order');
-        }
-        const { order_id, amount, key_id } = await response.json();
-        hidePageLoader(); // dismiss before Razorpay modal opens
-        openRazorpay(order_id, amount, buyer, key_id);
-      } catch (fetchErr) {
-        // If API is unreachable (dev without backend), simulate
-        if (fetchErr instanceof TypeError && fetchErr.message.includes('fetch')) {
-          console.log('Dev mode: simulating checkout');
-          await new Promise(r => setTimeout(r, 1500));
-          hidePageLoader();
-          showToast('Dev mode — redirecting to confirmation', 'info');
-          clearCart();
-          setTimeout(() => { window.location.href = '/thank-you.html?order=DEV-' + Date.now(); }, 500);
-        } else {
-          throw fetchErr;
-        }
+      const response = await apiFetch(`${CONFIG.API_BASE}/create-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items, shippingMethod: selectedMethod, buyer }),
+      });
+      if (!response.ok) {
+        throw new Error(await readApiError(response, 'Could not start the payment. Please try again.'));
       }
+      const { order_id, amount, key_id } = await response.json();
+      hidePageLoader(); // dismiss before Razorpay modal opens
+      openRazorpay(order_id, amount, buyer, key_id);
     } catch (err) {
       console.error('Checkout error:', err);
-      showToast(err.message || 'Something went wrong. Please try again.', 'error');
+      showToast(err.message || 'Something went wrong. Please try again.', 'error', 8000);
     } finally {
       hidePageLoader();
       payBtn.disabled = false;
