@@ -1,6 +1,6 @@
 # Work Log
 
-**Active agent:** BACKEND
+**Active agent:** none
 <!-- Set to BACKEND or FRONTEND at session start; reset to none at session end. -->
 
 Append-only. Newest entry at the **bottom**. Never edit or delete past entries.
@@ -64,4 +64,18 @@ Append-only. Newest entry at the **bottom**. Never edit or delete past entries.
 **How to verify on preview:** place a test order on preview → buyer + seller emails arrive.
 **Needs from other agent / owner:** unchanged (MESSAGES #8, #9; O-4, O-5, O-7, O-11, O-14).
 **Next:** unchanged.
+
+## 2026-11-17 · BACKEND (owner decisions applied)
+**Tasks:** B-8 (on preview), B-13 delivery copy (on preview), B-19 (on preview). Owner approved the BE recommendations.
+**Changed:**
+- B-8: `/api/quote` file limit 25 MB → **10 MB** (option A). Over → 400 with a message pointing to queries@snaprint.in.
+- B-13: order emails say Air 3–5 / Surface 6–9 business days *including 1–2 days of production* (matches shipping policy). Note: this code change was accidentally committed inside the B-8 commit `51e4ea1`; documented in `0798cce`.
+- B-19: `package.json` → `dev:full` now passes `--compatibility-date 2026-08-01` (only that script changed). Verified `npm run dev:full` starts and serves the site.
+**Contract changes:** quote max file size 10 MB (changelog). FE messages #10 (upload limit) and #11 (delivery wording, F-11). Owner threads #8/#9 resolved.
+**Pushed to dev:** yes (51e4ea1, 0798cce, 7306362 + this entry)
+**How to verify on preview:**
+1. Quote form: upload an `.stl` over 10 MB → error "File too large. Maximum size is 10 MB…" (the page itself may still say 25 MB until FE does #10). A small file still succeeds.
+2. Place a test order with Surface shipping → confirmation email shows "6–9 business days (including 1–2 days of production)"; Air shows 3–5.
+**Needs from other agent / owner:** FE: #3–#7, #10, #11. Owner: O-4, O-5, O-7, O-11 (and Production `RESEND_API_KEY` check before promoting).
+**Next:** Phase 2 (B-14 track-order, B-16/B-17 Firestore) when the owner says go.
 
