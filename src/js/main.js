@@ -7,6 +7,7 @@
 import {
   updateCartBadge, fetchActiveProducts, extractCategories,
 } from './utils.js';
+import { escapeHtml } from './helpers.js';
 
 // ── Detect if we're on the catalog (homepage) ──
 function isCatalogPage() {
@@ -248,8 +249,8 @@ async function initShopDropdown() {
           All Products <span class="navbar__dropdown-count">${products.length}</span>
         </a>
         ${categories.map(c => `
-          <a href="/?category=${c.name}" class="navbar__dropdown-item">
-            ${c.label} <span class="navbar__dropdown-count">${c.count}</span>
+          <a href="/?category=${encodeURIComponent(c.name)}" class="navbar__dropdown-item">
+            ${escapeHtml(c.label)} <span class="navbar__dropdown-count">${c.count}</span>
           </a>
         `).join('')}
       `;
@@ -265,7 +266,7 @@ async function initShopDropdown() {
         const catContainer = document.createElement('div');
         catContainer.className = 'navbar__mobile-categories';
         catContainer.innerHTML = categories.map(c =>
-          `<a href="/?category=${c.name}" class="navbar__link navbar__mobile-cat-link">${c.label}</a>`
+          `<a href="/?category=${encodeURIComponent(c.name)}" class="navbar__link navbar__mobile-cat-link">${escapeHtml(c.label)}</a>`
         ).join('');
         mobileShopLink.after(catContainer);
       }
@@ -314,9 +315,10 @@ async function populateFooterShopLinks() {
     categories.forEach(cat => {
       if (cat.name === 'engineering') return; // skip — already covered by Custom Parts
       // Avoid duplicates (home page catalog.js may also add these)
-      if (footerLinks.querySelector(`a[href="/?category=${cat.name}"]`)) return;
+      const href = `/?category=${encodeURIComponent(cat.name)}`;
+      if ([...footerLinks.querySelectorAll('a')].some(a => a.getAttribute('href') === href)) return;
       const link = document.createElement('a');
-      link.href = `/?category=${cat.name}`;
+      link.href = href;
       link.className = 'footer__link';
       link.textContent = cat.label;
       footerLinks.insertBefore(link, customPartsLink);

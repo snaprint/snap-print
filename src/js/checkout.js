@@ -25,7 +25,7 @@ import {
   addBuyerAddress,
   saveBuyerOrder,
 } from './firebase.js';
-import { apiFetch, readApiError } from './helpers.js';
+import { apiFetch, readApiError, escapeHtml } from './helpers.js';
 
 let selectedAddressId = null; // tracks which saved address is selected
 
@@ -299,12 +299,12 @@ function renderAddressPicker(addresses) {
       .filter(Boolean).join(', ');
     const isDefault = addr.id === defaultAddr.id;
     return `
-      <label class="address-picker__option ${isDefault ? 'selected' : ''}" data-address-id="${addr.id}">
-        <input type="radio" name="checkout-address" value="${addr.id}" ${isDefault ? 'checked' : ''} />
+      <label class="address-picker__option ${isDefault ? 'selected' : ''}" data-address-id="${escapeHtml(addr.id)}">
+        <input type="radio" name="checkout-address" value="${escapeHtml(addr.id)}" ${isDefault ? 'checked' : ''} />
         <div class="address-picker__content">
-          <span class="address-picker__label">${addr.label || 'Address'}${addr.isDefault ? ' <small>(Default)</small>' : ''}</span>
-          <span class="address-picker__recipient">${addr.name || ''}${addr.phone ? ' · ' + addr.phone : ''}</span>
-          <span class="address-picker__text">${fullAddress}</span>
+          <span class="address-picker__label">${escapeHtml(addr.label || 'Address')}${addr.isDefault ? ' <small>(Default)</small>' : ''}</span>
+          <span class="address-picker__recipient">${escapeHtml(addr.name || '')}${addr.phone ? ' · ' + escapeHtml(addr.phone) : ''}</span>
+          <span class="address-picker__text">${escapeHtml(fullAddress)}</span>
         </div>
       </label>
     `;
@@ -439,12 +439,12 @@ function renderOrderSummary() {
           return `
           <div class="flex items-center gap-3">
             <div style="width:48px;height:48px;border-radius:var(--radius-md);overflow:hidden;background:var(--bg-muted);flex-shrink:0;position:relative;">
-              <img src="${item.image}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;"
+              <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" style="width:100%;height:100%;object-fit:cover;"
                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22%3E%3Crect fill=%22%23f3f4f6%22 width=%2248%22 height=%2248%22/%3E%3C/svg%3E'" />
               <span style="position:absolute;top:-4px;right:-4px;background:var(--text-secondary);color:white;font-size:10px;font-weight:700;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;">${item.quantity}</span>
             </div>
             <div style="flex:1;min-width:0;">
-              <div style="font-size:var(--text-sm);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name}</div>
+              <div style="font-size:var(--text-sm);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.name)}</div>
             </div>
             <span style="font-size:var(--text-sm);font-weight:600;white-space:nowrap;">${formatCurrency(lineTotal)}</span>
           </div>`;

@@ -4,6 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import { showToast, CONFIG, fetchCSV } from './utils.js';
+import { escapeHtml } from './helpers.js';
 import {
   signInWithGoogle,
   signUpWithEmail,
@@ -271,7 +272,7 @@ function renderProfileView(user, profile) {
   profileGrid.innerHTML = fields.map(f => `
     <div class="profile-field">
       <span class="profile-field__label">${f.label}</span>
-      <span class="profile-field__value">${f.value}</span>
+      <span class="profile-field__value">${escapeHtml(f.value)}</span>
     </div>
   `).join('');
 }
@@ -350,20 +351,21 @@ function renderAddressList(profile) {
     const defaultBadge = addr.isDefault
       ? '<span class="address-badge address-badge--default">Default</span>'
       : '';
-    const labelText = addr.label || 'Address';
+    const labelText = escapeHtml(addr.label || 'Address');
+    const id = escapeHtml(addr.id);
 
     return `
-      <div class="address-card" data-address-id="${addr.id}">
+      <div class="address-card" data-address-id="${id}">
         <div class="address-card__header">
           <span class="address-card__label">${labelText}</span>
           ${defaultBadge}
         </div>
-        <p class="address-card__recipient">${addr.name || '—'}${addr.phone ? ' · ' + addr.phone : ''}</p>
-        <p class="address-card__text">${fullAddress}</p>
+        <p class="address-card__recipient">${escapeHtml(addr.name || '—')}${addr.phone ? ' · ' + escapeHtml(addr.phone) : ''}</p>
+        <p class="address-card__text">${escapeHtml(fullAddress)}</p>
         <div class="address-card__actions">
-          ${!addr.isDefault ? `<button class="btn btn-ghost btn-xs" data-action="set-default" data-id="${addr.id}">Set Default</button>` : ''}
-          <button class="btn btn-ghost btn-xs" data-action="edit" data-id="${addr.id}">Edit</button>
-          <button class="btn btn-ghost btn-xs address-card__delete" data-action="delete" data-id="${addr.id}">Delete</button>
+          ${!addr.isDefault ? `<button class="btn btn-ghost btn-xs" data-action="set-default" data-id="${id}">Set Default</button>` : ''}
+          <button class="btn btn-ghost btn-xs" data-action="edit" data-id="${id}">Edit</button>
+          <button class="btn btn-ghost btn-xs address-card__delete" data-action="delete" data-id="${id}">Delete</button>
         </div>
       </div>
     `;
@@ -597,15 +599,15 @@ async function loadOrders(uid) {
       <div class="order-card">
         <div class="order-card__header">
           <div>
-            <span class="order-card__id">${orderId}</span>
+            <span class="order-card__id">${escapeHtml(orderId)}</span>
             <span class="order-card__date">${date}</span>
           </div>
           <span class="order-card__total">${total}</span>
         </div>
-        <div class="order-card__items">${itemsSummary || 'No items recorded'}</div>
+        <div class="order-card__items">${escapeHtml(itemsSummary || 'No items recorded')}</div>
         <div class="order-card__footer">
-          <span class="order-status ${statusInfo.cssClass}">${statusInfo.label}</span>
-          <a href="${trackBtnHref}" class="${trackBtnClass}"${trackBtnTarget}${trackBtnClick}>${canTrack ? 'Track Order →' : 'Track Order'}</a>
+          <span class="order-status ${statusInfo.cssClass}">${escapeHtml(statusInfo.label)}</span>
+          <a href="${escapeHtml(trackBtnHref)}" class="${trackBtnClass}"${trackBtnTarget}${trackBtnClick}>${canTrack ? 'Track Order →' : 'Track Order'}</a>
         </div>
       </div>
     `;
@@ -642,7 +644,9 @@ function getStatusInfo(status) {
 /** Ensure a string is a valid URL with scheme */
 function ensureUrl(url) {
   if (!url) return '#';
-  return /^https?:\/\//i.test(url) ? url : 'https://' + url;
+  if (/^https?:\/\//i.test(url)) return url;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(url)) return '#'; // javascript:, data:, … never become links
+  return 'https://' + url;
 }
 
 document.addEventListener('DOMContentLoaded', init);

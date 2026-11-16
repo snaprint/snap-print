@@ -3,6 +3,21 @@
    Safe to import from any page (no Firebase, no PapaParse).
    ═══════════════════════════════════════════════════════════════ */
 
+/**
+ * F-12: escape a value for use inside HTML text or a quoted attribute.
+ * Use it for EVERY sheet / localStorage / Firestore / user value put into
+ * innerHTML or an HTML template string. (URLs in href also need a scheme
+ * check; ids in query strings also need encodeURIComponent.)
+ */
+export function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /** Shown when the request never reached the server (offline, DNS, blocked). */
 export const NETWORK_ERROR_MESSAGE =
   'Could not reach Snap Print. Please check your internet connection and try again.';

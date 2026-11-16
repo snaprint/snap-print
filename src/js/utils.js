@@ -4,6 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import Papa from 'papaparse';
+import { escapeHtml } from './helpers.js';
 // Product rules shared with the server (create-order). Owned by BE; do not edit (F-7).
 import {
   parseBulkPricing, getBulkPrice, getPurchasability, MAX_QTY_PER_PRODUCT,
@@ -186,9 +187,11 @@ export function showToast(message, type = 'info', duration = 3500) {
   toast.className = `toast toast--${type}`;
   toast.innerHTML = `
     <span class="toast__icon">${TOAST_ICONS[type] || TOAST_ICONS.info}</span>
-    <span class="toast__message">${message}</span>
+    <span class="toast__message"></span>
     <button class="toast__close" aria-label="Dismiss"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
   `;
+  // F-12: messages often contain product names / server text, so never parse them as HTML.
+  toast.querySelector('.toast__message').textContent = String(message ?? '');
   const dismiss = () => { toast.classList.add('removing'); setTimeout(() => toast.remove(), 250); };
   toast.querySelector('.toast__close').addEventListener('click', dismiss);
   container.appendChild(toast);
@@ -458,7 +461,7 @@ export function showPageLoader(message = '') {
   _loaderEl.className = 'loader-overlay';
   _loaderEl.innerHTML = `
     ${HAMSTER_HTML}
-    ${message ? `<span class="loader-overlay__text">${message}</span>` : ''}
+    ${message ? `<span class="loader-overlay__text">${escapeHtml(message)}</span>` : ''}
   `;
   document.body.appendChild(_loaderEl);
   document.body.style.overflow = 'hidden';

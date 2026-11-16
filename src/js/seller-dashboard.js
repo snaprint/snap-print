@@ -4,6 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import { CONFIG, fetchCSV } from './utils.js';
+import { escapeHtml } from './helpers.js';
 
 // ── State ──
 let products = [];           // Loaded from CSV
@@ -397,11 +398,6 @@ function showToast(msg, isError = false) {
   setTimeout(() => { toastEl.classList.remove('visible'); }, 4000);
 }
 
-function escapeHtml(text) {
-  const el = document.createElement('span');
-  el.textContent = String(text);
-  return el.innerHTML;
-}
 
 // Clear error state on input
 function initFieldListeners() {

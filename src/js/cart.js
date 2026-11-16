@@ -17,6 +17,7 @@ import {
   getItemMaxQuantity,
 } from './utils.js';
 import { parseBulkPricing, getBulkPrice, getPurchasability } from '../../shared/products.js';
+import { escapeHtml } from './helpers.js';
 
 // Live product data (fetched from Google Sheets) keyed by product ID
 let liveProductMap = {};
@@ -95,16 +96,18 @@ function renderCart() {
     const effectivePrice = getBulkPrice(tiers, item.quantity, item.price);
     const isBulkDiscounted = tiers && effectivePrice < item.price;
     const lineTotal = effectivePrice * item.quantity;
+    const id = escapeHtml(item.id);
+    const name = escapeHtml(item.name);
 
     return `
-    <div class="cart-item animate-fade-in" data-id="${item.id}">
+    <div class="cart-item animate-fade-in" data-id="${id}">
       <div class="cart-item__image">
-        <img src="${item.image}" alt="${item.name}" loading="lazy"
+        <img src="${escapeHtml(item.image)}" alt="${name}" loading="lazy"
           onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 80 80%22%3E%3Crect fill=%22%23f3f4f6%22 width=%2280%22 height=%2280%22/%3E%3C/svg%3E'" />
       </div>
       <div class="cart-item__info">
-        <a href="/product.html?id=${item.id}" class="cart-item__name">${item.name}</a>
-        <span class="cart-item__meta">${item.material ? item.material : ''} · ${formatCurrency(effectivePrice)} each</span>
+        <a href="/product.html?id=${encodeURIComponent(item.id)}" class="cart-item__name">${name}</a>
+        <span class="cart-item__meta">${item.material ? escapeHtml(item.material) + ' · ' : ''}${formatCurrency(effectivePrice)} each</span>
         ${isBulkDiscounted ? `
           <span class="cart-item__bulk-badge">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
@@ -113,18 +116,18 @@ function renderCart() {
         ` : ''}
       </div>
       <div class="qty-selector">
-        <button class="qty-selector__btn qty-decrease" data-id="${item.id}" aria-label="Decrease quantity">
+        <button class="qty-selector__btn qty-decrease" data-id="${id}" aria-label="Decrease quantity">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
         <span class="qty-selector__value">${item.quantity}</span>
-        <button class="qty-selector__btn qty-increase" data-id="${item.id}" aria-label="Increase quantity"
+        <button class="qty-selector__btn qty-increase" data-id="${id}" aria-label="Increase quantity"
           ${item.quantity >= getItemMaxQuantity(item) ? `disabled title="Max ${getItemMaxQuantity(item)} per order"` : ''}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
       </div>
       <div class="flex items-center gap-3">
         <span class="cart-item__price">${formatCurrency(lineTotal)}</span>
-        <button class="cart-item__remove remove-btn" data-id="${item.id}" aria-label="Remove ${item.name}">
+        <button class="cart-item__remove remove-btn" data-id="${id}" aria-label="Remove ${name}">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>

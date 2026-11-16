@@ -79,7 +79,7 @@ Skipped this session: F-1 (needs B-14, still `planned`), F-3 second half (needs 
 | 6 | (#4) | Checkout `maxlength`s; show server 400 message (MESSAGES #4) | B-3 | on preview |
 | 7 | (#10) | Quote upload limit 25 → 10 MB (MESSAGES #10) | B-8 | on preview |
 | 8 | F-11 | Single delivery-time copy (MESSAGES #11) | owner decision (done); made-to-order lead time: MESSAGES #12 | on preview |
-| 9 | F-12 | Escape all interpolated HTML (shared `escapeHtml`) | — | todo |
+| 9 | F-12 | Escape all interpolated HTML (shared `escapeHtml`) | — | on preview |
 | 10 | F-8 | Cart refreshes price/name/image; flags unavailable items | — | todo |
 | 10 | F-13 | Shuffle catalog once per load | — | todo |
 | 10 | F-15 | Use shared product cache; reduce CSV fetches | — | todo |

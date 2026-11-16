@@ -11,6 +11,7 @@ import {
   parseBulkPricing, getBulkPrice, getPurchasability, isEngineering, isMadeToOrder,
   tracksStock, availableStock,
 } from '../../shared/products.js';
+import { escapeHtml } from './helpers.js';
 
 let currentProduct = null;
 let allProducts = [];
@@ -102,8 +103,9 @@ function renderProduct(product) {
   const breadcrumbCategory = document.getElementById('breadcrumb-category');
 
   if (breadcrumbCategory) {
-    const catLabel = product.category.charAt(0).toUpperCase() + product.category.slice(1);
-    breadcrumbCategory.innerHTML = `<a href="/?category=${product.category}">${catLabel}</a> <span class="separator">›</span> ${product.name}`;
+    const cat = String(product.category || '').toLowerCase();
+    const catLabel = cat.charAt(0).toUpperCase() + cat.slice(1);
+    breadcrumbCategory.innerHTML = `<a href="/?category=${encodeURIComponent(cat)}">${escapeHtml(catLabel)}</a> <span class="separator">›</span> ${escapeHtml(product.name)}`;
   }
 
   const images = (product.image_urls || '')
@@ -113,6 +115,15 @@ function renderProduct(product) {
     .map(resolveImageUrl);
   const imageFallback = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 600 600%22%3E%3Crect fill=%22%23f3f4f6%22 width=%22600%22 height=%22600%22/%3E%3Ctext fill=%22%239ca3af%22 font-family=%22sans-serif%22 font-size=%2218%22 x=%22300%22 y=%22300%22 text-anchor=%22middle%22%3EImage unavailable%3C/text%3E%3C/svg%3E';
   const mainImage = images[0] || imageFallback;
+  // F-12: escaped copies of sheet values used in the template below
+  const e = {
+    name: escapeHtml(product.name),
+    category: escapeHtml(product.category),
+    description: escapeHtml(product.description || 'No description available.'),
+    material: escapeHtml(product.material),
+    dimensions: escapeHtml(product.dimensions),
+    weight: escapeHtml(product.weight_g),
+  };
   // F-7: the same rule the server uses (shared/products.js). Blank stock on a
   // stock-tracked product = Sold Out; blank/0 price = Currently unavailable.
   const { purchasable, reason, maxQuantity } = getPurchasability(product);
@@ -124,7 +135,7 @@ function renderProduct(product) {
     <!-- Gallery -->
     <div class="product-gallery">
       <div class="product-gallery__main">
-        <img src="${mainImage}" alt="${product.name}${images.length > 1 ? ' — image 1' : ''}" id="main-image"
+        <img src="${escapeHtml(mainImage)}" alt="${e.name}${images.length > 1 ? ' — image 1' : ''}" id="main-image"
           onerror="this.src='${imageFallback}'" />
         <button type="button" class="product-gallery__fullscreen" id="gallery-fullscreen" aria-label="View image fullscreen">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
@@ -143,7 +154,7 @@ function renderProduct(product) {
         <div class="product-gallery__thumbs">
           ${images.map((img, i) => `
             <button type="button" class="product-gallery__thumb ${i === 0 ? 'active' : ''}" data-index="${i}" aria-label="View image ${i + 1}" aria-current="${i === 0 ? 'true' : 'false'}">
-              <img src="${img}" alt="${product.name} ${i + 1}" />
+              <img src="${escapeHtml(img)}" alt="${e.name} ${i + 1}" />
             </button>
           `).join('')}
         </div>
@@ -154,8 +165,8 @@ function renderProduct(product) {
     <div class="product-info">
       <div class="product-info__header">
         <div>
-          <span class="product-info__category">${product.category}</span>
-          <h1 class="product-info__title">${product.name}</h1>
+          <span class="product-info__category">${e.category}</span>
+          <h1 class="product-info__title">${e.name}</h1>
         </div>
         <button type="button" class="product-info__share" id="share-btn" aria-label="Share this product">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -181,14 +192,14 @@ function renderProduct(product) {
         ${purchasable && tracksStock(product) ? `<span class="badge badge-stock">In Stock (${availableStock(product)} left)</span>` : ''}
       </div>
 
-      <p class="product-info__desc">${product.description || 'No description available.'}</p>
+      <p class="product-info__desc">${e.description}</p>
 
       <!-- Specs -->
       ${product.material || product.dimensions || product.weight_g ? `
         <div class="product-info__specs">
-          ${product.material ? `<div><span class="product-info__spec-label">Material</span><span class="product-info__spec-value">${product.material}</span></div>` : ''}
-          ${product.dimensions ? `<div><span class="product-info__spec-label">Dimensions</span><span class="product-info__spec-value">${product.dimensions}</span></div>` : ''}
-          ${product.weight_g ? `<div><span class="product-info__spec-label">Weight</span><span class="product-info__spec-value">${product.weight_g}g</span></div>` : ''}
+          ${product.material ? `<div><span class="product-info__spec-label">Material</span><span class="product-info__spec-value">${e.material}</span></div>` : ''}
+          ${product.dimensions ? `<div><span class="product-info__spec-label">Dimensions</span><span class="product-info__spec-value">${e.dimensions}</span></div>` : ''}
+          ${product.weight_g ? `<div><span class="product-info__spec-label">Weight</span><span class="product-info__spec-value">${e.weight}g</span></div>` : ''}
           ${madeToOrder ? `<div><span class="product-info__spec-label">Lead Time</span><span class="product-info__spec-value">5–7 days</span></div>` : ''}
         </div>
       ` : ''}
@@ -316,7 +327,7 @@ function renderProduct(product) {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       ` : ''}
-      <img src="${images[activeImageIndex] || mainImage}" alt="${product.name} — fullscreen" class="product-lightbox__img" />
+      <img src="${escapeHtml(images[activeImageIndex] || mainImage)}" alt="${e.name} — fullscreen" class="product-lightbox__img" />
       ${images.length > 1 ? `<span class="product-lightbox__count">${activeImageIndex + 1} / ${images.length}</span>` : ''}
     `;
     document.body.appendChild(overlay);
@@ -507,16 +518,15 @@ function renderInstagramEmbed(product) {
       // Keep only the pathname, ensure trailing slash
       let path = u.pathname.replace(/\/+$/, '') + '/';
       return `https://www.instagram.com${path}`;
-    } catch { return rawUrl; }
+    } catch { return ''; }
   };
 
   // Build one blockquote per URL
-  grid.innerHTML = urls.map(rawUrl => {
-    const permalink = cleanPermalink(rawUrl);
+  grid.innerHTML = urls.map(cleanPermalink).filter(Boolean).map(permalink => {
     return `
       <div class="instagram-section__item">
         <blockquote class="instagram-media"
-          data-instgrm-permalink="${permalink}"
+          data-instgrm-permalink="${escapeHtml(permalink)}"
           data-instgrm-version="14"
           data-instgrm-captioned>
         </blockquote>
@@ -549,18 +559,20 @@ function renderRelatedProducts(product) {
 
   section.style.display = 'block';
   grid.innerHTML = related.map(p => {
-    const img = p.image_urls ? resolveImageUrl(p.image_urls.split(',')[0].trim()) : '';
+    const img = escapeHtml(p.image_urls ? resolveImageUrl(p.image_urls.split(',')[0].trim()) : '');
+    const href = `/product.html?id=${encodeURIComponent(p.id)}`;
+    const name = escapeHtml(p.name);
     const { reason } = getPurchasability(p);
     const disc = reason === 'no_price' ? 0 : getDiscountPercent(p.price, p.actual_price);
     return `
       <article class="product-card">
-        <a href="/product.html?id=${p.id}" class="product-card__image-wrap">
-          <img class="product-card__image" src="${img}" alt="${p.name}" loading="lazy"
+        <a href="${href}" class="product-card__image-wrap">
+          <img class="product-card__image" src="${img}" alt="${name}" loading="lazy"
             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 400%22%3E%3Crect fill=%22%23f3f4f6%22 width=%22400%22 height=%22400%22/%3E%3C/svg%3E'" />
           ${disc > 0 ? `<div class="product-card__badges"><span class="badge badge-sale">Save ${disc}%</span></div>` : ''}
         </a>
         <div class="product-card__body">
-          <h3 class="product-card__name"><a href="/product.html?id=${p.id}">${p.name}</a></h3>
+          <h3 class="product-card__name"><a href="${href}">${name}</a></h3>
           <div class="product-card__pricing">
             ${reason === 'no_price'
               ? `<span style="font-size:var(--text-sm);color:var(--text-secondary);">${unavailableLabel(reason)}</span>`

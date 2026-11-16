@@ -21,6 +21,7 @@ import {
   resolveImageUrl, unavailableLabel,
 } from './utils.js';
 import { getPurchasability, isEngineering, isMadeToOrder } from '../../shared/products.js';
+import { escapeHtml } from './helpers.js';
 
 // ── State ──
 let allProducts = [];      // full active product list (never mutated after load)
@@ -248,12 +249,13 @@ function renderProducts(products) {
     const madeToOrder = isMadeToOrder(product);
     const discount = unavailable ? 0 : getDiscountPercent(product.price, product.actual_price);
     const stagger = `stagger-${(index % 6) + 1}`;
-    const href = quoteOnly ? '/quote.html' : `/product.html?id=${product.id}`;
+    const href = quoteOnly ? '/quote.html' : `/product.html?id=${encodeURIComponent(product.id)}`;
+    const name = escapeHtml(product.name);
 
     return `
       <article class="product-card animate-fade-in-up ${stagger}" role="listitem">
-        <a href="${href}" class="product-card__image-wrap">
-          <img class="product-card__image" src="${imageUrl}" alt="${product.name}" loading="lazy"
+        <a href="${escapeHtml(href)}" class="product-card__image-wrap">
+          <img class="product-card__image" src="${escapeHtml(imageUrl)}" alt="${name}" loading="lazy"
             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 400%22%3E%3Crect fill=%22%23f3f4f6%22 width=%22400%22 height=%22400%22/%3E%3Ctext fill=%22%239ca3af%22 font-family=%22sans-serif%22 font-size=%2214%22 x=%22200%22 y=%22200%22 text-anchor=%22middle%22%3ENo Image%3C/text%3E%3C/svg%3E'" />
           <div class="product-card__badges">
             ${discount > 0 ? `<span class="badge badge-sale">Save ${discount}%</span>` : ''}
@@ -262,7 +264,7 @@ function renderProducts(products) {
           </div>
         </a>
         <div class="product-card__body">
-          <h3 class="product-card__name"><a href="${href}">${product.name}</a></h3>
+          <h3 class="product-card__name"><a href="${escapeHtml(href)}">${name}</a></h3>
           <div class="product-card__pricing">
             ${quoteOnly
               ? '<span style="font-size:var(--text-sm);color:var(--text-secondary);">Get a Quote</span>'
@@ -278,9 +280,6 @@ function renderProducts(products) {
   }).join('');
 }
 
-function escapeHtml(text) {
-  return String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
 
 // ═══════════════════════════════════════════════════════════════
 // Product Count + Active Filter Badge
@@ -349,14 +348,14 @@ function buildCategoryTiles() {
       <span class="category-tile__label">All (${allProducts.length})</span>
     </a>
     ${categories.map(cat => `
-      <a href="/?category=${cat.name}" class="category-tile" data-category="${cat.name}">
+      <a href="/?category=${encodeURIComponent(cat.name)}" class="category-tile" data-category="${escapeHtml(cat.name)}">
         <div class="category-tile__image">
           ${cat.image
-            ? `<img src="${cat.image}" alt="${cat.label}" loading="lazy" onerror="this.parentElement.innerHTML='<svg viewBox=\\'0 0 100 100\\' style=\\'width:100%;height:100%;background:var(--bg-muted)\\'><text x=\\'50\\' y=\\'55\\' font-family=\\'sans-serif\\' font-size=\\'14\\' fill=\\'var(--text-secondary)\\' text-anchor=\\'middle\\'>${cat.label}</text></svg>'" />`
-            : `<svg viewBox="0 0 100 100" style="width:100%;height:100%;background:var(--bg-muted);"><text x="50" y="55" font-family="sans-serif" font-size="14" fill="var(--text-secondary)" text-anchor="middle">${cat.label}</text></svg>`
+            ? `<img src="${escapeHtml(cat.image)}" alt="${escapeHtml(cat.label)}" loading="lazy" onerror="this.style.visibility='hidden'" />`
+            : `<svg viewBox="0 0 100 100" style="width:100%;height:100%;background:var(--bg-muted);"><text x="50" y="55" font-family="sans-serif" font-size="14" fill="var(--text-secondary)" text-anchor="middle">${escapeHtml(cat.label)}</text></svg>`
           }
         </div>
-        <span class="category-tile__label">${cat.label} (${cat.count})</span>
+        <span class="category-tile__label">${escapeHtml(cat.label)} (${cat.count})</span>
       </a>
     `).join('')}
   `;
@@ -410,7 +409,7 @@ function buildMaterialChips() {
 
   container.innerHTML = `
     <button class="filter-chip active" data-material="">All</button>
-    ${materials.map(m => `<button class="filter-chip" data-material="${m}">${m}</button>`).join('')}
+    ${materials.map(m => `<button class="filter-chip" data-material="${escapeHtml(m)}">${escapeHtml(m)}</button>`).join('')}
   `;
 
   container.addEventListener('click', (e) => {
@@ -540,7 +539,7 @@ async function loadHeroCarousel() {
     // Build slides
     track.innerHTML = imageUrls.map((url, i) => `
       <div class="hero__slide ${i === 0 ? 'active' : ''}">
-        <img src="${url}" alt="Snap Print – Image ${i + 1}" loading="${i === 0 ? 'eager' : 'lazy'}" />
+        <img src="${escapeHtml(url)}" alt="Snap Print – Image ${i + 1}" loading="${i === 0 ? 'eager' : 'lazy'}" />
       </div>
     `).join('');
 
