@@ -254,7 +254,8 @@ With default sort, `sortProducts` runs Fisher-Yates ([catalog.js:217](src/js/cat
 - `getCartWeight`, `hasBulkPricing` and unused imports (`addToCart`, `showToast`, `fetchCSV` in catalog.js; `clearCart` in product-detail.js).
 - Auth-gate code and the state-name map are duplicated between `checkout.js` and `account.js`.
 
-### 🟡 F-17 Deploy bloat from git-ignored images
+### 🟡 F-17 Deploy bloat from git-ignored images — ✅ fixed 2026-11-17 (without moving files)
+**Fixed:** a Vite plugin in `vite.config.js` (`dropRawImages`) deletes `dist/images/{products_png,hero_png,raw_downloaded_images,raw_images_nano_banana_automated}` after every build, so local builds / `npm run deploy` no longer ship them (local `dist/` 263 MB → 62 MB). Cloudflare builds never had them (git-ignored). **Not moved:** the owner's local `scripts/convert-images.js` reads PNGs from `public/images/products_png` and `hero_png`, and `public/images/products/README.md` points there; moving them would break that script (outside FE's files). Nothing on the site or in the product/hero sheets references them (sheet images all use `images/products/` and `images/hero_images/`). Owner question about moving them and about `public/images/hueforge_product_guide.md` (publicly served): MESSAGES #13.
 `public/images/products_png` (~190 MB) and `hero_png` (~11 MB) are git-ignored but live inside `publicDir`, so Vite copies them into `dist/` and `npm run deploy` uploads them. Move source/raw images outside `public/` (e.g. a top-level `assets-src/`).
 
 ### 🟡 F-18 Seller dashboard guard — ✅ fixed 2026-11-17

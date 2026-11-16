@@ -1,7 +1,30 @@
 import { resolve } from 'path';
+import { rm } from 'fs/promises';
 import { defineConfig } from 'vite';
 
+// F-17: raw/source image folders that live inside public/ on the owner's
+// machine (git-ignored; scripts/convert-images.js reads them) must never be
+// deployed. Vite copies all of public/ into dist/, so drop them after build.
+const RAW_IMAGE_DIRS = [
+  'images/products_png',
+  'images/hero_png',
+  'images/raw_downloaded_images',
+  'images/raw_images_nano_banana_automated',
+];
+function dropRawImages() {
+  return {
+    name: 'snaprint-drop-raw-images',
+    apply: 'build',
+    async closeBundle() {
+      for (const dir of RAW_IMAGE_DIRS) {
+        await rm(resolve(__dirname, 'dist', dir), { recursive: true, force: true });
+      }
+    },
+  };
+}
+
 export default defineConfig({
+  plugins: [dropRawImages()],
   root: 'src',
   // F-21: read .env from the project root, not from `root` (src/). Without
   // this, local builds/dev got no VITE_* values and silently used sample data.
