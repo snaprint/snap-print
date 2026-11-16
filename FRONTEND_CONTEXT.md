@@ -134,7 +134,7 @@ Renders instantly from localStorage, then refreshes **only `bulk_pricing`** from
 3. Prefill name/phone from profile; if there are saved addresses, show the address picker (selecting one fills **and disables** the fields; "+ Add New Address" clears them).
 4. Shipping selector (hard-coded `surface` / `air` radios), free-shipping progress bars from the sheet `item_total` threshold, PIN → state auto-fill, blur validation.
 5. Pay → `POST /api/create-order` with `{items:[{id,quantity}], shippingMethod, buyer}` → Razorpay modal with server `order_id`/`amount`/`key_id`.
-6. Razorpay `handler`: fire-and-forget profile save, new address save (if not a saved one), order doc save → `clearCart()` → redirect `/thank-you.html?order=<id>`. Payment signature is **not** verified client-side; the webhook is the source of truth (and sends the emails).
+6. Razorpay `handler`: profile save, new address save (if not a saved one), order doc save, **awaited** (max 4 s) → `clearCart()` → redirect `/thank-you.html?order=<id>`. Payment signature is **not** verified client-side; the webhook is the source of truth (and sends the emails).
 
 ### Account (`account.js`)
 Same auth gate (code duplicated from checkout). Profile view/edit (name, phone), address cards (add / edit / delete / set default, counter `n/16`), and orders from `buyers/{uid}/orders` (newest first) merged with the tracking CSV by `order_id`. Status priority: sheet `order_status` → default "Processing". "Track Order →" is enabled only when status is `in_transit` and there is a `tracking_link`. `#orders` hash scrolls to orders.
@@ -176,7 +176,8 @@ Severity: 🔴 high · 🟠 medium · 🟡 low.
 [checkout.js:690](src/js/checkout.js#L690): any `TypeError` mentioning "fetch" (offline, DNS failure, connection reset, ad-blocker) **clears the cart and redirects to the thank-you page with `DEV-<timestamp>`**, so a real customer believes an unpaid order was placed. [quote.js:190](src/js/quote.js#L190) likewise shows "Quote request submitted successfully!" when the request never reached the server.
 **Fix:** wrap both in `if (import.meta.env.DEV)`; in production show an error toast and keep the cart.
 
-### 🔴 F-3 Post-payment Firestore writes can be lost; order record is client-authored
+### 🔴 F-3 Post-payment Firestore writes can be lost; order record is client-authored — 🟡 first half fixed 2026-11-17 (F-3a); removal of the client write waits for B-16 (F-3b)
+**F-3a done:** the handler shows "Payment received. Saving your order…", awaits `Promise.allSettled` of the three writes (capped at 4 s, `POST_PAYMENT_SAVE_TIMEOUT_MS`), then redirects. The order doc stores the **bulk unit price** per item and `total` = the amount Razorpay charged (`amount/100`, computed by the server); `shippingCost` = total − subtotal. Still client-authored and `status: paid` without signature check until B-16.
 In the Razorpay `handler` ([checkout.js:740-786](src/js/checkout.js#L740-L786)) three writes are fired without `await`, then the page navigates away immediately ([checkout.js:786](src/js/checkout.js#L786)). In-flight Firestore writes are aborted on navigation, so orders can be missing from **My Account**. The record also uses `price: item.price` (base price, not the bulk price actually charged, [checkout.js:774](src/js/checkout.js#L774)), a client-computed subtotal/total, and `status: 'paid'` without verifying `razorpay_signature`.
 **Fix:** `await Promise.allSettled([...])` (with a ~3 s timeout) before redirecting. Better: have the webhook write the order with the Firebase Admin REST API, so the record is server-authored and always present. Commit the Firestore rules (`firestore.rules`) and make `orders` read-only for clients.
 

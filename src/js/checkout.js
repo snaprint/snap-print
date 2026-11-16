@@ -32,6 +32,9 @@ let selectedAddressId = null; // tracks which saved address is selected
 let selectedMethod = 'surface';
 let shippingCost = 0;
 
+// Max time to wait for the post-payment Firestore writes before redirecting.
+const POST_PAYMENT_SAVE_TIMEOUT_MS = 4000;
+
 // ── DOM refs (auth gate) ──
 const loginGate       = document.getElementById('checkout-login-gate');
 const checkoutForm    = document.getElementById('checkout-form');
@@ -725,20 +728,49 @@ function openRazorpay(orderId, amount, buyer, keyId) {
     },
     notes: {},
     theme: { color: '#1a1a1a' },
-    handler(response) {
-      // Save/update buyer profile + address to Firestore (fire-and-forget)
+    async handler(response) {
+      // F-3 (first half): the payment is done; the webhook sends the emails.
+      // Save the profile / address / order record to Firestore and WAIT for
+      // the writes (navigating away aborts in-flight writes), capped so a
+      // slow network can't keep the buyer on this page. The client order
+      // write stays until the webhook writes it server-side (B-16, F-3b).
+      showPageLoader('Payment received. Saving your order…');
       const currentUser = getCurrentUser();
       if (currentUser) {
-        // Save name/phone/email
-        saveBuyerProfile(currentUser.uid, {
-          name:  buyer.fullName,
-          phone: buyer.phone,
-          email: buyer.email,
-        }).catch(err => console.warn('[Checkout] Profile save failed:', err));
+        const cart = getCart();
+        // Store the unit price actually charged (bulk tier), not the base price.
+        const items = cart.map(item => ({
+          id: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          price: getBulkPrice(parseBulkPricing(item.bulk_pricing), item.quantity, item.price),
+          image: item.image || '',
+        }));
+        const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+        const total = Number(amount) / 100; // what Razorpay charged (paise → ₹), computed by the server
+        const chargedShipping = Math.round((total - subtotal) * 100) / 100;
 
-        // If using a new address (not a saved one), add it to addresses array
+        const writes = [
+          saveBuyerProfile(currentUser.uid, {
+            name:  buyer.fullName,
+            phone: buyer.phone,
+            email: buyer.email,
+          }),
+          saveBuyerOrder(currentUser.uid, orderId, {
+            orderId,
+            paymentId: response.razorpay_payment_id || '',
+            items,
+            subtotal,
+            shippingCost: chargedShipping >= 0 ? chargedShipping : shippingCost,
+            shippingMethod: selectedMethod,
+            total,
+            buyerEmail: buyer.email,
+            status: 'paid',
+          }),
+        ];
+        // If using a new address (not a saved one), add it to the address book
         if (!selectedAddressId) {
-          addBuyerAddress(currentUser.uid, {
+          writes.push(addBuyerAddress(currentUser.uid, {
             label: 'Address',
             name: buyer.fullName,
             phone: buyer.phone,
@@ -747,31 +779,20 @@ function openRazorpay(orderId, amount, buyer, keyId) {
             city: buyer.city,
             state: buyer.state,
             pincode: buyer.pincode,
-          }).catch(err => console.warn('[Checkout] Address save failed:', err));
+          }));
         }
 
-        // Save order record to Firestore (fire-and-forget)
-        const cart = getCart();
-        saveBuyerOrder(currentUser.uid, orderId, {
-          orderId,
-          paymentId: response.razorpay_payment_id || '',
-          items: cart.map(item => ({
-            id: item.id,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            image: item.image || '',
-          })),
-          subtotal: getCartSubtotal(),
-          shippingCost,
-          shippingMethod: selectedMethod,
-          total: getCartSubtotal() + shippingCost,
-          buyerEmail: buyer.email,
-          status: 'paid',
-        }).catch(err => console.warn('[Checkout] Order save failed:', err));
+        const timeout = new Promise(resolve => setTimeout(() => resolve('timeout'), POST_PAYMENT_SAVE_TIMEOUT_MS));
+        const results = await Promise.race([Promise.allSettled(writes), timeout]);
+        if (results === 'timeout') {
+          console.warn('[Checkout] Post-payment saves did not finish in time; continuing.');
+        } else {
+          results.filter(r => r.status === 'rejected')
+            .forEach(r => console.warn('[Checkout] Post-payment save failed:', r.reason));
+        }
       }
       clearCart();
-      window.location.href = `/thank-you.html?order=${orderId}`;
+      window.location.href = `/thank-you.html?order=${encodeURIComponent(orderId)}`;
     },
     modal: { ondismiss() { showToast('Payment cancelled', 'info'); } },
   });
