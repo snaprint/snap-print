@@ -32,6 +32,8 @@ Required: `items[]`, `shippingMethod` (must match a `method` in the shipping she
 - Missing/blank `id` → 400 `Item N is missing a product id`.
 - FE should cap the quantity input at 100 per product (F-6) so users never see these errors in normal use.
 
+**Purchasability (B-10, live on preview 2026-11-17):** the server applies `getPurchasability()` from `shared/products.js`. New 400: `<name> is currently unavailable` (price blank/0 in the sheet). Blank `stock` on a stock-tracked product → `<name> is out of stock`. Category/yes-no checks are case-insensitive.
+
 **Length rules (B-3, live on preview 2026-11-17):** each buyer value must be ≤256 characters, where "address" means `address` + `", "` + `apartment` combined. Too long → 400 `<Field> is too long (maximum 256 characters)` (fields: Full name, Email, Phone, Address (including apartment), City, State, PIN code). `buyer.uid` > 128 chars → 400 `Invalid account id`.
 **Cart size:** a cart with too many *different* products to fit Razorpay's notes (about 25 with long ids, more with short ones) → 400 `This order has too many different products. Please split it into two orders.`
 
@@ -86,5 +88,6 @@ _FE: add needs here (new endpoint, field, error code). BE answers inline and mov
 
 ## Changelog
 - 2026-11-17: initial contract documenting existing endpoints; `track-order` planned.
+- 2026-11-17 (BE, B-10): `create-order` uses the shared purchasability rule (`shared/products.js`); new 400 "currently unavailable" for price ≤ 0.
 - 2026-11-17 (BE, B-3): `create-order` adds 400s for over-long buyer fields and for carts with too many different products.
 - 2026-11-17 (BE, B-2): `create-order` rejects quantities that are not whole numbers 1–100 (per product, after merging duplicate ids) with 400 instead of clamping.

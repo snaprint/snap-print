@@ -40,6 +40,13 @@ functions/
     └── send-shipment.js    POST /api/send-shipment    (token-auth) "order shipped" email to buyer
 ```
 
+```
+shared/
+└── products.js             pure product rules used by BOTH sides (B-10): MAX_QTY_PER_PRODUCT,
+                            parseBulkPricing/getBulkPrice, getPurchasability/isPurchasable, stock helpers
+```
+`shared/` is owned by BE; FE imports it from `src/js/` with a relative path (e.g. `import { getPurchasability } from '../../shared/products.js'`) and must not edit it.
+
 Pages Functions routing is file-based: `functions/api/foo.js` exporting `onRequestPost` = `POST /api/foo`.
 Each file currently re-implements its own helpers (`jsonError`, `escapeHtml`, `sleep`, `sendEmailWithRetry`, CSV parser, HMAC helpers) — see problem **B-12**.
 
@@ -63,7 +70,7 @@ Flow:
 1. Validates presence of items / shippingMethod / buyer.email, fullName, phone, pincode.
 2. Fetches Products CSV + Shipping CSV (`PRODUCTS_CSV_URL` / `SHIPPING_RATES_CSV_URL`, falls back to the `VITE_` names).
 3. Shipping method is normalised once (`trim().toLowerCase()`) and must exist in the sheet's `method` column; the normalised value is used for the rate lookup and the notes (B-1).
-4. Validates every line: `id` present, quantity a whole number 1–100 (400 otherwise, never clamped). Duplicate ids are merged (summed); merged total > 100 → 400 (B-2). Per product: must be `active=yes`, not `category=engineering`; bulk price via `parseBulkPricing`/`getBulkPrice` (copied from `src/js/utils.js`); stock checked unless `made_to_order=yes` **or** product has bulk pricing.
+4. Validates every line: `id` present, quantity a whole number 1–100 (400 otherwise, never clamped). Duplicate ids are merged (summed); merged total > 100 → 400 (B-2). Per product: `getPurchasability()` from `shared/products.js` (see §4.1) must say purchasable, and the quantity must be ≤ its `maxQuantity`; per-unit price via `parseBulkPricing`/`getBulkPrice` (also in `shared/`), and an effective price ≤ 0 → 400 "currently unavailable".
 5. Shipping: if `subtotal >= item_total` (sheet column) → free, else `shipping_cost`. Blank/non-numeric `item_total` = no free-shipping threshold; blank/invalid `shipping_cost` → 500 (never silently free).
 6. Creates Razorpay order (`amount` in paise, `currency: INR`, `receipt: order_<ts>`) with `notes` (max 15 keys, every value ≤256 chars, B-3): 8 `buyer_*` keys, `shipping_method`, `shipping_cost`, `subtotal`, `items_summary` (plain text, shortened at item boundaries with `+N more`), and `items_1..items_3` = `encodeURIComponent(id):qty:unitPrice` tokens joined by `,`, packed at item boundaries. Buyer values >256 chars → 400; items that don't fit 3 chunks (≈25–45 distinct products depending on id length) → 400 "too many different products". A final guard returns 500 if any note would still break the limits. (Orders created before B-3 have `item_count` + JSON `items_detail` instead; the webhook still reads those.)
 7. Returns `{ order_id, amount, currency, key_id }`.
@@ -103,6 +110,17 @@ Static page list + `product.html?id=<id>` for every active, non-engineering prod
 Frontend additionally uses `image_urls` (comma-separated), `description`, `material`, `dimensions`, `weight_g`, `instagram_url`.
 
 `bulk_pricing` format: `"1-2:499|3-5:449|6-10:399|11+:349"` (pipe-separated `range:price`; ranges `a-b`, `n`, or `n+`). If quantity exceeds all tiers, the last tier applies.
+
+### 4.1 Purchasability rule (B-10) — single source: `shared/products.js`
+A product can be bought through checkout only if **all** of these hold (sheet cells are trimmed, yes/no and category checks are case-insensitive):
+1. `active` = yes. Otherwise: not shown / "not found or inactive".
+2. `category` ≠ engineering. Engineering parts are quote-only (`/quote.html`).
+3. `price` is a number **> 0**. Blank, 0, negative or text = not buyable ("currently unavailable"); the server logs it as a sheet error.
+4. Stock is **tracked** unless `made_to_order` = yes **or** the product has valid `bulk_pricing` (bulk orders are made after confirmation). For a tracked product, a **blank, non-numeric or ≤0 `stock` cell means out of stock** (decided 2026-11-17: never sell what the sheet doesn't confirm). Fractions round down.
+5. Max quantity per order = `min(stock, 100)` if tracked, else 100 (`MAX_QTY_PER_PRODUCT`).
+6. Additionally checkout rejects a bulk tier whose price is 0.
+
+`getPurchasability(product)` → `{ purchasable, reason: null|'inactive'|'quote_only'|'no_price'|'out_of_stock', maxQuantity }`. Owner-visible effect: to sell an item without counting stock, set `made_to_order` = yes; to sell a counted item, put a number in `stock`.
 
 ### Shipping rates sheet (CSV)
 `method, item_total, shipping_cost, field_content` — e.g. `surface,499,100,Ship Rocket Surface`. `item_total` is the free-shipping threshold.
@@ -219,11 +237,13 @@ A 25 MB upload is held as `ArrayBuffer` + a binary JS string (UTF-16, about 50 M
 ### 🟡 B-9 Success returned when emails fail
 `quote.js` and `cancel-order.js` catch email errors and still return `success: true`, so the user believes the request was received. Return 502 if the **seller** email fails.
 
-### 🟡 B-10 Data-handling edge cases in create-order
+### 🟡 B-10 Data-handling edge cases in create-order — ✅ fixed 2026-11-17 (rule in §4.1; FE alignment = F-7)
 - `category === 'engineering'` is case-sensitive ([create-order.js:199](functions/api/create-order.js#L199)); sitemap and frontend lowercase it.
 - Blank `price` cell → `Number('') = 0` → item is free. Validate `price > 0`.
 - Blank `stock` with `made_to_order != yes` → treated as 0 → "out of stock", but the product page shows it as buyable (see F-7).
 - Bulk-priced products skip the stock check entirely ([create-order.js:211](functions/api/create-order.js#L211)), intentionally but undocumented in the UI.
+
+**Fixed:** all four now follow the written rule in §4.1, implemented once in `shared/products.js` and used by create-order. Also: `made_to_order` and `active` are now case-insensitive (`Yes` counts; previously `made_to_order=Yes` was treated as "no").
 
 ### 🟡 B-11 Sitemap is stale
 `STATIC_PAGES` ([sitemap.xml.js:15](functions/sitemap.xml.js#L15)) is missing `/faq.html` and `/contact.html`.
@@ -240,7 +260,7 @@ Comments in create-order, seller-login, send-shipment and sitemap say Pages Func
 ## 9. Planned work (new IDs, not existing bugs)
 
 - **B-14** `POST /api/track-order`: server-side tracking lookup (fixes FE F-1). Draft spec in `agents/API_CONTRACT.md`.
-- **B-15** `shared/` module for logic both sides use (CSV parsing, bulk pricing, `isPurchasable`).
+- **B-15** `shared/` module for logic both sides use. **Core done in B-10:** `shared/products.js` (bulk pricing, `getPurchasability`). CSV parsing stays server-side (`functions/_lib/`); FE keeps PapaParse.
 - **B-16** Webhook writes the order to Firestore with a service account, so the order record is server-authored.
 - **B-17** `firestore.rules` committed to the repo (orders read-only for clients).
 - **B-18** Restyle email templates to match the redesign (`agents/DESIGN_TOKENS.md`).

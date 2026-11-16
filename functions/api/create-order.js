@@ -8,6 +8,15 @@
    authoritative total (tamper-proof), and creates a Razorpay order.
    ═══════════════════════════════════════════════════════════════ */
 
+import {
+  MAX_QTY_PER_PRODUCT,
+  getPurchasability,
+  availableStock,
+  parsePrice,
+  parseBulkPricing,
+  getBulkPrice,
+} from '../../shared/products.js';
+
 // Simple CSV parser (no external deps in Pages Functions)
 // Handles multi-line quoted fields (e.g. descriptions with line breaks)
 function parseCSV(text) {
@@ -80,64 +89,8 @@ function parseCSVLine(line) {
   return result;
 }
 
-// ── Bulk Pricing (server-side, tamper-proof) ──
-// Duplicated from src/js/utils.js because Pages Functions can't import ES modules.
-function parseBulkPricing(bulkString) {
-  if (!bulkString || typeof bulkString !== 'string') return null;
-  const trimmed = bulkString.trim();
-  if (!trimmed) return null;
-
-  const tiers = [];
-  const segments = trimmed.split('|');
-
-  for (const segment of segments) {
-    const [rangeStr, priceStr] = segment.split(':');
-    if (!rangeStr || !priceStr) continue;
-
-    const price = Number(priceStr.trim());
-    if (isNaN(price) || price < 0) continue;
-
-    const range = rangeStr.trim();
-
-    if (range.endsWith('+')) {
-      const min = Number(range.slice(0, -1));
-      if (isNaN(min) || min < 1) continue;
-      tiers.push({ min, max: Infinity, price });
-    } else if (range.includes('-')) {
-      const [minStr, maxStr] = range.split('-');
-      const min = Number(minStr.trim());
-      const max = Number(maxStr.trim());
-      if (isNaN(min) || isNaN(max) || min < 1 || max < min) continue;
-      tiers.push({ min, max, price });
-    } else {
-      const qty = Number(range);
-      if (isNaN(qty) || qty < 1) continue;
-      tiers.push({ min: qty, max: qty, price });
-    }
-  }
-
-  if (tiers.length === 0) return null;
-  return tiers.sort((a, b) => a.min - b.min);
-}
-
-function getBulkPrice(tiers, quantity, basePrice) {
-  if (!tiers || !Array.isArray(tiers) || tiers.length === 0) return Number(basePrice);
-  const qty = Number(quantity);
-
-  for (const tier of tiers) {
-    if (qty >= tier.min && qty <= tier.max) {
-      return tier.price;
-    }
-  }
-
-  const lastTier = tiers[tiers.length - 1];
-  if (qty >= lastTier.min) return lastTier.price;
-
-  return Number(basePrice);
-}
-
-// B-2: quantities are validated, never clamped. Max per product, after merging duplicate lines.
-const MAX_QTY_PER_PRODUCT = 100;
+// B-2: quantities are validated, never clamped. Max per product (MAX_QTY_PER_PRODUCT,
+// from shared/products.js) applies after merging duplicate lines.
 
 /** Accepts an integer (or an all-digits string). Returns the number, or null if invalid. */
 function parseQuantity(value) {
@@ -284,37 +237,37 @@ export async function onRequestPost(context) {
     const resolvedItems = [];
 
     for (const [id, quantity] of requested) {
-      const product = products.find(p => p.id === id && p.active?.toLowerCase() === 'yes');
-      if (!product) {
-        return jsonError(`Product ${id} not found or inactive`, 400);
+      // Same rule the UI uses: shared/products.js getPurchasability (B-10).
+      const product = products.find(p => p.id === id);
+      const status = getPurchasability(product);
+      if (!status.purchasable) {
+        switch (status.reason) {
+          case 'inactive':
+            return jsonError(`Product ${id} not found or inactive`, 400);
+          case 'quote_only':
+            return jsonError(`Engineering parts require a quote — cannot checkout directly`, 400);
+          case 'no_price':
+            console.error(`Products sheet: ${id} has no valid price (> 0)`);
+            return jsonError(`${product.name} is currently unavailable`, 400);
+          default: // out_of_stock
+            return jsonError(`${product.name} is out of stock`, 400);
+        }
       }
       if (quantity > MAX_QTY_PER_PRODUCT) {
         return jsonError(`You can order at most ${MAX_QTY_PER_PRODUCT} of ${product.name} (your cart has ${quantity})`, 400);
       }
-
-      // Engineering items can't be purchased directly
-      if (product.category === 'engineering') {
-        return jsonError(`Engineering parts require a quote — cannot checkout directly`, 400);
+      if (quantity > status.maxQuantity) {
+        // Only stock-tracked products have maxQuantity < MAX_QTY_PER_PRODUCT.
+        return jsonError(`Only ${availableStock(product)} of ${product.name} available`, 400);
       }
 
-      const basePrice = Number(product.price);
-
-      // Compute effective per-unit price using bulk pricing tiers
-      const bulkTiers = parseBulkPricing(product.bulk_pricing);
-      const hasBulk = bulkTiers !== null;
-
-      // Check stock (skip for made-to-order AND bulk-priced products — bulk orders are manufactured after confirmation)
-      if (product.made_to_order !== 'yes' && !hasBulk) {
-        const stock = Number(product.stock);
-        if (stock <= 0) {
-          return jsonError(`${product.name} is out of stock`, 400);
-        }
-        if (quantity > stock) {
-          return jsonError(`Only ${stock} of ${product.name} available`, 400);
-        }
+      const basePrice = parsePrice(product.price);
+      // Bulk tiers set the per-unit price (bulk-priced products skip the stock check — see tracksStock).
+      const effectivePrice = getBulkPrice(parseBulkPricing(product.bulk_pricing), quantity, basePrice);
+      if (!Number.isFinite(effectivePrice) || effectivePrice <= 0) {
+        console.error(`Products sheet: ${id} bulk tier for qty ${quantity} has no valid price (> 0)`);
+        return jsonError(`${product.name} is currently unavailable`, 400);
       }
-
-      const effectivePrice = getBulkPrice(bulkTiers, quantity, basePrice);
 
       subtotal += effectivePrice * quantity;
       resolvedItems.push({
