@@ -92,8 +92,9 @@ If `PRODUCTS_CSV_URL` is empty, catalog and product pages fall back to `getSampl
 ## 4. Shared modules
 
 ### `utils.js`
-- **Cart** (`localStorage['snaprint_cart']`): items are `{id, name, price, actual_price, weight_g, image, material, bulk_pricing, quantity}`. `setCart` updates `.cart-badge` elements and dispatches a `cart-updated` window event. `main.js` listens to `storage` for cross-tab badge sync.
-- **Pricing:** `parseBulkPricing("1-2:499|3-5:449|11+:349")` → tiers, and `getBulkPrice(tiers, qty, base)`. These are **mirrored in `functions/api/create-order.js`**; keep both copies identical. `getCartSubtotal` applies bulk tiers. `getDiscountPercent(price, actual_price)`.
+- **Cart** (`localStorage['snaprint_cart']`): items are `{id, name, price, actual_price, weight_g, image, material, bulk_pricing, max_quantity, quantity}`. `setCart` updates `.cart-badge` elements and dispatches a `cart-updated` window event. `main.js` listens to `storage` for cross-tab badge sync.
+- **Pricing / purchasability:** come from **`shared/products.js`** (BE-owned, imported as `../../shared/products.js`; never edit it, never copy it). `getCartSubtotal` applies bulk tiers. `getDiscountPercent(price, actual_price)`.
+- **Cart caps:** `addToCart(product, qty)` applies `getPurchasability` and caps the combined quantity; `updateQuantity` clamps to `getItemMaxQuantity(item)`; `cartFieldsFromProduct` builds a line from a sheet row; `unavailableLabel(reason)` gives "Sold Out" / "Currently unavailable" / …
 - **Data:** `fetchCSV(url)` uses PapaParse with header trim/BOM strip and value trim, plus a cache-buster `?_t=` and `cache: 'no-store'`. `fetchActiveProducts()` is a module-level memoised promise of `active=yes` rows, shared by `main.js` + `catalog.js` + `cart.js` on the same page. `normalizeProduct` maps legacy `compare_price` → `actual_price`. `resolveImageUrl` converts GitHub `blob` URLs to `raw.githubusercontent.com`.
 - **UI:** `showToast(msg, type, ms)` (innerHTML), `renderSkeletons` (hamster loader in a grid), `showPageLoader/hidePageLoader` (full-screen overlay), `debounce`.
 - **Validation:** `isValidEmail`, `isValidPhone` (Indian 10-digit starting 6–9, strips +91).
@@ -190,11 +191,12 @@ Every helper in `firebase.js` catches and only `console.warn`s (e.g. [firebase.j
 The same button is toggled twice per click, once in [main.js:29](src/js/main.js#L29) (`.navbar__hamburger`) and once in [track-order.js:176](src/js/track-order.js#L176) (`#hamburger`), so the menu opens and closes instantly.
 **Fix:** delete the hamburger block in `track-order.js` (lines 172-181).
 
-### 🟠 F-6 No quantity limits in the UI
+### 🟠 F-6 No quantity limits in the UI — ✅ fixed 2026-11-17 (with F-7)
 Product page ([product-detail.js:450](src/js/product-detail.js#L450)), cart ([cart.js:174](src/js/cart.js#L174)) and `addToCart` have no maximum and ignore `stock`. The server silently clamps to 100 (BACKEND B-2) and rejects quantities above stock only at the payment step, after login and address entry.
 **Fix:** cap at `min(stock, 100)` for stocked items (100 for made-to-order/bulk), and disable "+" at the cap.
 
-### 🟠 F-7 Stock semantics differ between catalog, product page and server
+### 🟠 F-7 Stock semantics differ between catalog, product page and server — ✅ fixed 2026-11-17
+**Fixed (F-6 + F-7):** the UI imports `getPurchasability`, `MAX_QTY_PER_PRODUCT`, `parseBulkPricing`, `getBulkPrice` (and `isEngineering`, `isMadeToOrder`, `tracksStock`, `availableStock`) from `shared/products.js`; the copies in `utils.js` are deleted. Blank stock on a stock-tracked product → "Sold Out"; price blank/0 → "Currently unavailable" (no ₹0, no Add to Cart); category checks are case-insensitive. The product-page selector stops at `maxQuantity` (shows "Max N per order"); `addToCart` caps the **combined** quantity and returns `false` when nothing could be added (Buy It Now only navigates on `true`); cart lines store `max_quantity`, refreshed from the sheet, and "+" is disabled at the cap; a line above the cap is clamped with a toast. Vite builds and serves the import from outside `src/` with default settings (dev server `fs.allow` defaults to the project root).
 For a product with a blank `stock` cell and `made_to_order != yes`:
 - catalog `isBuyable` ([catalog.js:39](src/js/catalog.js#L39)) → **Sold Out**
 - product page ([product-detail.js:113](src/js/product-detail.js#L113)) → **purchasable**

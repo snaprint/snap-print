@@ -4,6 +4,10 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import Papa from 'papaparse';
+// Product rules shared with the server (create-order). Owned by BE; do not edit (F-7).
+import {
+  parseBulkPricing, getBulkPrice, getPurchasability, MAX_QTY_PER_PRODUCT,
+} from '../../shared/products.js';
 
 const CART_KEY = 'snaprint_cart';
 
@@ -20,82 +24,6 @@ export function getDiscountPercent(sellingPrice, actualPrice) {
   return Math.round(((actual - selling) / actual) * 100);
 }
 
-// ── Bulk Pricing ──
-/**
- * Parses a pipe-delimited bulk pricing string from the Google Sheet.
- * Format: "1-2:499|3-5:449|6-10:399|11+:349"
- * Returns an array of { min, max, price } tier objects, sorted by min ascending.
- * Returns null if the string is empty or invalid.
- */
-export function parseBulkPricing(bulkString) {
-  if (!bulkString || typeof bulkString !== 'string') return null;
-  const trimmed = bulkString.trim();
-  if (!trimmed) return null;
-
-  const tiers = [];
-  const segments = trimmed.split('|');
-
-  for (const segment of segments) {
-    const [rangeStr, priceStr] = segment.split(':');
-    if (!rangeStr || !priceStr) continue;
-
-    const price = Number(priceStr.trim());
-    if (isNaN(price) || price < 0) continue;
-
-    const range = rangeStr.trim();
-
-    if (range.endsWith('+')) {
-      // Open-ended: "11+"
-      const min = Number(range.slice(0, -1));
-      if (isNaN(min) || min < 1) continue;
-      tiers.push({ min, max: Infinity, price });
-    } else if (range.includes('-')) {
-      // Range: "3-5"
-      const [minStr, maxStr] = range.split('-');
-      const min = Number(minStr.trim());
-      const max = Number(maxStr.trim());
-      if (isNaN(min) || isNaN(max) || min < 1 || max < min) continue;
-      tiers.push({ min, max, price });
-    } else {
-      // Single value: "1" (treated as exact quantity)
-      const qty = Number(range);
-      if (isNaN(qty) || qty < 1) continue;
-      tiers.push({ min: qty, max: qty, price });
-    }
-  }
-
-  if (tiers.length === 0) return null;
-  return tiers.sort((a, b) => a.min - b.min);
-}
-
-/**
- * Returns the applicable per-unit price for a given quantity.
- * Falls back to basePrice if no tier matches.
- */
-export function getBulkPrice(tiers, quantity, basePrice) {
-  if (!tiers || !Array.isArray(tiers) || tiers.length === 0) return Number(basePrice);
-  const qty = Number(quantity);
-
-  for (const tier of tiers) {
-    if (qty >= tier.min && qty <= tier.max) {
-      return tier.price;
-    }
-  }
-
-  // If quantity exceeds all defined tiers, use the last (highest) tier
-  const lastTier = tiers[tiers.length - 1];
-  if (qty >= lastTier.min) return lastTier.price;
-
-  return Number(basePrice);
-}
-
-/**
- * Quick check: does this product have valid bulk pricing?
- */
-export function hasBulkPricing(product) {
-  return parseBulkPricing(product?.bulk_pricing) !== null;
-}
-
 // ── Cart ──
 export function getCart() {
   try { return JSON.parse(localStorage.getItem(CART_KEY)) || []; } catch { return []; }
@@ -107,38 +35,101 @@ export function setCart(cart) {
   window.dispatchEvent(new CustomEvent('cart-updated', { detail: { cart } }));
 }
 
+/**
+ * Most units of one cart line the buyer may order: the product's
+ * getPurchasability().maxQuantity stored on the line (refreshed from the
+ * sheet by cart.js), never more than MAX_QTY_PER_PRODUCT.
+ */
+export function getItemMaxQuantity(item) {
+  const max = Math.floor(Number(item?.max_quantity));
+  return max >= 1 ? Math.min(max, MAX_QTY_PER_PRODUCT) : MAX_QTY_PER_PRODUCT;
+}
+
+/** Short label for a product that can't be bought (reason from getPurchasability). */
+export function unavailableLabel(reason) {
+  switch (reason) {
+    case 'out_of_stock': return 'Sold Out';
+    case 'no_price':     return 'Currently unavailable';
+    case 'quote_only':   return 'Quote only';
+    default:             return 'No longer available';
+  }
+}
+
+function firstImage(product) {
+  return product.image_urls ? resolveImageUrl(product.image_urls.split(',')[0].trim()) : '';
+}
+
+/** Cart-line fields copied from the sheet row (also used by the cart refresh, F-8). */
+export function cartFieldsFromProduct(product) {
+  return {
+    name: product.name,
+    price: Number(product.price),
+    actual_price: Number(product.actual_price) || 0,
+    weight_g: Number(product.weight_g) || 0,
+    image: firstImage(product),
+    material: product.material || '',
+    bulk_pricing: product.bulk_pricing || '',
+    max_quantity: getPurchasability(product).maxQuantity,
+  };
+}
+
+/**
+ * Adds `quantity` units of a product, respecting the shared purchasability
+ * rule and the per-product cap on the COMBINED quantity (F-6/F-7).
+ * @returns {boolean} true if the product is in the cart afterwards
+ */
 export function addToCart(product, quantity = 1) {
+  const { purchasable, reason, maxQuantity } = getPurchasability(product);
+  if (!purchasable) {
+    showToast(`${product?.name || 'This product'}: ${unavailableLabel(reason)}`, 'error');
+    return false;
+  }
+
+  let qty = Math.floor(Number(quantity));
+  if (!(qty >= 1)) qty = 1;
+
   const cart = getCart();
   const existing = cart.find(item => item.id === product.id);
+  const current = existing ? existing.quantity : 0;
+
+  if (current >= maxQuantity) {
+    showToast(`Your cart already has the maximum of ${maxQuantity} for ${product.name}.`, 'info', 5000);
+    if (existing) {
+      Object.assign(existing, cartFieldsFromProduct(product), { quantity: maxQuantity });
+      setCart(cart);
+    }
+    return true;
+  }
+
+  const added = Math.min(qty, maxQuantity - current);
   if (existing) {
-    existing.quantity += quantity;
-    // Update bulk_pricing in case it changed in the sheet
-    if (product.bulk_pricing) existing.bulk_pricing = product.bulk_pricing;
+    // Refresh price/name/image/bulk tiers in case they changed in the sheet.
+    Object.assign(existing, cartFieldsFromProduct(product), { quantity: current + added });
   } else {
-    cart.push({
-      id: product.id,
-      name: product.name,
-      price: Number(product.price),
-      actual_price: Number(product.actual_price) || 0,
-      weight_g: Number(product.weight_g) || 0,
-      image: product.image_urls ? resolveImageUrl(product.image_urls.split(',')[0].trim()) : '',
-      material: product.material || '',
-      bulk_pricing: product.bulk_pricing || '',
-      quantity,
-    });
+    cart.push({ id: product.id, ...cartFieldsFromProduct(product), quantity: added });
   }
   setCart(cart);
-  showToast(`${product.name} added to cart`, 'success');
+
+  if (added < qty) {
+    showToast(`You can order at most ${maxQuantity} of ${product.name}. Your cart now has ${current + added}.`, 'info', 5000);
+  } else {
+    showToast(`${product.name} added to cart`, 'success');
+  }
+  return true;
 }
 
 export function removeFromCart(productId) {
   setCart(getCart().filter(item => item.id !== productId));
 }
 
+/** Sets a line's quantity, clamped to 1…its max (whole numbers only). */
 export function updateQuantity(productId, quantity) {
   const cart = getCart();
   const item = cart.find(item => item.id === productId);
-  if (item) item.quantity = Math.max(1, quantity);
+  if (item) {
+    const q = Math.floor(Number(quantity)) || 1;
+    item.quantity = Math.min(Math.max(1, q), getItemMaxQuantity(item));
+  }
   setCart(cart);
 }
 

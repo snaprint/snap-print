@@ -16,10 +16,11 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import {
-  getSampleProducts, CONFIG, fetchCSV, fetchActiveProducts, extractCategories,
-  addToCart, formatCurrency, getDiscountPercent, debounce, renderSkeletons,
-  showToast, resolveImageUrl,
+  getSampleProducts, CONFIG, fetchCSV, fetchActiveProducts,
+  formatCurrency, getDiscountPercent, debounce, renderSkeletons,
+  resolveImageUrl, unavailableLabel,
 } from './utils.js';
+import { getPurchasability, isEngineering, isMadeToOrder } from '../../shared/products.js';
 
 // ── State ──
 let allProducts = [];      // full active product list (never mutated after load)
@@ -35,12 +36,9 @@ let state = {
   material: '',           // empty string = all materials
 };
 
-// ── Buyability check (reused by in-stock filter + card badges) ──
-function isBuyable(product) {
-  if (product.category?.toLowerCase() === 'engineering') return true; // quote-based
-  if (product.made_to_order === 'yes') return true;
-  const stock = Number(product.stock);
-  return stock > 0;
+// ── "In stock" filter: buyable now (shared rule, F-7), or quote-based ──
+function isAvailable(product) {
+  return isEngineering(product) || getPurchasability(product).purchasable;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -175,13 +173,13 @@ function applyFiltersAndRender() {
 
     // Price range (skip for engineering / quote-based)
     const price = Number(product.price);
-    if (product.category?.toLowerCase() !== 'engineering') {
+    if (!isEngineering(product)) {
       if (state.priceMin !== null && price < state.priceMin) return false;
       if (state.priceMax !== null && price > state.priceMax) return false;
     }
 
     // In stock only
-    if (state.inStockOnly && !isBuyable(product)) return false;
+    if (state.inStockOnly && !isAvailable(product)) return false;
 
     // Material
     if (state.material && product.material?.toLowerCase() !== state.material.toLowerCase()) return false;
@@ -244,12 +242,13 @@ function renderProducts(products) {
 
   grid.innerHTML = products.map((product, index) => {
     const imageUrl = resolveImageUrl(product.image_urls ? product.image_urls.split(',')[0].trim() : '');
-    const isEngineering = product.category?.toLowerCase() === 'engineering';
-    const isOutOfStock = !isEngineering && !isBuyable(product);
-    const isMadeToOrder = product.made_to_order === 'yes';
-    const discount = getDiscountPercent(product.price, product.actual_price);
+    const quoteOnly = isEngineering(product);
+    const { purchasable, reason } = getPurchasability(product);
+    const unavailable = !quoteOnly && !purchasable;
+    const madeToOrder = isMadeToOrder(product);
+    const discount = unavailable ? 0 : getDiscountPercent(product.price, product.actual_price);
     const stagger = `stagger-${(index % 6) + 1}`;
-    const href = isEngineering ? '/quote.html' : `/product.html?id=${product.id}`;
+    const href = quoteOnly ? '/quote.html' : `/product.html?id=${product.id}`;
 
     return `
       <article class="product-card animate-fade-in-up ${stagger}" role="listitem">
@@ -258,15 +257,17 @@ function renderProducts(products) {
             onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 400%22%3E%3Crect fill=%22%23f3f4f6%22 width=%22400%22 height=%22400%22/%3E%3Ctext fill=%22%239ca3af%22 font-family=%22sans-serif%22 font-size=%2214%22 x=%22200%22 y=%22200%22 text-anchor=%22middle%22%3ENo Image%3C/text%3E%3C/svg%3E'" />
           <div class="product-card__badges">
             ${discount > 0 ? `<span class="badge badge-sale">Save ${discount}%</span>` : ''}
-            ${isMadeToOrder ? '<span class="badge badge-made-to-order">Made to Order</span>' : ''}
-            ${isOutOfStock ? '<span class="badge badge-out-of-stock">Sold Out</span>' : ''}
+            ${madeToOrder && !unavailable ? '<span class="badge badge-made-to-order">Made to Order</span>' : ''}
+            ${unavailable ? `<span class="badge badge-out-of-stock">${reason === 'out_of_stock' ? 'Sold Out' : 'Unavailable'}</span>` : ''}
           </div>
         </a>
         <div class="product-card__body">
           <h3 class="product-card__name"><a href="${href}">${product.name}</a></h3>
           <div class="product-card__pricing">
-            ${isEngineering
+            ${quoteOnly
               ? '<span style="font-size:var(--text-sm);color:var(--text-secondary);">Get a Quote</span>'
+              : reason === 'no_price'
+              ? `<span style="font-size:var(--text-sm);color:var(--text-secondary);">${unavailableLabel(reason)}</span>`
               : `
                 <span class="product-card__price">${formatCurrency(product.price)}</span>
                 ${discount > 0 ? `<span class="product-card__compare-price">${formatCurrency(product.actual_price)}</span>` : ''}

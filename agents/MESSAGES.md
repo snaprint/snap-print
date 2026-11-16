@@ -20,6 +20,7 @@ Before restyling pages, complete R-1: propose a design direction to the owner (m
 ### #3 · BE → FE · 2026-11-17 · create-order now rejects bad quantities (F-6)
 Task **B-2** is on preview. `POST /api/create-order` no longer clamps quantities; it returns **400** when a quantity is not a whole number from 1 to 100, and it merges lines with the same `id` before checking (merged total > 100 → 400). Exact messages are in `API_CONTRACT.md` → create-order.
 Please do **F-6**: cap the quantity selector (product page, cart, Buy It Now) at 100 per product, block non-integers, and make "add to cart" of an item already in the cart respect the cap on the *combined* quantity. Show the server's `message` if a 400 still happens.
+> **Reply (FE, 2026-11-17):** Done (F-6 with F-7). Product page, cart and Buy It Now cap at `maxQuantity` from `getPurchasability` (≤100, stock-limited), whole numbers only (+/- buttons), and adding an item already in the cart caps the combined quantity. Any 400 shows your `message` (F-2). Tested in a browser against the live sheet.
 
 ### #4 · BE → FE · 2026-11-17 · create-order: field length limits (B-3)
 Razorpay limits each order note to 256 characters, so `POST /api/create-order` now returns **400** if a buyer field is longer than 256 characters. The address check uses `address` and `apartment` **combined** (joined with ", "). Please add `maxlength` to the checkout inputs, for example name 100, email 254, phone 15, address 200, apartment 50, city 100. A very large cart (about 25+ different products) can also get a 400 asking the buyer to split the order. Show `message` as usual. Details are in `API_CONTRACT.md`.
@@ -36,6 +37,7 @@ const { purchasable, reason, maxQuantity } = getPurchasability(product);
 - Use `maxQuantity` as the quantity selector's max (covers F-6 too).
 - `parseBulkPricing`/`getBulkPrice` in `shared/` are byte-identical to `src/js/utils.js`; please switch to the shared ones and delete the copy so prices can't drift.
 The rule is described in `BACKEND_CONTEXT.md` §4.1. Don't edit `shared/`; ask here if you need a change.
+> **Reply (FE, 2026-11-17):** Done (F-7). Catalog, product page, related products, cart and checkout import from `shared/products.js`; the `utils.js` copies of `parseBulkPricing`/`getBulkPrice`/`hasBulkPricing` are deleted. Blank stock → "Sold Out", price blank/0 → "Currently unavailable", case-insensitive engineering/made-to-order. Build and dev server both resolve the import without config changes. No changes to `shared/` needed.
 
 ### #6 · BE → FE · 2026-11-17 · quote / cancel-order can now return 502 / 503 (B-9)
 `POST /api/quote` and `POST /api/cancel-order` now return **502** when the request could not be delivered to the seller (previously they said success). `quote` also returns **503** if email isn't configured. Make sure both forms show `message` and keep the user's input so they can retry (don't clear the form or show the success state on non-2xx). Relates to F-2 (remove the fake "dev mode" success).

@@ -4,10 +4,13 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import {
-  getSampleProducts, CONFIG, fetchCSV, normalizeProduct, addToCart, clearCart,
-  formatCurrency, getDiscountPercent, showToast, resolveImageUrl,
-  parseBulkPricing, getBulkPrice, hasBulkPricing,
+  getSampleProducts, CONFIG, fetchCSV, normalizeProduct, addToCart,
+  formatCurrency, getDiscountPercent, showToast, resolveImageUrl, unavailableLabel,
 } from './utils.js';
+import {
+  parseBulkPricing, getBulkPrice, getPurchasability, isEngineering, isMadeToOrder,
+  tracksStock, availableStock,
+} from '../../shared/products.js';
 
 let currentProduct = null;
 let allProducts = [];
@@ -28,7 +31,7 @@ async function loadProduct() {
 
     currentProduct = allProducts.find(p => p.id === productId);
     if (!currentProduct) { showNotFound(); return; }
-    if (currentProduct.category === 'engineering') { window.location.href = '/quote.html'; return; }
+    if (isEngineering(currentProduct)) { window.location.href = '/quote.html'; return; }
 
     renderProduct(currentProduct);
     renderRelatedProducts(currentProduct);
@@ -110,9 +113,12 @@ function renderProduct(product) {
     .map(resolveImageUrl);
   const imageFallback = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 600 600%22%3E%3Crect fill=%22%23f3f4f6%22 width=%22600%22 height=%22600%22/%3E%3Ctext fill=%22%239ca3af%22 font-family=%22sans-serif%22 font-size=%2218%22 x=%22300%22 y=%22300%22 text-anchor=%22middle%22%3EImage unavailable%3C/text%3E%3C/svg%3E';
   const mainImage = images[0] || imageFallback;
-  const isOutOfStock = product.stock !== '' && Number(product.stock) <= 0 && product.made_to_order !== 'yes';
-  const isMadeToOrder = product.made_to_order === 'yes';
-  const discount = getDiscountPercent(product.price, product.actual_price);
+  // F-7: the same rule the server uses (shared/products.js). Blank stock on a
+  // stock-tracked product = Sold Out; blank/0 price = Currently unavailable.
+  const { purchasable, reason, maxQuantity } = getPurchasability(product);
+  const madeToOrder = isMadeToOrder(product);
+  const noPrice = reason === 'no_price';
+  const discount = noPrice ? 0 : getDiscountPercent(product.price, product.actual_price);
 
   layout.innerHTML = `
     <!-- Gallery -->
@@ -158,7 +164,7 @@ function renderProduct(product) {
 
       <!-- Pricing -->
       <div class="product-info__pricing" id="product-pricing">
-        <span class="product-info__price" id="product-price-display">${formatCurrency(product.price)}</span>
+        <span class="product-info__price" id="product-price-display">${noPrice ? unavailableLabel(reason) : formatCurrency(product.price)}</span>
         ${discount > 0 ? `
           <span class="product-info__compare-price" id="product-compare-price">${formatCurrency(product.actual_price)}</span>
           <span class="product-info__discount" id="product-discount-badge">Save ${discount}%</span>
@@ -166,13 +172,13 @@ function renderProduct(product) {
       </div>
 
       <!-- Bulk Pricing Table -->
-      ${renderBulkPricingTable(product, 1)}
+      ${noPrice ? '' : renderBulkPricingTable(product, 1)}
 
       <!-- Badges -->
       <div class="flex gap-2" style="flex-wrap:wrap;">
-        ${isMadeToOrder ? '<span class="badge badge-made-to-order">Made to Order</span>' : ''}
-        ${isOutOfStock ? '<span class="badge badge-out-of-stock">Sold Out</span>' : ''}
-        ${!isOutOfStock && !isMadeToOrder && product.stock ? `<span class="badge badge-stock">In Stock (${product.stock} left)</span>` : ''}
+        ${madeToOrder ? '<span class="badge badge-made-to-order">Made to Order</span>' : ''}
+        ${!purchasable ? `<span class="badge badge-out-of-stock">${unavailableLabel(reason)}</span>` : ''}
+        ${purchasable && tracksStock(product) ? `<span class="badge badge-stock">In Stock (${availableStock(product)} left)</span>` : ''}
       </div>
 
       <p class="product-info__desc">${product.description || 'No description available.'}</p>
@@ -183,14 +189,14 @@ function renderProduct(product) {
           ${product.material ? `<div><span class="product-info__spec-label">Material</span><span class="product-info__spec-value">${product.material}</span></div>` : ''}
           ${product.dimensions ? `<div><span class="product-info__spec-label">Dimensions</span><span class="product-info__spec-value">${product.dimensions}</span></div>` : ''}
           ${product.weight_g ? `<div><span class="product-info__spec-label">Weight</span><span class="product-info__spec-value">${product.weight_g}g</span></div>` : ''}
-          ${isMadeToOrder ? `<div><span class="product-info__spec-label">Lead Time</span><span class="product-info__spec-value">5–7 days</span></div>` : ''}
+          ${madeToOrder ? `<div><span class="product-info__spec-label">Lead Time</span><span class="product-info__spec-value">5–7 days</span></div>` : ''}
         </div>
       ` : ''}
 
       <!-- Quantity + CTAs -->
-      ${isOutOfStock ? `
+      ${!purchasable ? `
         <div class="product-info__ctas">
-          <button class="btn btn-primary btn-lg btn-full" disabled>Sold Out</button>
+          <button class="btn btn-primary btn-lg btn-full" disabled>${unavailableLabel(reason)}</button>
         </div>
       ` : `
         <div class="flex items-center gap-4">
@@ -203,6 +209,7 @@ function renderProduct(product) {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
           </div>
+          <span id="qty-limit-note" style="font-size:var(--text-xs);color:var(--text-muted);display:none;">Max ${maxQuantity} per order</span>
         </div>
         <div class="product-info__ctas">
           <button class="btn btn-primary btn-lg btn-full" id="add-to-cart-btn">Add to Cart</button>
@@ -214,7 +221,7 @@ function renderProduct(product) {
       <div class="product-trust-row">
         <div class="product-trust-item">
           <svg class="product-trust-item__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-          <span class="product-trust-item__text">${isMadeToOrder ? 'Ships in 5–7 days' : 'Ready to ship'}</span>
+          <span class="product-trust-item__text">${madeToOrder ? 'Ships in 5–7 days' : 'Ready to ship'}</span>
         </div>
         <div class="product-trust-item">
           <svg class="product-trust-item__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -236,7 +243,7 @@ function renderProduct(product) {
         <div class="faq-list" id="product-faq-list">
           <div class="faq-item">
             <button class="faq-item__question">How long will delivery take?<svg class="faq-item__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button>
-            <div class="faq-item__answer">${isMadeToOrder ? 'Made-to-order items take 5–7 days to produce, then' : 'We'} ship via Normal (7–10 days) or Speed (3–5 days) delivery.</div>
+            <div class="faq-item__answer">${madeToOrder ? 'Made-to-order items take 5–7 days to produce, then' : 'We'} ship via Normal (7–10 days) or Speed (3–5 days) delivery.</div>
           </div>
           <div class="faq-item">
             <button class="faq-item__question">What if my item arrives damaged?<svg class="faq-item__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button>
@@ -443,22 +450,30 @@ function renderProduct(product) {
     }
   };
 
-  document.getElementById('qty-decrease')?.addEventListener('click', () => {
-    if (quantity > 1) { quantity--; qtyValue.textContent = quantity; updatePriceForQuantity(quantity); }
-  });
-  document.getElementById('qty-increase')?.addEventListener('click', () => {
-    quantity++; qtyValue.textContent = quantity; updatePriceForQuantity(quantity);
-  });
+  // F-6: quantity is a whole number from 1 to maxQuantity (stock-limited, max 100)
+  const decBtn = document.getElementById('qty-decrease');
+  const incBtn = document.getElementById('qty-increase');
+  const limitNote = document.getElementById('qty-limit-note');
+  const setQuantity = (q) => {
+    quantity = Math.min(Math.max(1, q), maxQuantity);
+    qtyValue.textContent = quantity;
+    if (decBtn) decBtn.disabled = quantity <= 1;
+    if (incBtn) incBtn.disabled = quantity >= maxQuantity;
+    if (limitNote) limitNote.style.display = quantity >= maxQuantity ? '' : 'none';
+    updatePriceForQuantity(quantity);
+  };
+  if (qtyValue) setQuantity(1);
+  decBtn?.addEventListener('click', () => setQuantity(quantity - 1));
+  incBtn?.addEventListener('click', () => setQuantity(quantity + 1));
 
-  // Add to Cart
+  // Add to Cart (addToCart caps the combined quantity if the item is already in the cart)
   document.getElementById('add-to-cart-btn')?.addEventListener('click', () => {
     addToCart(currentProduct, quantity);
   });
 
-  // Buy It Now — add to cart and go straight to checkout
+  // Buy It Now: add to cart and go straight to checkout
   document.getElementById('buy-now-btn')?.addEventListener('click', () => {
-    addToCart(currentProduct, quantity);
-    window.location.href = '/checkout.html';
+    if (addToCart(currentProduct, quantity)) window.location.href = '/checkout.html';
   });
 
   // Product FAQ accordion
@@ -527,7 +542,7 @@ function renderRelatedProducts(product) {
   if (!section || !grid) return;
 
   const related = allProducts
-    .filter(p => p.category === product.category && p.id !== product.id && p.category !== 'engineering')
+    .filter(p => p.category?.toLowerCase() === product.category?.toLowerCase() && p.id !== product.id && !isEngineering(p))
     .slice(0, 4);
 
   if (related.length === 0) return;
@@ -535,7 +550,8 @@ function renderRelatedProducts(product) {
   section.style.display = 'block';
   grid.innerHTML = related.map(p => {
     const img = p.image_urls ? resolveImageUrl(p.image_urls.split(',')[0].trim()) : '';
-    const disc = getDiscountPercent(p.price, p.actual_price);
+    const { reason } = getPurchasability(p);
+    const disc = reason === 'no_price' ? 0 : getDiscountPercent(p.price, p.actual_price);
     return `
       <article class="product-card">
         <a href="/product.html?id=${p.id}" class="product-card__image-wrap">
@@ -546,7 +562,9 @@ function renderRelatedProducts(product) {
         <div class="product-card__body">
           <h3 class="product-card__name"><a href="/product.html?id=${p.id}">${p.name}</a></h3>
           <div class="product-card__pricing">
-            <span class="product-card__price">${formatCurrency(p.price)}</span>
+            ${reason === 'no_price'
+              ? `<span style="font-size:var(--text-sm);color:var(--text-secondary);">${unavailableLabel(reason)}</span>`
+              : `<span class="product-card__price">${formatCurrency(p.price)}</span>`}
             ${disc > 0 ? `<span class="product-card__compare-price">${formatCurrency(p.actual_price)}</span>` : ''}
           </div>
         </div>

@@ -9,8 +9,8 @@ import {
   formatCurrency, getSampleShippingRates, getShippingCostPreview,
   isValidPhone, showToast, CONFIG, fetchCSV, lookupPIN,
   showPageLoader, hidePageLoader,
-  parseBulkPricing, getBulkPrice,
 } from './utils.js';
+import { parseBulkPricing, getBulkPrice } from '../../shared/products.js';
 
 import {
   signInWithGoogle,

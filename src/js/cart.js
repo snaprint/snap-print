@@ -14,9 +14,9 @@ import {
   formatCurrency,
   showToast,
   fetchActiveProducts,
-  parseBulkPricing,
-  getBulkPrice,
+  getItemMaxQuantity,
 } from './utils.js';
+import { parseBulkPricing, getBulkPrice, getPurchasability } from '../../shared/products.js';
 
 // Live product data (fetched from Google Sheets) keyed by product ID
 let liveProductMap = {};
@@ -40,6 +40,17 @@ async function refreshBulkPricingFromSheet() {
         const newBulk = live.bulk_pricing || '';
         if (item.bulk_pricing !== newBulk) {
           item.bulk_pricing = newBulk;
+          changed = true;
+        }
+        // F-6: the per-product cap (stock-limited) comes from the shared rule.
+        const { maxQuantity } = getPurchasability(live);
+        if (maxQuantity >= 1 && item.max_quantity !== maxQuantity) {
+          item.max_quantity = maxQuantity;
+          changed = true;
+        }
+        if (maxQuantity >= 1 && item.quantity > maxQuantity) {
+          showToast(`Only ${maxQuantity} of ${item.name} can be ordered. Your cart was updated.`, 'info', 6000);
+          item.quantity = maxQuantity;
           changed = true;
         }
       }
@@ -106,7 +117,8 @@ function renderCart() {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
         <span class="qty-selector__value">${item.quantity}</span>
-        <button class="qty-selector__btn qty-increase" data-id="${item.id}" aria-label="Increase quantity">
+        <button class="qty-selector__btn qty-increase" data-id="${item.id}" aria-label="Increase quantity"
+          ${item.quantity >= getItemMaxQuantity(item) ? `disabled title="Max ${getItemMaxQuantity(item)} per order"` : ''}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
       </div>
@@ -170,7 +182,7 @@ function attachCartEvents() {
       const id = btn.dataset.id;
       const cart = getCart();
       const item = cart.find(i => i.id === id);
-      if (item) {
+      if (item && item.quantity < getItemMaxQuantity(item)) {
         updateQuantity(id, item.quantity + 1);
         renderCart();
       }
