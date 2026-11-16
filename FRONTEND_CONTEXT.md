@@ -95,7 +95,7 @@ If `PRODUCTS_CSV_URL` is empty, catalog and product pages fall back to `getSampl
 - **Cart** (`localStorage['snaprint_cart']`): items are `{id, name, price, actual_price, weight_g, image, material, bulk_pricing, max_quantity, quantity}`. `setCart` updates `.cart-badge` elements and dispatches a `cart-updated` window event. `main.js` listens to `storage` for cross-tab badge sync.
 - **Pricing / purchasability:** come from **`shared/products.js`** (BE-owned, imported as `../../shared/products.js`; never edit it, never copy it). `getCartSubtotal` applies bulk tiers. `getDiscountPercent(price, actual_price)`.
 - **Cart caps:** `addToCart(product, qty)` applies `getPurchasability` and caps the combined quantity; `updateQuantity` clamps to `getItemMaxQuantity(item)`; `cartFieldsFromProduct` builds a line from a sheet row; `unavailableLabel(reason)` gives "Sold Out" / "Currently unavailable" / …
-- **Data:** `fetchCSV(url)` uses PapaParse with header trim/BOM strip and value trim, plus a cache-buster `?_t=` and `cache: 'no-store'`. `fetchActiveProducts()` is a module-level memoised promise of `active=yes` rows, shared by `main.js` + `catalog.js` + `cart.js` on the same page. `normalizeProduct` maps legacy `compare_price` → `actual_price`. `resolveImageUrl` converts GitHub `blob` URLs to `raw.githubusercontent.com`.
+- **Data:** `fetchCSV(url)` uses PapaParse with header trim/BOM strip and value trim, plus a cache-buster `?_t=` and `cache: 'no-store'`. `fetchActiveProducts()` is a module-level memoised promise of active rows (shared `isActive`), used by **every** page that needs products (F-15). Don't call `fetchCSV(PRODUCTS_CSV_URL)` directly. `normalizeProduct` maps legacy `compare_price` → `actual_price`. `resolveImageUrl` converts GitHub `blob` URLs to `raw.githubusercontent.com`.
 - **UI:** `showToast(msg, type, ms)` (innerHTML), `renderSkeletons` (hamster loader in a grid), `showPageLoader/hidePageLoader` (full-screen overlay), `debounce`.
 - **Validation:** `isValidEmail`, `isValidPhone` (Indian 10-digit starting 6–9, strips +91).
 - **`lookupPIN(pin)`**: 2-digit prefix → state code table (approximate; see **F-10**).
@@ -124,7 +124,7 @@ Address CRUD (`add/update/delete/setDefault`) is read-modify-write of the whole 
 Loads active products → builds category tiles (first product image per category) and material chips (only if ≥ 2 materials) → restores state from URL (`category, q, sort, price_min, price_max, in_stock=1, material`) → filter → sort → render, then writes state back with `history.replaceState`. Default sort is a **random shuffle**. Engineering products link to `/quote.html` and show "Get a Quote". Hero carousel from the hero CSV, autoplay every 4.5 s.
 
 ### Product (`product-detail.js`)
-`?id=` → fetches CSV itself (not via the shared cache) → redirects engineering items to the quote page. Gallery with thumbs, prev/next, fullscreen lightbox (keyboard nav), Web Share / clipboard. Quantity selector updates the price and highlights the active bulk-pricing tier. Add to Cart / Buy It Now (adds and goes to checkout). Static FAQ, related products (same category, up to 4), Instagram embeds from `instagram_url`.
+`?id=` → shared product cache → redirects engineering items to the quote page. Gallery with thumbs, prev/next, fullscreen lightbox (keyboard nav), Web Share / clipboard. Quantity selector updates the price and highlights the active bulk-pricing tier. Add to Cart / Buy It Now (adds and goes to checkout). Static FAQ, related products (same category, up to 4), Instagram embeds from `instagram_url`.
 
 ### Cart (`cart.js`)
 Renders instantly from localStorage, then refreshes **only `bulk_pricing`** from the sheet and re-renders. ± and remove controls. Shipping shows "Calculated at checkout".
@@ -237,7 +237,8 @@ With default sort, `sortProducts` runs Fisher-Yates ([catalog.js:217](src/js/cat
 - Only `index.html` and `account.html` have the Track Order nav link.
 - `robots.txt` doesn't disallow `/account.html` or `/cancel-order.html`.
 
-### 🟡 F-15 Redundant network work
+### 🟡 F-15 Redundant network work — ✅ fixed 2026-11-17 (client side)
+**Fixed:** `fetchActiveProducts()` is the only way pages get products (catalog, product page, cart, main.js nav/footer, seller dashboard): one products-CSV download per page view (tested: 1 on home, product, cart, about; the product page used to make 2). It filters with the shared `isActive`, falls back to sample products only when `VITE_PRODUCTS_CSV_URL` is unset, and doesn't cache a failed download. The `?_t=` cache-buster stays so sheet edits show up immediately. **Still open (BE idea):** serve the CSVs through a cached Pages Function to avoid hitting Google Sheets on every page view.
 `fetchCSV` cache-busts every call, so each page view hits Google Sheets directly (published CSVs can lag ~5 min and rate-limit under load). The product page fetches the products CSV twice (its own `fetchCSV` + `main.js`'s `fetchActiveProducts`). Use `fetchActiveProducts()` in `product-detail.js`; consider serving the CSVs through a cached Pages Function.
 
 ### 🟡 F-16 Dead / duplicated code

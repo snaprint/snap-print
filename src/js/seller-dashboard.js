@@ -3,7 +3,7 @@
    Auth guard, products autocomplete, shipment form, email send
    ═══════════════════════════════════════════════════════════════ */
 
-import { CONFIG, fetchCSV } from './utils.js';
+import { fetchActiveProducts } from './utils.js';
 import { escapeHtml } from './helpers.js';
 
 // ── State ──
@@ -54,15 +54,10 @@ function logout() {
 // ═══════════════════════════════════════════════════════════════
 
 async function loadProducts() {
-  if (!CONFIG.PRODUCTS_CSV_URL) {
-    console.warn('PRODUCTS_CSV_URL not configured — items autocomplete disabled');
-    return;
-  }
-
   try {
-    const rows = await fetchCSV(CONFIG.PRODUCTS_CSV_URL);
+    const rows = await fetchActiveProducts();
     products = rows
-      .filter(r => r.active?.toLowerCase() === 'yes' && r.name)
+      .filter(r => r.name)
       .map(r => ({
         id: r.id,
         name: r.name,

@@ -16,7 +16,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import {
-  getSampleProducts, CONFIG, fetchCSV, fetchActiveProducts,
+  CONFIG, fetchCSV, fetchActiveProducts,
   formatCurrency, getDiscountPercent, debounce, renderSkeletons,
   resolveImageUrl, unavailableLabel,
 } from './utils.js';
@@ -52,11 +52,8 @@ async function loadProducts() {
   renderSkeletons(grid, 8);
 
   try {
-    if (CONFIG.PRODUCTS_CSV_URL) {
-      allProducts = await fetchActiveProducts();
-    } else {
-      allProducts = getSampleProducts();
-    }
+    // F-15: shared cached list (same download main.js uses for the nav)
+    allProducts = [...await fetchActiveProducts()];
 
     // Build dynamic UI elements from the data
     buildCategoryTiles();

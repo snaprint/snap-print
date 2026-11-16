@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import {
-  getSampleProducts, CONFIG, fetchCSV, normalizeProduct, addToCart,
+  fetchActiveProducts, addToCart,
   formatCurrency, getDiscountPercent, showToast, resolveImageUrl, unavailableLabel, DELIVERY_SUMMARY,
 } from './utils.js';
 import {
@@ -22,13 +22,8 @@ async function loadProduct() {
   if (!productId) { showNotFound(); return; }
 
   try {
-    if (CONFIG.PRODUCTS_CSV_URL) {
-      allProducts = (await fetchCSV(CONFIG.PRODUCTS_CSV_URL))
-        .map(normalizeProduct)
-        .filter(p => p.active?.toLowerCase() === 'yes');
-    } else {
-      allProducts = getSampleProducts().filter(p => p.active?.toLowerCase() === 'yes');
-    }
+    // F-15: shared cached list; main.js uses the same download for the nav
+    allProducts = await fetchActiveProducts();
 
     currentProduct = allProducts.find(p => p.id === productId);
     if (!currentProduct) { showNotFound(); return; }

@@ -7,7 +7,7 @@ import Papa from 'papaparse';
 import { escapeHtml } from './helpers.js';
 // Product rules shared with the server (create-order). Owned by BE; do not edit (F-7).
 import {
-  parseBulkPricing, getBulkPrice, getPurchasability, MAX_QTY_PER_PRODUCT,
+  parseBulkPricing, getBulkPrice, getPurchasability, MAX_QTY_PER_PRODUCT, isActive,
 } from '../../shared/products.js';
 
 const CART_KEY = 'snaprint_cart';
@@ -252,24 +252,25 @@ export function normalizeProduct(product) {
   return { ...product, actual_price: actualPrice };
 }
 
-// ── Shared Active Products (fetched once, cached, used by both header and catalog) ──
-let _activeProductsCache = null;
+// ── Shared Active Products (F-15) ──
+// THE way every page gets products: one products-CSV download per page view,
+// shared by main.js (nav/footer), catalog, product page, cart and seller
+// dashboard. Rows are normalised and filtered with the shared isActive rule.
+// Without VITE_PRODUCTS_CSV_URL (local dev without .env) it returns the
+// sample products. A failed download is not cached, so a later call retries.
+// Callers must not mutate the returned array (copy it first).
 let _activeProductsPromise = null;
 
 export function fetchActiveProducts() {
-  if (_activeProductsCache) return Promise.resolve(_activeProductsCache);
-  if (_activeProductsPromise) return _activeProductsPromise;
-
-  _activeProductsPromise = (async () => {
-    if (!CONFIG.PRODUCTS_CSV_URL) {
-      _activeProductsCache = [];
-      return _activeProductsCache;
-    }
-    const all = (await fetchCSV(CONFIG.PRODUCTS_CSV_URL)).map(normalizeProduct);
-    _activeProductsCache = all.filter(p => p.active?.toLowerCase() === 'yes');
-    return _activeProductsCache;
-  })();
-
+  if (!_activeProductsPromise) {
+    _activeProductsPromise = (async () => {
+      const rows = CONFIG.PRODUCTS_CSV_URL
+        ? await fetchCSV(CONFIG.PRODUCTS_CSV_URL)
+        : getSampleProducts();
+      return rows.map(normalizeProduct).filter(isActive);
+    })();
+    _activeProductsPromise.catch(() => { _activeProductsPromise = null; });
+  }
   return _activeProductsPromise;
 }
 

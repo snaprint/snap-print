@@ -82,7 +82,7 @@ Skipped this session: F-1 (needs B-14, still `planned`), F-3 second half (needs 
 | 9 | F-12 | Escape all interpolated HTML (shared `escapeHtml`) | — | on preview |
 | 10 | F-8 | Cart refreshes price/name/image; flags unavailable items | — | todo |
 | 10 | F-13 | Shuffle catalog once per load | — | todo |
-| 10 | F-15 | Use shared product cache; reduce CSV fetches | — | todo |
+| 10 | F-15 | Use shared product cache; reduce CSV fetches | — | on preview |
 | 10 | F-10 | Fix PIN → state auto-fill | — | todo |
 | 10 | F-9 | Render shipping options from the sheet | — | todo |
 | 10 | F-18 | Seller dashboard: check token expiry client-side | — | todo |
