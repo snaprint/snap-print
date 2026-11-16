@@ -3,6 +3,8 @@
    Form validation, API call, token storage, redirect
    ═══════════════════════════════════════════════════════════════ */
 
+import { sellerTokenExpired } from './helpers.js';
+
 const form = document.getElementById('login-form');
 const usernameInput = document.getElementById('login-username');
 const passwordInput = document.getElementById('login-password');
@@ -14,9 +16,14 @@ const passwordToggle = document.getElementById('password-toggle');
 // ── If already logged in, redirect to dashboard ──
 function checkExistingSession() {
   const token = sessionStorage.getItem('seller_token');
-  if (token) {
-    window.location.href = '/seller-dashboard.html';
+  if (!token) return;
+  if (sellerTokenExpired(token)) {
+    // F-18: an expired session stays here instead of bouncing to the dashboard
+    sessionStorage.removeItem('seller_token');
+    sessionStorage.removeItem('seller_username');
+    return;
   }
+  window.location.href = '/seller-dashboard.html';
 }
 
 // ── Password visibility toggle ──
@@ -116,6 +123,12 @@ function initFieldListeners() {
 // ── Init ──
 function init() {
   checkExistingSession();
+  // F-18: explain why the seller was sent back here
+  const notice = sessionStorage.getItem('seller_login_notice');
+  if (notice) {
+    sessionStorage.removeItem('seller_login_notice');
+    showError(notice);
+  }
   initPasswordToggle();
   initFieldListeners();
   if (form) form.addEventListener('submit', handleLogin);

@@ -47,3 +47,23 @@ export async function apiFetch(url, options) {
     throw new Error(NETWORK_ERROR_MESSAGE);
   }
 }
+
+/**
+ * F-18: seconds-since-epoch expiry of a seller token, or 0 if unreadable.
+ * Token = base64(JSON {sub, exp, iat}) + "." + signature (API_CONTRACT seller-login).
+ * Only used to send the seller back to login early; the server still decides.
+ */
+export function sellerTokenExpiry(token) {
+  try {
+    const payload = JSON.parse(atob(String(token).split('.')[0]));
+    return Number(payload.exp) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** True when there is no usable seller token (missing, unreadable or expired). */
+export function sellerTokenExpired(token, nowMs = Date.now()) {
+  if (!token) return true;
+  return sellerTokenExpiry(token) * 1000 <= nowMs;
+}

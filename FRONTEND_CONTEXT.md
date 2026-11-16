@@ -147,7 +147,7 @@ Downloads the **entire** tracking CSV in the browser, normalises email + mobile 
 Client validation, then `FormData` POST to `/api/quote` (≤ 10 MB, STL/STEP/STP), or JSON with a base64 screenshot (≤ 5 MB, png/jpg/webp) to `/api/cancel-order`.
 
 ### Seller (`seller-login.js`, `seller-dashboard.js`)
-Login → token in `sessionStorage` (`seller_token`, `seller_username`). The dashboard guard only checks that the token exists. Form: buyer name/email, optional order id, partner select (or "Other…"), optional tracking link, items picked via product autocomplete (keyboard nav, chips with qty) → `/api/send-shipment`. A 401 response clears the token and redirects to login.
+Login → token in `sessionStorage` (`seller_token`, `seller_username`). The dashboard guard checks the token's `exp` (F-18). Form: buyer name/email, optional order id, partner select (or "Other…"), optional tracking link, items picked via product autocomplete (keyboard nav, chips with qty) → `/api/send-shipment`. A 401 response clears the token and redirects to login.
 
 ---
 
@@ -253,7 +253,8 @@ With default sort, `sortProducts` runs Fisher-Yates ([catalog.js:217](src/js/cat
 ### 🟡 F-17 Deploy bloat from git-ignored images
 `public/images/products_png` (~190 MB) and `hero_png` (~11 MB) are git-ignored but live inside `publicDir`, so Vite copies them into `dist/` and `npm run deploy` uploads them. Move source/raw images outside `public/` (e.g. a top-level `assets-src/`).
 
-### 🟡 F-18 Seller dashboard guard
+### 🟡 F-18 Seller dashboard guard — ✅ fixed 2026-11-17
+**Fixed:** `helpers.js` `sellerTokenExpiry/sellerTokenExpired` read `exp` from the token payload (display only; the server still decides). The dashboard sends missing / unreadable / expired tokens to login with "Your session expired" and logs out automatically when the token expires while open; the login page no longer bounces an expired token to the dashboard. Browser-tested with crafted tokens.
 Only checks that a token **exists**. An expired token sends `seller-login` → dashboard → (works until submit) → 401 → login. Decode `exp` client-side and redirect early.
 
 ### 🟡 F-19 Repo hygiene

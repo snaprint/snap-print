@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import { fetchActiveProducts } from './utils.js';
-import { escapeHtml } from './helpers.js';
+import { escapeHtml, sellerTokenExpired, sellerTokenExpiry } from './helpers.js';
 
 // ── State ──
 let products = [];           // Loaded from CSV
@@ -32,9 +32,20 @@ function checkAuth() {
   const token = sessionStorage.getItem('seller_token');
   const username = sessionStorage.getItem('seller_username');
 
-  if (!token) {
-    window.location.href = '/seller-login.html';
+  // F-18: also check the token's expiry so an expired session goes back to
+  // login now, not after the seller has filled in the whole form.
+  if (sellerTokenExpired(token)) {
+    sessionStorage.setItem('seller_login_notice', token ? 'Your session expired. Please log in again.' : '');
+    logout();
     return false;
+  }
+  // Log out when the token expires while the page is open
+  const msLeft = sellerTokenExpiry(token) * 1000 - Date.now();
+  if (msLeft < 2 ** 31 - 1) {
+    setTimeout(() => {
+      sessionStorage.setItem('seller_login_notice', 'Your session expired. Please log in again.');
+      logout();
+    }, msLeft);
   }
 
   if (usernameDisplay) {
