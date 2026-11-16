@@ -11,8 +11,9 @@
    4. Logs order to Google Sheets via Sheets API
    5. Sends itemized confirmation emails to buyer + seller via Resend
    
-   All amounts and item data come from Razorpay's payment.notes,
-   which were set server-side by create-order.js — never re-fetched.
+   Buyer + item details come from the Razorpay ORDER's notes (set
+   server-side by create-order.js), fetched via GET /v1/orders/{id};
+   payment.notes is only a fallback. The amount comes from the payment.
    ═══════════════════════════════════════════════════════════════ */
 // In-memory fallback (only effective within a single warm isolate).
 // For true persistence, bind a KV namespace as ORDERS_KV.
@@ -93,9 +94,6 @@ export async function onRequestPost(context) {
 
     const paymentId = payment.id;
     const orderId = payment.order_id;
-    const amountPaise = payment.amount;
-    const totalAmount = amountPaise / 100; // paise → rupees
-    const notes = payment.notes || {};
 
     // ── 5. Idempotency check (persistent via KV) ──
     if (await isAlreadyProcessed(env, paymentId)) {
@@ -106,43 +104,14 @@ export async function onRequestPost(context) {
     // Mark as processed BEFORE doing any work
     await markProcessed(env, paymentId);
 
-    console.log(`Processing payment.captured: ${paymentId} for order ${orderId}, ₹${totalAmount}`);
+    console.log(`Processing payment.captured: ${paymentId} for order ${orderId}, ₹${payment.amount / 100}`);
 
-    // ── 6. Parse item details from notes ──
-    let itemsDetail = [];
-    try {
-      itemsDetail = JSON.parse(notes.items_detail || '[]');
-    } catch {
-      console.warn('Could not parse items_detail from notes');
-    }
-
-    const orderData = {
-      orderId,
-      paymentId,
-      totalAmount,
-      subtotal: Number(notes.subtotal) || totalAmount,
-      shippingCost: Number(notes.shipping_cost) || 0,
-      shippingMethod: notes.shipping_method || 'normal',
-      buyerUid: notes.buyer_uid || '',
-      buyerName: notes.buyer_name || '',
-      buyerEmail: notes.buyer_email || '',
-      buyerPhone: notes.buyer_phone || '',
-      buyerAddress: notes.buyer_address || '',
-      buyerCity: notes.buyer_city || '',
-      buyerState: notes.buyer_state || '',
-      buyerPincode: notes.buyer_pincode || '',
-      itemCount: notes.item_count || '',
-      itemsSummary: notes.items_summary || '',
-      itemsDetail,
-      timestamp: new Date().toISOString(),
-    };
-
-    // ── 7. Return 200 immediately — run heavy work in background ──
+    // ── 6. Return 200 immediately — run heavy work in background ──
     // Razorpay has a ~5s webhook timeout. If we don't respond fast,
     // it retries → hits a different edge worker → KV hasn't propagated
     // yet (eventually consistent, up to 60s) → duplicate emails.
-    // Fix: respond instantly, do Sheets + emails via waitUntil().
-    context.waitUntil(processOrderBackground(env, orderData));
+    // Fix: respond instantly, do the order lookup + emails via waitUntil().
+    context.waitUntil(processOrderBackground(env, payment));
 
     return jsonResponse({ received: true, order_id: orderId });
 
@@ -156,12 +125,106 @@ export async function onRequestPost(context) {
  * Runs in the background after the 200 response has been sent to Razorpay.
  * Sends buyer + seller confirmation emails.
  */
-async function processOrderBackground(env, orderData) {
+async function processOrderBackground(env, payment) {
   try {
+    const orderData = await buildOrderData(env, payment);
     await sendConfirmationEmails(env, orderData);
   } catch (emailErr) {
     console.error('Email sending failed:', emailErr);
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Order details (B-4)
+// create-order.js puts the buyer + item details in the Razorpay ORDER's notes.
+// The payment entity in the webhook does not reliably carry them (Checkout is
+// opened with notes: {}), so we fetch the order and use its notes, falling
+// back to payment.notes key by key.
+// ═══════════════════════════════════════════════════════════════
+
+/** Razorpay returns `notes: []` when empty; normalise to a plain object. */
+function asNotes(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+/**
+ * GET /v1/orders/{id}. Returns the order's notes object, or null if the order
+ * could not be fetched (missing keys, network error, non-2xx).
+ */
+async function fetchOrderNotes(env, orderId) {
+  const keyId = env.RAZORPAY_KEY_ID || env.VITE_RAZORPAY_KEY_ID;
+  const keySecret = env.RAZORPAY_KEY_SECRET;
+  if (!orderId) {
+    console.warn('Payment has no order_id — using payment.notes only');
+    return null;
+  }
+  if (!keyId || !keySecret) {
+    console.warn('RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET not set — cannot fetch order; using payment.notes only');
+    return null;
+  }
+  try {
+    const res = await fetch(`https://api.razorpay.com/v1/orders/${encodeURIComponent(orderId)}`, {
+      headers: { 'Authorization': 'Basic ' + btoa(`${keyId}:${keySecret}`) },
+    });
+    if (!res.ok) {
+      console.error(`Razorpay order fetch failed (${res.status}) for ${orderId} — using payment.notes only`);
+      return null;
+    }
+    const order = await res.json();
+    return asNotes(order.notes);
+  } catch (err) {
+    console.error(`Razorpay order fetch error for ${orderId} — using payment.notes only:`, err);
+    return null;
+  }
+}
+
+/** Order notes win; payment notes fill any key that is missing or empty on the order. */
+function mergeNotes(orderNotes, paymentNotes) {
+  const merged = { ...paymentNotes };
+  for (const [key, value] of Object.entries(orderNotes || {})) {
+    if (value !== undefined && value !== null && String(value) !== '') merged[key] = value;
+  }
+  return merged;
+}
+
+async function buildOrderData(env, payment) {
+  const orderNotes = await fetchOrderNotes(env, payment.order_id);
+  const notes = mergeNotes(orderNotes, asNotes(payment.notes));
+  const totalAmount = payment.amount / 100; // paise → rupees
+
+  let itemsDetail = [];
+  try {
+    itemsDetail = JSON.parse(notes.items_detail || '[]');
+  } catch {
+    console.warn('Could not parse items_detail from notes');
+  }
+
+  const orderData = {
+    orderId: payment.order_id,
+    paymentId: payment.id,
+    totalAmount,
+    subtotal: Number(notes.subtotal) || totalAmount,
+    shippingCost: Number(notes.shipping_cost) || 0,
+    shippingMethod: notes.shipping_method || 'normal',
+    buyerUid: notes.buyer_uid || '',
+    buyerName: notes.buyer_name || '',
+    buyerEmail: notes.buyer_email || payment.email || '',
+    buyerPhone: notes.buyer_phone || payment.contact || '',
+    buyerAddress: notes.buyer_address || '',
+    buyerCity: notes.buyer_city || '',
+    buyerState: notes.buyer_state || '',
+    buyerPincode: notes.buyer_pincode || '',
+    itemCount: notes.item_count || '',
+    itemsSummary: notes.items_summary || '',
+    itemsDetail,
+    timestamp: new Date().toISOString(),
+    notesSource: orderNotes ? 'order' : 'payment',
+  };
+
+  if (!orderData.buyerEmail || !orderData.buyerName) {
+    console.error(`Order ${orderData.orderId}: buyer details incomplete after reading ${orderData.notesSource} notes`);
+  }
+  return orderData;
 }
 
 // ═══════════════════════════════════════════════════════════════

@@ -74,8 +74,8 @@ The server total is authoritative — the client never sends prices.
 1. Reads raw body, verifies `X-Razorpay-Signature` = HMAC-SHA256(body, `RAZORPAY_WEBHOOK_SECRET`) with constant-time compare.
 2. `payment.authorized` / `payment.failed` / anything else → 200, ignored. Only `payment.captured` is processed.
 3. Idempotency: `ORDERS_KV` key `payment:<id>` (30-day TTL) — or in-memory `Set` if KV not bound. Marked processed **before** doing any work.
-4. Builds `orderData` entirely from `payment.notes`.
-5. Responds 200 immediately; `context.waitUntil()` sends buyer email, waits 500 ms, sends seller email. Both use Resend `Idempotency-Key` (`order-confirmed/<paymentId>-buyer`, `order-received/<paymentId>-seller`).
+4. Responds 200 immediately; in `context.waitUntil()` it fetches the Razorpay **order** (`GET /v1/orders/{order_id}`, Basic auth with `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET`) and builds `orderData` from the order's notes. `payment.notes` fills any missing key (and `payment.email`/`payment.contact` fill a missing buyer email/phone) if the order can't be fetched (B-4).
+5. Then sends buyer email, waits 500 ms, sends seller email. Both use Resend `Idempotency-Key` (`order-confirmed/<paymentId>-buyer`, `order-received/<paymentId>-seller`).
 6. Header comment says "Logs order to Google Sheets" — **not implemented** (no Sheets code exists).
 
 ### 3.4 `POST /api/quote` (multipart/form-data)
@@ -184,12 +184,11 @@ Severity: 🔴 high · 🟠 medium · 🟡 low. Each has a concrete location and
 [create-order.js:286](functions/api/create-order.js#L286) and [:290](functions/api/create-order.js#L290) slice `items_summary` / `items_detail` to 512 chars. Razorpay documents notes as max 15 keys × **256 chars** each, so larger carts can make order creation fail ("Failed to create payment order"). Even under the limit, slicing JSON mid-string yields invalid JSON, so the webhook silently falls back to the plain summary. `buyer_address` is also unbounded.
 **Fix:** keep notes small (ids + quantities only) and recompute details in the webhook, or persist the order server-side (KV/D1) keyed by `order_id` at creation time.
 
-### 🔴 B-4 Order emails depend on `payment.notes` being populated
-> **Status: unverified.** The owner believes the "email not working" issue (commit `b1de42d`) was resolved outside the code. Test one live/test payment end-to-end before changing this; the code risk below still applies.
+### 🔴 B-4 Order emails depend on `payment.notes` being populated — ✅ code fixed (2026-11-17), delivery still unverified
+> **Owner check (O-1):** as of 2026-11-17 the owner had **not yet checked** whether buyer + seller emails arrive. Verify with one test payment on preview.
 
-The webhook reads every buyer field from `payment.entity.notes` ([webhook.js:98](functions/api/webhook.js#L98)). The notes were set on the **order**, while the client opens Checkout with `notes: {}` ([checkout.js:738](src/js/checkout.js#L738)). If the payment entity doesn't carry the order's notes, `buyerEmail` is `''`, the buyer email fails at Resend ([webhook.js:243](functions/api/webhook.js#L243)) and the seller email has blank buyer details. Errors only go to `console.error`.
-**To verify:** open a recent live payment in the Razorpay dashboard and check whether its notes match the order's.
-**Fix:** in the webhook, read notes from the order (subscribe to `order.paid`, whose payload includes the order entity, or `GET /v1/orders/{order_id}`), or pass the same notes in the Checkout options.
+Was: the webhook read every buyer field from `payment.entity.notes`, but the notes are set on the **order** and the client opens Checkout with `notes: {}` ([checkout.js:738](src/js/checkout.js#L738)), so buyer email/details could be blank.
+**Now:** the webhook fetches the order (`GET /v1/orders/{order_id}`) and uses its notes; `payment.notes` is a key-by-key fallback, and `payment.email` / `payment.contact` are the last fallback for buyer email/phone. Needs `RAZORPAY_KEY_ID` + `RAZORPAY_KEY_SECRET` in the same environment as the webhook (already required by create-order). Logs `buyer details incomplete` if name/email are still missing.
 
 **Other things to check for missing emails (commit `b1de42d`):**
 1. A webhook is configured in **Live mode** (separate from Test mode) for `payment.captured` → `https://snaprint.in/api/webhook`, and its secret equals the Production `RAZORPAY_WEBHOOK_SECRET`.
