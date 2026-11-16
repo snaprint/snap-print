@@ -184,7 +184,7 @@ In the Razorpay `handler` ([checkout.js:740-786](src/js/checkout.js#L740-L786)) 
 Every helper in `firebase.js` catches and only `console.warn`s (e.g. [firebase.js:194](src/js/firebase.js#L194), [:321](src/js/firebase.js#L321)). So `account.js` always shows "Profile updated!" ([account.js:290](src/js/account.js#L290)), "Address saved!", or "Address deleted." even when the write failed, and the `.catch()` handlers in `checkout.js` are dead code.
 **Fix:** let helpers re-throw (or return `{ok:false}`) and handle the result in callers.
 
-### 🟠 F-5 Mobile menu is broken on the Track Order page
+### 🟠 F-5 Mobile menu is broken on the Track Order page — ✅ fixed 2026-11-17 (duplicate handler removed; tested on a 390 px viewport)
 The same button is toggled twice per click, once in [main.js:29](src/js/main.js#L29) (`.navbar__hamburger`) and once in [track-order.js:176](src/js/track-order.js#L176) (`#hamburger`), so the menu opens and closes instantly.
 **Fix:** delete the hamburger block in `track-order.js` (lines 172-181).
 

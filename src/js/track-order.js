@@ -168,17 +168,8 @@ function init() {
   if (form) form.addEventListener('submit', handleTrack);
   initFieldValidation();
   setLoading(false);
-
-  // Hamburger menu
-  const hamburger  = document.getElementById('hamburger');
-  const mobileMenu = document.getElementById('mobile-menu');
-  if (hamburger && mobileMenu) {
-    hamburger.addEventListener('click', () => {
-      const open = hamburger.classList.toggle('open');
-      hamburger.setAttribute('aria-expanded', open);
-      mobileMenu.classList.toggle('open', open);
-    });
-  }
+  // The mobile menu is handled by main.js (F-5: a second handler here
+  // toggled it twice per tap, so it never opened).
 }
 
 document.addEventListener('DOMContentLoaded', init);
