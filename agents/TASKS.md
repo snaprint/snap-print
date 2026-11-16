@@ -15,6 +15,9 @@ Update the row when status changes. New tasks: add a row with the next free ID i
 | O-3 | Check Preview env vars in Cloudflare (CSV URLs, Razorpay **test** keys, Resend, `RAZORPAY_WEBHOOK_SECRET`, `SELLER_ACCOUNTS`, Firebase `VITE_*`) | testing on preview | todo |
 | O-4 | Bind a KV namespace as `ORDERS_KV` (Production + Preview) | B-5 | todo |
 | O-5 | Create Cloudflare Turnstile site (hostnames `snaprint.in`, `www.snaprint.in`, `dev.snap-print.pages.dev`). Add `VITE_TURNSTILE_SITE_KEY` now; add `TURNSTILE_SECRET_KEY` **only after F-20 (widget) is live** in that environment, or the quote/cancel forms will return 403 | B-6 / F-20 | todo |
+| O-12 | Razorpay **Test mode** → Webhooks: add `https://dev.snap-print.pages.dev/api/webhook`, event `payment.captured`, secret = Preview `RAZORPAY_WEBHOOK_SECRET`; so test payments on preview send emails | verifying B-3/B-4/B-5 | todo |
+| O-13 | Decide delivery-time wording (MESSAGES #8) and quote upload option A/B (MESSAGES #9) | B-13, B-8 | todo |
+| O-14 | Allow BE to edit `package.json` to fix `npm run dev:full` (B-19), or fix it yourself (add `--compatibility-date 2026-08-01`) | B-19 | todo |
 | O-11 | Add a WAF rate-limiting rule for `POST /api/quote`, `/api/cancel-order`, `/api/seller-login` (exact settings in `BACKEND_CONTEXT.md` → B-6) | B-6 / B-7 | todo |
 | O-6 | Create Firebase service account; add `FIREBASE_SERVICE_ACCOUNT_JSON` to Pages env | B-16 | todo |
 | O-7 | Add `SELLER_TOKEN_SECRET` (random 32+ chars) to Production + Preview; replace plaintext passwords in `SELLER_ACCOUNTS` with `passwordHash` values (command in `BACKEND_CONTEXT.md` → B-7) | B-7 | todo |
@@ -31,20 +34,20 @@ No new features this phase: B-14, B-16, B-17, B-18 wait. A shared module is crea
 
 | # | ID | Task | Depends on | Status |
 |---|---|---|---|---|
-| 1 | B-4 | Verify order emails (O-1); webhook reads buyer/items from the Razorpay **order**, payment notes as fallback | O-1 (verification only) | todo |
-| 2 | B-1 | Normalise shipping method once, use everywhere | — | todo |
-| 3 | B-2 | Reject non-integer / <1 / >100 quantities (400); merge duplicate ids before stock check; contract + FE message (F-6) | — | todo |
-| 4 | B-3 | Every Razorpay notes value ≤256 chars; never truncate JSON | — | todo |
-| 5 | B-10 | Price > 0, case-insensitive categories, one blank-stock rule; `shared/` purchasability rule; FE message (F-7) | — | todo |
-| 6 | B-9 | Return an error when the **seller** email fails (quote, cancel-order) | — | todo |
-| 7 | B-5 | Mark payment processed only after emails succeed; works with `ORDERS_KV`, degrades safely without | O-4 to be fully effective | todo |
-| 8 | B-6 | Turnstile check in quote + cancel-order, active only when `TURNSTILE_SECRET_KEY` is set | O-5 to switch on | todo |
-| 8 | B-7 | `SELLER_TOKEN_SECRET` (optional), hashed passwords (plaintext still works), no username logs | O-7 to switch on | todo |
-| 9 | B-11 | Sitemap: add faq/contact | — | todo |
-| 9 | B-12 | De-duplicate helpers into one shared module | — | todo |
-| 9 | B-13 | Minor items (escaping, `SELLER_EMAIL` default, tracking-link scheme) | delivery copy: owner decision (F-11) | todo |
-| 10 | B-8 | Quote upload memory: owner chooses between options | owner decision | todo |
-| — | B-15 | `shared/` module for FE + BE (CSV, bulk pricing, `isPurchasable`) | done as part of B-10/B-12 | todo |
+| 1 | B-4 | Verify order emails (O-1); webhook reads buyer/items from the Razorpay **order**, payment notes as fallback | O-1 (verification only) | on preview (email delivery not yet verified, O-1) |
+| 2 | B-1 | Normalise shipping method once, use everywhere | — | on preview |
+| 3 | B-2 | Reject non-integer / <1 / >100 quantities (400); merge duplicate ids before stock check; contract + FE message (F-6) | — | on preview |
+| 4 | B-3 | Every Razorpay notes value ≤256 chars; never truncate JSON | — | on preview |
+| 5 | B-10 | Price > 0, case-insensitive categories, one blank-stock rule; `shared/` purchasability rule; FE message (F-7) | — | on preview |
+| 6 | B-9 | Return an error when the **seller** email fails (quote, cancel-order) | — | on preview |
+| 7 | B-5 | Mark payment processed only after emails succeed; works with `ORDERS_KV`, degrades safely without | O-4 to be fully effective | on preview (full effect needs O-4) |
+| 8 | B-6 | Turnstile check in quote + cancel-order, active only when `TURNSTILE_SECRET_KEY` is set | O-5 to switch on | on preview (off until O-5) |
+| 8 | B-7 | `SELLER_TOKEN_SECRET` (optional), hashed passwords (plaintext still works), no username logs | O-7 to switch on | on preview (switch on via O-7) |
+| 9 | B-11 | Sitemap: add faq/contact | — | on preview |
+| 9 | B-12 | De-duplicate helpers into one shared module | — | on preview |
+| 9 | B-13 | Minor items (escaping, `SELLER_EMAIL` default, tracking-link scheme) | delivery copy: owner decision (F-11) | on preview (delivery copy: owner, MESSAGES #8) |
+| 10 | B-8 | Quote upload memory: owner chooses between options | owner decision | blocked (owner decision, MESSAGES #9) |
+| — | B-15 | `shared/` module for FE + BE (CSV, bulk pricing, `isPurchasable`) | done as part of B-10/B-12 | on preview (core in shared/products.js) |
 | — | B-19 | `npm run dev:full` fails (compat date newer than local workerd); fix the script (package.json) | owner OK to edit package.json | todo |
 
 **Later (not this phase)**

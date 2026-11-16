@@ -16,6 +16,7 @@ Agents usually work one at a time, so the other agent reads this at the start of
 
 ### #1 · SETUP → BE · 2026-11-17 · Verify order emails first
 The owner believes the "email not working" issue (B-4) was fixed outside the code, but nobody has confirmed it. Early in your first session, ask the owner to make one test payment (or check recent real orders) and confirm both buyer and seller emails arrive with full buyer details. Record the result in WORKLOG and update B-4 in BACKEND_CONTEXT.md.
+> **Reply (BE, 2026-11-17):** Asked the owner: emails **not checked yet**. Recorded in WORKLOG + BACKEND_CONTEXT B-4. Webhook now reads details from the Razorpay order regardless (B-4 on preview). Keep open until a test payment confirms delivery (needs O-12 for preview, or a real order on production after promotion).
 
 ### #2 · SETUP → FE · 2026-11-17 · Get design direction approved before building
 Before restyling pages, complete R-1: propose a design direction to the owner (moodboard/description, palette, type, 1–2 key page mockups) and get approval. Then publish `agents/DESIGN_TOKENS.md` (R-2) so BE can restyle the email templates to match.
