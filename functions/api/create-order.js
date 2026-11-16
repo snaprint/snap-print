@@ -147,7 +147,9 @@ export async function onRequestPost(context) {
     if (!items || !Array.isArray(items) || items.length === 0) {
       return jsonError('No items provided', 400);
     }
-    if (!shippingMethod) {
+    // B-1: normalise the shipping method ONCE and use only `method` below.
+    const method = typeof shippingMethod === 'string' ? shippingMethod.trim().toLowerCase() : '';
+    if (!method) {
       return jsonError('Missing shipping method', 400);
     }
     if (!buyer || !buyer.email || !buyer.fullName || !buyer.phone || !buyer.pincode) {
@@ -180,7 +182,7 @@ export async function onRequestPost(context) {
     const validMethods = shippingRates
       .map(r => r.method?.trim().toLowerCase())
       .filter(Boolean);
-    if (!validMethods.includes(shippingMethod.trim().toLowerCase())) {
+    if (!validMethods.includes(method)) {
       return jsonError(`Invalid shipping method. Valid options: ${validMethods.join(', ')}`, 400);
     }
 
@@ -235,12 +237,18 @@ export async function onRequestPost(context) {
     //   - If subtotal >= item_total  →  shipping is FREE (0)
     //   - If subtotal <  item_total  →  charge shipping_cost
     const rateRow = shippingRates.find(
-      r => r.method?.trim().toLowerCase() === shippingMethod
+      r => r.method?.trim().toLowerCase() === method
     );
-    const shippingCap  = rateRow ? Number(rateRow.item_total)   : Infinity;
-    const shippingCost = (rateRow && subtotal < shippingCap)
-      ? Number(rateRow.shipping_cost)
-      : 0;
+    // rateRow always exists here (validated above), but never fall through to free shipping.
+    const rateCost = Number(rateRow?.shipping_cost);
+    if (!rateRow || !rateRow.shipping_cost?.trim() || !Number.isFinite(rateCost) || rateCost < 0) {
+      console.error(`Shipping sheet: invalid shipping_cost for method "${method}"`);
+      return jsonError('Shipping rates are misconfigured. Please try again later.', 500);
+    }
+    // Blank / non-numeric item_total means "no free-shipping threshold" (never free).
+    const capRaw = rateRow.item_total?.trim();
+    const shippingCap = capRaw && Number.isFinite(Number(capRaw)) ? Number(capRaw) : Infinity;
+    const shippingCost = subtotal < shippingCap ? rateCost : 0;
 
     const totalAmount = subtotal + shippingCost;
     const totalAmountPaise = Math.round(totalAmount * 100);
@@ -276,7 +284,7 @@ export async function onRequestPost(context) {
           buyer_city: buyer.city || '',
           buyer_state: buyer.state || '',
           buyer_pincode: buyer.pincode,
-          shipping_method: shippingMethod,
+          shipping_method: method,
           shipping_cost: String(shippingCost),
           subtotal: String(subtotal),
           item_count: String(resolvedItems.length),

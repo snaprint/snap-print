@@ -62,9 +62,9 @@ Request:
 Flow:
 1. Validates presence of items / shippingMethod / buyer.email, fullName, phone, pincode.
 2. Fetches Products CSV + Shipping CSV (`PRODUCTS_CSV_URL` / `SHIPPING_RATES_CSV_URL`, falls back to the `VITE_` names).
-3. Shipping method must exist in the sheet's `method` column (case-insensitive check).
+3. Shipping method is normalised once (`trim().toLowerCase()`) and must exist in the sheet's `method` column; the normalised value is used for the rate lookup and the notes (B-1).
 4. Per item: must be `active=yes`, not `category=engineering`; quantity clamped to `[1,100]`; bulk price via `parseBulkPricing`/`getBulkPrice` (copied from `src/js/utils.js`); stock checked unless `made_to_order=yes` **or** product has bulk pricing.
-5. Shipping: if `subtotal >= item_total` (sheet column) → free, else `shipping_cost`.
+5. Shipping: if `subtotal >= item_total` (sheet column) → free, else `shipping_cost`. Blank/non-numeric `item_total` = no free-shipping threshold; blank/invalid `shipping_cost` → 500 (never silently free).
 6. Creates Razorpay order (`amount` in paise, `currency: INR`, `receipt: order_<ts>`) with buyer + order details stuffed into `notes` (14 keys: `buyer_*`, `shipping_method`, `shipping_cost`, `subtotal`, `item_count`, `items_summary`, `items_detail` = JSON `[{n,q,p}]`).
 7. Returns `{ order_id, amount, currency, key_id }`.
 
@@ -172,9 +172,9 @@ The only durable records of an order are: Razorpay dashboard, the two emails, an
 
 Severity: 🔴 high · 🟠 medium · 🟡 low. Each has a concrete location and a suggested fix.
 
-### 🔴 B-1 Free-shipping bypass via shipping-method casing
+### 🔴 B-1 Free-shipping bypass via shipping-method casing — ✅ fixed 2026-11-17
 [create-order.js:183](functions/api/create-order.js#L183) validates `shippingMethod.trim().toLowerCase()`, but [create-order.js:238](functions/api/create-order.js#L238) looks up the rate row with the **raw** `shippingMethod`. Sending `"AIR"` or `" air"` passes validation, finds no row, and `shippingCost` becomes `0`.
-**Fix:** normalise once (`const method = shippingMethod.trim().toLowerCase()`) and use it everywhere, including the notes.
+**Fixed:** `method` is normalised once and used for validation, lookup and notes. A sheet row with a blank `shipping_cost` now returns 500 instead of free shipping; a blank `item_total` means shipping is always charged.
 
 ### 🔴 B-2 Silent quantity clamp, unvalidated quantities, duplicate line items
 [create-order.js:204](functions/api/create-order.js#L204) clamps to 100 without telling the client. The UI allows any quantity (see F-6), so a buyer who chose 150 is charged for 100 while their Firestore record and cart say 150. `Number("abc")` → `NaN` survives the clamp; fractional quantities (`1.5`) are accepted. Two cart lines with the same `id` each pass the stock check independently.
