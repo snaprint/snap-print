@@ -1,6 +1,6 @@
 # Work Log
 
-**Active agent:** none
+**Active agent:** BACKEND
 <!-- Set to BACKEND or FRONTEND at session start; reset to none at session end. -->
 
 Append-only. Newest entry at the **bottom**. Never edit or delete past entries.

@@ -25,37 +25,33 @@ Update the row when status changes. New tasks: add a row with the next free ID i
 
 ## Backend (BE)
 
-**Phase 1: correctness & money (do first)**
+**Current phase: fix existing problems B-1…B-13, in this order** (owner instruction, 2026-11-17).
+No new features this phase: B-14, B-16, B-17, B-18 wait. A shared module is created only where a fix needs it (B-10, B-12); that covers the core of B-15.
+
+| # | ID | Task | Depends on | Status |
+|---|---|---|---|---|
+| 1 | B-4 | Verify order emails (O-1); webhook reads buyer/items from the Razorpay **order**, payment notes as fallback | O-1 (verification only) | todo |
+| 2 | B-1 | Normalise shipping method once, use everywhere | — | todo |
+| 3 | B-2 | Reject non-integer / <1 / >100 quantities (400); merge duplicate ids before stock check; contract + FE message (F-6) | — | todo |
+| 4 | B-3 | Every Razorpay notes value ≤256 chars; never truncate JSON | — | todo |
+| 5 | B-10 | Price > 0, case-insensitive categories, one blank-stock rule; `shared/` purchasability rule; FE message (F-7) | — | todo |
+| 6 | B-9 | Return an error when the **seller** email fails (quote, cancel-order) | — | todo |
+| 7 | B-5 | Mark payment processed only after emails succeed; works with `ORDERS_KV`, degrades safely without | O-4 to be fully effective | todo |
+| 8 | B-6 | Turnstile check in quote + cancel-order, active only when `TURNSTILE_SECRET_KEY` is set | O-5 to switch on | todo |
+| 8 | B-7 | `SELLER_TOKEN_SECRET` (optional), hashed passwords (plaintext still works), no username logs | O-7 to switch on | todo |
+| 9 | B-11 | Sitemap: add faq/contact | — | todo |
+| 9 | B-12 | De-duplicate helpers into one shared module | — | todo |
+| 9 | B-13 | Minor items (escaping, `SELLER_EMAIL` default, tracking-link scheme) | delivery copy: owner decision (F-11) | todo |
+| 10 | B-8 | Quote upload memory: owner chooses between options | owner decision | todo |
+| — | B-15 | `shared/` module for FE + BE (CSV, bulk pricing, `isPurchasable`) | done as part of B-10/B-12 | todo |
+
+**Later (not this phase)**
 
 | ID | Task | Depends on | Status |
 |---|---|---|---|
-| B-4 | Verify order emails; harden webhook to read notes from the order, not the payment | O-1 | todo |
-| B-1 | Normalise shipping method (free-shipping bypass) | — | todo |
-| B-2 | Reject invalid / >100 / duplicate quantities with clear 400s (update contract) | — | todo |
-| B-3 | Shrink Razorpay notes to ≤256 chars/value | — | todo |
-| B-10 | Price/stock/engineering edge cases in create-order | B-15 | todo |
-| B-15 | Create `shared/` module: CSV parser, bulk pricing, `isPurchasable`; use it in all functions and expose it to FE | — | todo |
-
-**Phase 2: privacy, durability, abuse**
-
-| ID | Task | Depends on | Status |
-|---|---|---|---|
-| B-14 | New `POST /api/track-order` (server-side lookup; returns only the matching row's status + link) | — | todo |
-| B-16 | Webhook writes the order to Firestore `buyers/{uid}/orders/{orderId}` (server-authored record) | O-6 | todo |
+| B-14 | New `POST /api/track-order` | — | todo |
+| B-16 | Webhook writes the order to Firestore (server-authored record) | O-6 | todo |
 | B-17 | Commit `firestore.rules` (orders read-only for clients) | B-16 | todo |
-| B-5 | Durable order record + mark processed only after emails succeed | O-4 | todo |
-| B-6 | Verify Turnstile in quote + cancel-order; document rate-limit rules for owner | O-5 | todo |
-| B-7 | Seller login hardening (own secret, hashed passwords, no username logs) | O-7 | todo |
-| B-9 | Return error when seller email fails in quote/cancel | — | todo |
-
-**Phase 3: cleanup & redesign support**
-
-| ID | Task | Depends on | Status |
-|---|---|---|---|
-| B-8 | Quote upload memory (lower limit or R2) | owner decision | todo |
-| B-11 | Sitemap: add faq/contact + any new FE pages | — | todo |
-| B-12 | De-duplicate helpers into `shared/` / `functions/_lib/` | B-15 | todo |
-| B-13 | Minor items (escaping, `SELLER_EMAIL` defaults, delivery copy in emails) | R-2 for copy | todo |
 | B-18 | Restyle all email templates to the new design | R-2 | todo |
 
 ---
