@@ -187,17 +187,59 @@ function mergeNotes(orderNotes, paymentNotes) {
   return merged;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// Items (B-3)
+// New orders: notes.items_1 / items_2 / items_3 hold `id:qty:unitPrice` tokens joined by ','
+// (id URI-encoded). Names are looked up in the Products sheet (fallback: the id).
+// Orders created before B-3: notes.items_detail = JSON [{n,q,p}].
+// ═══════════════════════════════════════════════════════════════
+
+/** Map of product id → name from the Products CSV; empty map on any failure. */
+async function fetchProductNames(env) {
+  const url = env.PRODUCTS_CSV_URL || env.VITE_PRODUCTS_CSV_URL;
+  const names = new Map();
+  if (!url) return names;
+  try {
+    const res = await fetch(url, { cf: { cacheTtl: 300 } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    for (const p of parseCSV(await res.text())) {
+      if (p.id) names.set(p.id, p.name || p.id);
+    }
+  } catch (err) {
+    console.warn('Could not load product names for email — showing ids:', err.message || err);
+  }
+  return names;
+}
+
+function parseItemsFromNotes(notes, productNames) {
+  const packed = ['items_1', 'items_2', 'items_3'].map(k => notes[k]).filter(Boolean).join(',');
+  if (packed) {
+    return packed.split(',').map(token => {
+      const [rawId, q, p] = token.split(':');
+      let id = rawId;
+      try { id = decodeURIComponent(rawId); } catch { /* keep raw */ }
+      return { n: productNames.get(id) || id, q: Number(q) || 0, p: Number(p) || 0 };
+    });
+  }
+  if (notes.items_detail) {
+    try {
+      const legacy = JSON.parse(notes.items_detail);
+      if (Array.isArray(legacy)) return legacy;
+    } catch {
+      console.warn('Could not parse legacy items_detail from notes');
+    }
+  }
+  return [];
+}
+
 async function buildOrderData(env, payment) {
-  const orderNotes = await fetchOrderNotes(env, payment.order_id);
+  const [orderNotes, productNames] = await Promise.all([
+    fetchOrderNotes(env, payment.order_id),
+    fetchProductNames(env),
+  ]);
   const notes = mergeNotes(orderNotes, asNotes(payment.notes));
   const totalAmount = payment.amount / 100; // paise → rupees
-
-  let itemsDetail = [];
-  try {
-    itemsDetail = JSON.parse(notes.items_detail || '[]');
-  } catch {
-    console.warn('Could not parse items_detail from notes');
-  }
+  const itemsDetail = parseItemsFromNotes(notes, productNames);
 
   const orderData = {
     orderId: payment.order_id,
@@ -214,7 +256,7 @@ async function buildOrderData(env, payment) {
     buyerCity: notes.buyer_city || '',
     buyerState: notes.buyer_state || '',
     buyerPincode: notes.buyer_pincode || '',
-    itemCount: notes.item_count || '',
+    itemCount: notes.item_count || String(itemsDetail.length || ''),
     itemsSummary: notes.items_summary || '',
     itemsDetail,
     timestamp: new Date().toISOString(),
@@ -469,6 +511,45 @@ async function sendEmailWithRetry(apiKey, emailData, maxRetries = 3, idempotency
 // ═══════════════════════════════════════════════════════════════
 // Helpers
 // ═══════════════════════════════════════════════════════════════
+
+// CSV parser — same as create-order.js (to be moved to a shared module in B-12)
+function parseCSV(text) {
+  const rows = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (char === '"') { inQuotes = !inQuotes; current += char; }
+    else if ((char === '\n' || char === '\r') && !inQuotes) {
+      if (char === '\r' && text[i + 1] === '\n') i++;
+      if (current.trim()) rows.push(current);
+      current = '';
+    } else { current += char; }
+  }
+  if (current.trim()) rows.push(current);
+  if (rows.length === 0) return [];
+  const parseLine = line => {
+    const out = [];
+    let cur = '';
+    let q = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') { if (q && line[i + 1] === '"') { cur += '"'; i++; } else { q = !q; } }
+      else if (c === ',' && !q) { out.push(cur); cur = ''; }
+      else if (c !== '\r') { cur += c; }
+    }
+    out.push(cur);
+    return out;
+  };
+  const headers = parseLine(rows[0]).map(h => h.replace(/^\uFEFF/, '').trim());
+  return rows.slice(1).map(line => {
+    const values = parseLine(line);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = (values[i] || '').trim(); });
+    return obj;
+  });
+}
+
 function escapeHtml(text) {
   return String(text)
     .replace(/&/g, '&amp;')

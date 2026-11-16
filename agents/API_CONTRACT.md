@@ -32,6 +32,9 @@ Required: `items[]`, `shippingMethod` (must match a `method` in the shipping she
 - Missing/blank `id` → 400 `Item N is missing a product id`.
 - FE should cap the quantity input at 100 per product (F-6) so users never see these errors in normal use.
 
+**Length rules (B-3, live on preview 2026-11-17):** each buyer value must be ≤256 characters, where "address" means `address` + `", "` + `apartment` combined. Too long → 400 `<Field> is too long (maximum 256 characters)` (fields: Full name, Email, Phone, Address (including apartment), City, State, PIN code). `buyer.uid` > 128 chars → 400 `Invalid account id`.
+**Cart size:** a cart with too many *different* products to fit Razorpay's notes (about 25 with long ids, more with short ones) → 400 `This order has too many different products. Please split it into two orders.`
+
 ### `POST /api/webhook` · status: `live`
 Razorpay only (`X-Razorpay-Signature`). Not called by FE.
 
@@ -83,4 +86,5 @@ _FE: add needs here (new endpoint, field, error code). BE answers inline and mov
 
 ## Changelog
 - 2026-11-17: initial contract documenting existing endpoints; `track-order` planned.
+- 2026-11-17 (BE, B-3): `create-order` adds 400s for over-long buyer fields and for carts with too many different products.
 - 2026-11-17 (BE, B-2): `create-order` rejects quantities that are not whole numbers 1–100 (per product, after merging duplicate ids) with 400 instead of clamping.

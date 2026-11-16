@@ -65,7 +65,7 @@ Flow:
 3. Shipping method is normalised once (`trim().toLowerCase()`) and must exist in the sheet's `method` column; the normalised value is used for the rate lookup and the notes (B-1).
 4. Validates every line: `id` present, quantity a whole number 1–100 (400 otherwise, never clamped). Duplicate ids are merged (summed); merged total > 100 → 400 (B-2). Per product: must be `active=yes`, not `category=engineering`; bulk price via `parseBulkPricing`/`getBulkPrice` (copied from `src/js/utils.js`); stock checked unless `made_to_order=yes` **or** product has bulk pricing.
 5. Shipping: if `subtotal >= item_total` (sheet column) → free, else `shipping_cost`. Blank/non-numeric `item_total` = no free-shipping threshold; blank/invalid `shipping_cost` → 500 (never silently free).
-6. Creates Razorpay order (`amount` in paise, `currency: INR`, `receipt: order_<ts>`) with buyer + order details stuffed into `notes` (14 keys: `buyer_*`, `shipping_method`, `shipping_cost`, `subtotal`, `item_count`, `items_summary`, `items_detail` = JSON `[{n,q,p}]`).
+6. Creates Razorpay order (`amount` in paise, `currency: INR`, `receipt: order_<ts>`) with `notes` (max 15 keys, every value ≤256 chars, B-3): 8 `buyer_*` keys, `shipping_method`, `shipping_cost`, `subtotal`, `items_summary` (plain text, shortened at item boundaries with `+N more`), and `items_1..items_3` = `encodeURIComponent(id):qty:unitPrice` tokens joined by `,`, packed at item boundaries. Buyer values >256 chars → 400; items that don't fit 3 chunks (≈25–45 distinct products depending on id length) → 400 "too many different products". A final guard returns 500 if any note would still break the limits. (Orders created before B-3 have `item_count` + JSON `items_detail` instead; the webhook still reads those.)
 7. Returns `{ order_id, amount, currency, key_id }`.
 
 The server total is authoritative — the client never sends prices.
@@ -180,9 +180,9 @@ Severity: 🔴 high · 🟠 medium · 🟡 low. Each has a concrete location and
 [create-order.js:204](functions/api/create-order.js#L204) clamps to 100 without telling the client. The UI allows any quantity (see F-6), so a buyer who chose 150 is charged for 100 while their Firestore record and cart say 150. `Number("abc")` → `NaN` survives the clamp; fractional quantities (`1.5`) are accepted. Two cart lines with the same `id` each pass the stock check independently.
 **Fixed:** non-integer, `<1` or `>100` quantities → 400 with a clear message; duplicate ids merged before the stock and cap checks (contract updated; FE asked to cap the UI, F-6, MESSAGES #3).
 
-### 🔴 B-3 Razorpay `notes` values exceed Razorpay's per-value limit
+### 🔴 B-3 Razorpay `notes` values exceed Razorpay's per-value limit — ✅ fixed 2026-11-17
 [create-order.js:286](functions/api/create-order.js#L286) and [:290](functions/api/create-order.js#L290) slice `items_summary` / `items_detail` to 512 chars. Razorpay documents notes as max 15 keys × **256 chars** each, so larger carts can make order creation fail ("Failed to create payment order"). Even under the limit, slicing JSON mid-string yields invalid JSON, so the webhook silently falls back to the plain summary. `buyer_address` is also unbounded.
-**Fix:** keep notes small (ids + quantities only) and recompute details in the webhook, or persist the order server-side (KV/D1) keyed by `order_id` at creation time.
+**Fixed:** compact `id:qty:unitPrice` chunks (no JSON, never cut mid-item), summary shortened at item boundaries, buyer fields length-checked. The webhook decodes the chunks and looks up product names in the Products CSV (falls back to the id if the sheet is unreachable); the unit price in the notes is what was charged, so emails show the charged price even if the sheet changes.
 
 ### 🔴 B-4 Order emails depend on `payment.notes` being populated — ✅ code fixed (2026-11-17), delivery still unverified
 > **Owner check (O-1):** as of 2026-11-17 the owner had **not yet checked** whether buyer + seller emails arrive. Verify with one test payment on preview.

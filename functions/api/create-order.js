@@ -145,6 +145,54 @@ function parseQuantity(value) {
   return Number.isInteger(n) ? n : null;
 }
 
+// ── B-3: Razorpay notes limits ──
+// Razorpay allows at most 15 note keys, each value at most 256 characters.
+// Items are stored compactly as `id:qty:unitPrice` tokens joined by ',' (ids are
+// URI-encoded so ':' and ',' can't appear inside), split across ITEMS_NOTE_KEYS at
+// item boundaries (key budget: 8 buyer_* + 4 order keys + 3 item chunks = 15). The webhook decodes them (see webhook.js parseItemsFromNotes).
+const NOTE_MAX_CHARS = 256;
+const NOTE_MAX_KEYS = 15;
+const ITEMS_NOTE_KEYS = ['items_1', 'items_2', 'items_3'];
+
+// Buyer fields that go into notes, with the label used in error messages.
+const BUYER_NOTE_FIELDS = [
+  ['buyer_name', 'Full name'],
+  ['buyer_email', 'Email'],
+  ['buyer_phone', 'Phone'],
+  ['buyer_address', 'Address (including apartment)'],
+  ['buyer_city', 'City'],
+  ['buyer_state', 'State'],
+  ['buyer_pincode', 'PIN code'],
+];
+
+/** Packs tokens into at most `maxChunks` strings of ≤ maxLen chars without splitting a token. */
+function packTokens(tokens, maxChunks, maxLen, sep = ',') {
+  const chunks = [];
+  let current = '';
+  for (const token of tokens) {
+    if (token.length > maxLen) return null;
+    const next = current ? current + sep + token : token;
+    if (next.length <= maxLen) { current = next; continue; }
+    chunks.push(current);
+    current = token;
+  }
+  if (current) chunks.push(current);
+  return chunks.length <= maxChunks ? chunks : null;
+}
+
+/** Human-readable summary, shortened at item boundaries to fit one note. */
+function buildItemsSummary(resolvedItems) {
+  const parts = resolvedItems.map(i => `${i.name} x${i.quantity}`);
+  const full = parts.join(', ');
+  if (full.length <= NOTE_MAX_CHARS) return full;
+  for (let keep = parts.length - 1; keep >= 0; keep--) {
+    const more = ` +${parts.length - keep} more`;
+    const head = parts.slice(0, keep).join(', ');
+    if (head.length + more.length <= NOTE_MAX_CHARS) return head + more;
+  }
+  return `${parts.length} items`;
+}
+
 export async function onRequestPost(context) {
   const { env } = context;
 
@@ -163,6 +211,27 @@ export async function onRequestPost(context) {
     }
     if (!buyer || !buyer.email || !buyer.fullName || !buyer.phone || !buyer.pincode) {
       return jsonError('Missing buyer information', 400);
+    }
+
+    // B-3: every buyer value that goes into Razorpay notes must fit in 256 chars.
+    const str = v => (v === undefined || v === null ? '' : String(v).trim());
+    const buyerNotes = {
+      buyer_uid: str(buyer.uid),
+      buyer_name: str(buyer.fullName),
+      buyer_email: str(buyer.email),
+      buyer_phone: str(buyer.phone),
+      buyer_address: [str(buyer.address), str(buyer.apartment)].filter(Boolean).join(', '),
+      buyer_city: str(buyer.city),
+      buyer_state: str(buyer.state),
+      buyer_pincode: str(buyer.pincode),
+    };
+    for (const [key, label] of BUYER_NOTE_FIELDS) {
+      if (buyerNotes[key].length > NOTE_MAX_CHARS) {
+        return jsonError(`${label} is too long (maximum ${NOTE_MAX_CHARS} characters)`, 400);
+      }
+    }
+    if (buyerNotes.buyer_uid.length > 128) {
+      return jsonError('Invalid account id', 400);
     }
 
     // B-2: validate every line, then merge duplicate product ids (id → total quantity).
@@ -282,6 +351,31 @@ export async function onRequestPost(context) {
       return jsonError('Invalid order total', 400);
     }
 
+    // B-3: build notes that respect Razorpay's limits (never truncate structured data).
+    const itemChunks = packTokens(
+      resolvedItems.map(i => `${encodeURIComponent(i.id)}:${i.quantity}:${i.price}`),
+      ITEMS_NOTE_KEYS.length,
+      NOTE_MAX_CHARS,
+    );
+    if (!itemChunks) {
+      return jsonError('This order has too many different products. Please split it into two orders.', 400);
+    }
+    const notes = {
+      ...buyerNotes,
+      shipping_method: method,
+      shipping_cost: String(shippingCost),
+      subtotal: String(subtotal),
+      items_summary: buildItemsSummary(resolvedItems),
+    };
+    itemChunks.forEach((chunk, i) => { notes[ITEMS_NOTE_KEYS[i]] = chunk; });
+
+    const keys = Object.keys(notes);
+    const oversized = keys.filter(k => String(notes[k]).length > NOTE_MAX_CHARS);
+    if (keys.length > NOTE_MAX_KEYS || oversized.length) {
+      console.error('Razorpay notes exceed limits', { keyCount: keys.length, oversized });
+      return jsonError('Could not prepare your order. Please contact us.', 500);
+    }
+
     // Create Razorpay Order
     const razorpayKeyId = env.RAZORPAY_KEY_ID || env.VITE_RAZORPAY_KEY_ID;
     const razorpayKeySecret = env.RAZORPAY_KEY_SECRET;
@@ -300,28 +394,7 @@ export async function onRequestPost(context) {
         amount: totalAmountPaise,
         currency: 'INR',
         receipt: `order_${Date.now()}`,
-        notes: {
-          buyer_uid: buyer.uid || '',
-          buyer_name: buyer.fullName || '',
-          buyer_email: buyer.email,
-          buyer_phone: buyer.phone,
-          buyer_address: [buyer.address, buyer.apartment].filter(Boolean).join(', '),
-          buyer_city: buyer.city || '',
-          buyer_state: buyer.state || '',
-          buyer_pincode: buyer.pincode,
-          shipping_method: method,
-          shipping_cost: String(shippingCost),
-          subtotal: String(subtotal),
-          item_count: String(resolvedItems.length),
-          items_summary: resolvedItems
-            .map(i => `${i.name} x${i.quantity}`)
-            .join(', ')
-            .slice(0, 512),
-          // JSON-encoded item details for itemized emails
-          items_detail: JSON.stringify(
-            resolvedItems.map(i => ({ n: i.name, q: i.quantity, p: i.price }))
-          ).slice(0, 512),
-        },
+        notes,
       }),
     });
 

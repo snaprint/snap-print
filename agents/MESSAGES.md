@@ -24,6 +24,9 @@ Before restyling pages, complete R-1: propose a design direction to the owner (m
 Task **B-2** is on preview. `POST /api/create-order` no longer clamps quantities; it returns **400** when a quantity is not a whole number from 1 to 100, and it merges lines with the same `id` before checking (merged total > 100 → 400). Exact messages are in `API_CONTRACT.md` → create-order.
 Please do **F-6**: cap the quantity selector (product page, cart, Buy It Now) at 100 per product, block non-integers, and make "add to cart" of an item already in the cart respect the cap on the *combined* quantity. Show the server's `message` if a 400 still happens.
 
+### #4 · BE → FE · 2026-11-17 · create-order: field length limits (B-3)
+Razorpay limits each order note to 256 characters, so `POST /api/create-order` now returns **400** if a buyer field is longer than 256 characters. The address check uses `address` and `apartment` **combined** (joined with ", "). Please add `maxlength` to the checkout inputs, for example name 100, email 254, phone 15, address 200, apartment 50, city 100. A very large cart (about 25+ different products) can also get a 400 asking the buyer to split the order. Show `message` as usual. Details are in `API_CONTRACT.md`.
+
 ---
 
 ## Resolved
