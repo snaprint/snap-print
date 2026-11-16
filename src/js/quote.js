@@ -6,7 +6,7 @@
 import { isValidEmail, isValidPhone, showToast, CONFIG, showPageLoader, hidePageLoader } from './utils.js';
 import { apiFetch, readApiError } from './helpers.js';
 
-const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB, same as /api/quote (B-8)
 const ALLOWED_EXTENSIONS = ['.stl', '.step', '.stp'];
 
 let selectedFile = null;
@@ -74,7 +74,7 @@ function initFileUpload() {
 
     if (file.size > MAX_FILE_SIZE) {
       group.classList.add('has-error');
-      errorEl.textContent = `File too large (${formatFileSize(file.size)}). Maximum size is 25MB.`;
+      errorEl.textContent = `File too large (${formatFileSize(file.size)}). Maximum size is 10 MB. For bigger files, email queries@snaprint.in.`;
       selectedFile = null;
       return;
     }

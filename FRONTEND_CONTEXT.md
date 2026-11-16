@@ -144,7 +144,7 @@ Same auth gate (code duplicated from checkout). Profile view/edit (name, phone),
 Downloads the **entire** tracking CSV in the browser, normalises email + mobile (strips +91/0091/0), finds a row where both match, and opens its `tracking_link`. Same generic error for "no match" and "link not ready".
 
 ### Quote (`quote.js`) / Cancel (`cancel-order.js`)
-Client validation, then `FormData` POST to `/api/quote` (≤ 25 MB, STL/STEP/STP), or JSON with a base64 screenshot (≤ 5 MB, png/jpg/webp) to `/api/cancel-order`.
+Client validation, then `FormData` POST to `/api/quote` (≤ 10 MB, STL/STEP/STP), or JSON with a base64 screenshot (≤ 5 MB, png/jpg/webp) to `/api/cancel-order`.
 
 ### Seller (`seller-login.js`, `seller-dashboard.js`)
 Login → token in `sessionStorage` (`seller_token`, `seller_username`). The dashboard guard only checks that the token exists. Form: buyer name/email, optional order id, partner select (or "Other…"), optional tracking link, items picked via product autocomplete (keyboard nav, chips with qty) → `/api/send-shipment`. A 401 response clears the token and redirects to login.

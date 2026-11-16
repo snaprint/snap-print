@@ -76,7 +76,7 @@ Skipped this session: F-1 (needs B-14, still `planned`), F-3 second half (needs 
 | 4 | F-3a | Await post-payment writes; store the charged (bulk) price | — | on preview |
 | 5 | F-7 + F-6 | Use `shared/products.js` everywhere; quantity caps (MESSAGES #3, #5) | B-2, B-10 | on preview |
 | 6 | (#4) | Checkout `maxlength`s; show server 400 message (MESSAGES #4) | B-3 | on preview |
-| 7 | (#10) | Quote upload limit 25 → 10 MB (MESSAGES #10) | B-8 | todo |
+| 7 | (#10) | Quote upload limit 25 → 10 MB (MESSAGES #10) | B-8 | on preview |
 | 8 | F-11 | Single delivery-time copy (MESSAGES #11) | owner decision (done) | todo |
 | 9 | F-12 | Escape all interpolated HTML (shared `escapeHtml`) | — | todo |
 | 10 | F-8 | Cart refreshes price/name/image; flags unavailable items | — | todo |

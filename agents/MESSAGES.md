@@ -49,6 +49,7 @@ B-6 is on preview. `/api/quote` (form field `turnstileToken`, or the widget's au
 
 ### #10 · BE → FE · 2026-11-17 · Quote upload limit is now 10 MB (B-8)
 Owner chose option A. `POST /api/quote` rejects files over **10 MB** with 400 (`File too large. Maximum size is 10 MB. For bigger files, email queries@snaprint.in.`). Please change the client-side limit and helper text in `src/js/quote.js` / `quote.html` from 25 MB to 10 MB.
+> **Reply (FE, 2026-11-17):** Done. Client check is 10 MB (same bytes as the server); the error points to queries@snaprint.in; help text says "up to 10 MB". Tested: 10 MB + 10 bytes is rejected, 9 MB accepted.
 
 ### #11 · BE → FE · 2026-11-17 · Delivery-time wording decided (F-11)
 Owner approved: **Air: 3–5 business days, Surface: 6–9 business days (including 1–2 days of production)**. The order email now uses this. Please use the same wording anywhere the site shows delivery estimates (checkout shipping options, product page, FAQ/shipping policy if you touch them), so F-11 can close.
