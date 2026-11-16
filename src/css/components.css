@@ -1694,38 +1694,6 @@ a.navbar__track-btn.btn:hover {
   .footer__grid { grid-template-columns: 1fr; }
 }
 
-/* ── Address Autocomplete Dropdown ── */
-.address-suggestions {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: var(--bg-body);
-  border: 1px solid var(--border-medium);
-  border-top: none;
-  border-radius: 0 0 var(--radius-md) var(--radius-md);
-  box-shadow: var(--shadow-md);
-  z-index: var(--z-dropdown);
-  max-height: 200px;
-  overflow-y: auto;
-  display: none;
-}
-
-.address-suggestions.visible { display: block; }
-
-.address-suggestion {
-  padding: var(--space-3) var(--space-4);
-  font-size: var(--text-sm);
-  cursor: pointer;
-  border-bottom: 1px solid var(--border-light);
-  transition: background var(--duration-fast) var(--ease);
-}
-
-.address-suggestion:last-child { border-bottom: none; }
-.address-suggestion:hover { background: var(--bg-muted); }
-.address-suggestion__main { color: var(--text-primary); font-weight: 500; }
-.address-suggestion__sub { color: var(--text-muted); font-size: var(--text-xs); margin-top: 2px; }
-
 /* ═══════════════════════════════════════════════════════════════
    Catalog Search Bar
    ═══════════════════════════════════════════════════════════════ */

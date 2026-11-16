@@ -49,6 +49,9 @@ src/
 └── js/
     ├── utils.js          shared: cart, currency, bulk pricing, toast, CONFIG, fetchCSV, product cache, loaders, PIN lookup, sample data
     ├── main.js           runs on every public page: navbar, injected search, Shop dropdown, footer category links, scroll animations
+    ├── helpers.js        dependency-free: escapeHtml, apiFetch/readApiError, seller token expiry
+    ├── states.js         state code → name map
+    ├── auth-gate.js      shared buyer sign-in gate (imports firebase.js: checkout/account only)
     ├── firebase.js       Firebase init + Auth helpers + Firestore CRUD (only imported by checkout.js & account.js)
     ├── catalog.js        index.html
     ├── product-detail.js product.html
@@ -153,10 +156,10 @@ Login → token in `sessionStorage` (`seller_token`, `seller_username`). The das
 
 ## 6. Conventions & gotchas
 
-- **Only `checkout.js` and `account.js` may import `firebase.js`.** It is about 170 KB; other pages read `localStorage.snaprint_logged_in`.
+- **Only `checkout.js` and `account.js` may import `firebase.js` (or `auth-gate.js`, which imports it).** It is about 170 KB; other pages read `localStorage.snaprint_logged_in`.
 - Navbar/footer HTML is copy-pasted in every page. Change it in all 16 public pages. `main.js` finds the Shop link by its exact text `"Shop"`.
 - Category names are lower-cased everywhere for comparison; the display label is first-letter-capitalised.
-- State is stored as a 2-letter code; the code→name map is duplicated in `checkout.js` and `account.js`, and the `<select>` options are duplicated in `checkout.html` and `account.html`.
+- State is stored as a 2-letter code; names come from `states.js`. The `<select>` options are still duplicated in `checkout.html` and `account.html`.
 - Engineering category = quote-only; never purchasable.
 - All prices shown client-side are previews. The server recomputes everything (`create-order`).
 - `npm run dev` has no `/api`. Use `npm run dev:full` (port 8788) to exercise checkout/quote/cancel/seller.
@@ -245,7 +248,8 @@ With default sort, `sortProducts` runs Fisher-Yates ([catalog.js:217](src/js/cat
 **Fixed:** `fetchActiveProducts()` is the only way pages get products (catalog, product page, cart, main.js nav/footer, seller dashboard): one products-CSV download per page view (tested: 1 on home, product, cart, about; the product page used to make 2). It filters with the shared `isActive`, falls back to sample products only when `VITE_PRODUCTS_CSV_URL` is unset, and doesn't cache a failed download. The `?_t=` cache-buster stays so sheet edits show up immediately. **Still open (BE idea):** serve the CSVs through a cached Pages Function to avoid hitting Google Sheets on every page view.
 `fetchCSV` cache-busts every call, so each page view hits Google Sheets directly (published CSVs can lag ~5 min and rate-limit under load). The product page fetches the products CSV twice (its own `fetchCSV` + `main.js`'s `fetchActiveProducts`). Use `fetchActiveProducts()` in `product-detail.js`; consider serving the CSVs through a cached Pages Function.
 
-### 🟡 F-16 Dead / duplicated code
+### 🟡 F-16 Dead / duplicated code — ✅ fixed 2026-11-17
+**Fixed:** removed `#address-suggestions` + its CSS, `getCartWeight`, `hasBulkPricing` (F-7) and the unused imports (checked with `tsc --noUnusedLocals`). The sign-in gate is one module, `src/js/auth-gate.js` (`initAuthGate({signOutButton, onSignedOut})`, `friendlyAuthError`), and the state names are one module, `src/js/states.js`. Gate tested logged-out on both pages (tabs, errors) and logged-in checkout. **Left:** the state `<select>` options are still duplicated in `checkout.html` / `account.html` (fold into R-3 templating).
 - `#address-suggestions` ([checkout.html:167](src/checkout.html#L167)) and its CSS ("Address Autocomplete Dropdown" in components.css) are unused.
 - `getCartWeight`, `hasBulkPricing` and unused imports (`addToCart`, `showToast`, `fetchCSV` in catalog.js; `clearCart` in product-detail.js).
 - Auth-gate code and the state-name map are duplicated between `checkout.js` and `account.js`.

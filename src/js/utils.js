@@ -148,10 +148,6 @@ export function getCartSubtotal() {
   }, 0);
 }
 
-export function getCartWeight() {
-  return getCart().reduce((sum, item) => sum + (item.weight_g || 0) * item.quantity, 0);
-}
-
 // ── Cart Badge ──
 export function updateCartBadge() {
   const badges = document.querySelectorAll('.cart-badge');

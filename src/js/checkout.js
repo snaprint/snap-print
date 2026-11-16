@@ -5,7 +5,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import {
-  getCart, getCartSubtotal, getCartCount, clearCart,
+  getCart, getCartSubtotal, clearCart,
   formatCurrency, getSampleShippingRates, getShippingCostPreview,
   isValidPhone, showToast, CONFIG, fetchCSV, lookupPIN,
   showPageLoader, hidePageLoader, DELIVERY_DAYS, DELIVERY_PRODUCTION_NOTE,
@@ -13,11 +13,6 @@ import {
 import { parseBulkPricing, getBulkPrice } from '../../shared/products.js';
 
 import {
-  signInWithGoogle,
-  signUpWithEmail,
-  signInWithEmail,
-  resetPassword,
-  signOutUser,
   onAuthChange,
   getCurrentUser,
   getBuyerProfile,
@@ -26,6 +21,8 @@ import {
   saveBuyerOrder,
 } from './firebase.js';
 import { apiFetch, readApiError, escapeHtml } from './helpers.js';
+import { initAuthGate } from './auth-gate.js';
+import { getStateName } from './states.js';
 
 let selectedAddressId = null; // tracks which saved address is selected
 
@@ -39,14 +36,8 @@ const POST_PAYMENT_SAVE_TIMEOUT_MS = 4000;
 // ── DOM refs (auth gate) ──
 const loginGate       = document.getElementById('checkout-login-gate');
 const checkoutForm    = document.getElementById('checkout-form');
-const authGoogleBtn   = document.getElementById('auth-google-btn');
-const authTabs        = document.getElementById('auth-tabs');
-const signupForm      = document.getElementById('auth-signup-form');
-const loginForm       = document.getElementById('auth-login-form');
-const authError       = document.getElementById('auth-error');
 const authUserEmail   = document.getElementById('auth-user-email');
 const authLogoutBtn   = document.getElementById('auth-logout-btn');
-const authForgotBtn   = document.getElementById('auth-forgot-btn');
 
 // ── Fetch shipping rates from Sheets once per page (or fall back to sample) ──
 async function fetchShippingRates() {
@@ -81,7 +72,8 @@ async function init() {
   if (cart.length === 0) { window.location.href = '/cart.html'; return; }
 
   renderOrderSummary();
-  initAuthGate();
+  // Shared sign-in gate (F-16); signing out also clears the address fields
+  initAuthGate({ signOutButton: authLogoutBtn, onSignedOut: clearCheckoutFields });
 
   // Auth state drives everything — form init happens after sign-in
   onAuthChange(async (user) => {
@@ -94,143 +86,8 @@ async function init() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// AUTH GATE LOGIC
+// AUTH GATE (handlers live in auth-gate.js)
 // ═══════════════════════════════════════════════════════════
-
-function initAuthGate() {
-  // Google Sign-In
-  authGoogleBtn?.addEventListener('click', handleGoogleSignIn);
-
-  // Tab switching
-  authTabs?.querySelectorAll('.auth-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      const targetTab = tab.dataset.tab;
-      authTabs.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      if (targetTab === 'signup') {
-        signupForm.style.display = '';
-        loginForm.style.display = 'none';
-      } else {
-        signupForm.style.display = 'none';
-        loginForm.style.display = '';
-      }
-      hideAuthError();
-    });
-  });
-
-  // Sign Up form
-  signupForm?.addEventListener('submit', handleEmailSignUp);
-
-  // Log In form
-  loginForm?.addEventListener('submit', handleEmailLogin);
-
-  // Forgot Password
-  authForgotBtn?.addEventListener('click', handleForgotPassword);
-
-  // Sign Out
-  authLogoutBtn?.addEventListener('click', handleSignOut);
-}
-
-async function handleGoogleSignIn() {
-  hideAuthError();
-  authGoogleBtn.disabled = true;
-  try {
-    await signInWithGoogle();
-    // onAuthChange will handle the UI switch
-  } catch (err) {
-    console.error('[Auth] Google sign-in failed:', err);
-    showAuthError(friendlyAuthError(err));
-  } finally {
-    authGoogleBtn.disabled = false;
-  }
-}
-
-async function handleEmailSignUp(e) {
-  e.preventDefault();
-  hideAuthError();
-
-  const email    = document.getElementById('auth-signup-email').value.trim();
-  const password = document.getElementById('auth-signup-password').value;
-  const confirm  = document.getElementById('auth-signup-password-confirm').value;
-
-  if (password !== confirm) {
-    showAuthError('Passwords do not match.');
-    return;
-  }
-
-  if (password.length < 6) {
-    showAuthError('Password must be at least 6 characters.');
-    return;
-  }
-
-  const btn = document.getElementById('auth-signup-btn');
-  const btnText = document.getElementById('auth-signup-btn-text');
-  btn.disabled = true;
-  btnText.textContent = 'Creating account…';
-
-  try {
-    await signUpWithEmail(email, password);
-    // onAuthChange handles UI
-  } catch (err) {
-    console.error('[Auth] Email signup failed:', err);
-    showAuthError(friendlyAuthError(err));
-  } finally {
-    btn.disabled = false;
-    btnText.textContent = 'Create Account';
-  }
-}
-
-async function handleEmailLogin(e) {
-  e.preventDefault();
-  hideAuthError();
-
-  const email    = document.getElementById('auth-login-email').value.trim();
-  const password = document.getElementById('auth-login-password').value;
-
-  const btn = document.getElementById('auth-login-btn');
-  const btnText = document.getElementById('auth-login-btn-text');
-  btn.disabled = true;
-  btnText.textContent = 'Logging in…';
-
-  try {
-    await signInWithEmail(email, password);
-    // onAuthChange handles UI
-  } catch (err) {
-    console.error('[Auth] Email login failed:', err);
-    showAuthError(friendlyAuthError(err));
-  } finally {
-    btn.disabled = false;
-    btnText.textContent = 'Log In';
-  }
-}
-
-async function handleForgotPassword() {
-  hideAuthError();
-  const email = document.getElementById('auth-login-email')?.value.trim();
-  if (!email) {
-    showAuthError('Enter your email address above, then click "Forgot password?"');
-    return;
-  }
-
-  try {
-    await resetPassword(email);
-    showToast('Password reset email sent — check your inbox.', 'success', 5000);
-  } catch (err) {
-    console.error('[Auth] Password reset failed:', err);
-    showAuthError(friendlyAuthError(err));
-  }
-}
-
-async function handleSignOut() {
-  try {
-    await signOutUser();
-    clearCheckoutFields();
-    // onAuthChange handles UI
-  } catch (err) {
-    console.error('[Auth] Sign-out failed:', err);
-    showToast('Sign out failed. Please try again.', 'error');
-  }
-}
 
 // ── Show / hide auth gate vs checkout form ──
 function showLoginGate() {
@@ -296,22 +153,12 @@ function renderAddressPicker(addresses) {
 
   section.style.display = '';
 
-  const states = {
-    AN:'Andaman & Nicobar', AP:'Andhra Pradesh', AR:'Arunachal Pradesh', AS:'Assam',
-    BR:'Bihar', CH:'Chandigarh', CT:'Chhattisgarh', DN:'Dadra & Nagar Haveli',
-    DD:'Daman & Diu', DL:'Delhi', GA:'Goa', GJ:'Gujarat', HR:'Haryana',
-    HP:'Himachal Pradesh', JK:'Jammu & Kashmir', JH:'Jharkhand', KA:'Karnataka',
-    KL:'Kerala', LA:'Ladakh', LD:'Lakshadweep', MP:'Madhya Pradesh', MH:'Maharashtra',
-    MN:'Manipur', ML:'Meghalaya', MZ:'Mizoram', NL:'Nagaland', OR:'Odisha',
-    PY:'Puducherry', PB:'Punjab', RJ:'Rajasthan', SK:'Sikkim', TN:'Tamil Nadu',
-    TG:'Telangana', TR:'Tripura', UP:'Uttar Pradesh', UT:'Uttarakhand', WB:'West Bengal',
-  };
 
   // Find default address
   const defaultAddr = addresses.find(a => a.isDefault) || addresses[0];
 
   picker.innerHTML = addresses.map(addr => {
-    const fullAddress = [addr.address, addr.apartment, addr.city, states[addr.state] || addr.state, addr.pincode]
+    const fullAddress = [addr.address, addr.apartment, addr.city, getStateName(addr.state), addr.pincode]
       .filter(Boolean).join(', ');
     const isDefault = addr.id === defaultAddr.id;
     return `
@@ -399,37 +246,6 @@ function clearCheckoutFields() {
   });
   const stateSelect = document.getElementById('buyer-state');
   if (stateSelect) stateSelect.value = '';
-}
-
-// ── Auth error helpers ──
-function showAuthError(msg) {
-  if (!authError) return;
-  authError.textContent = msg;
-  authError.classList.add('visible');
-}
-
-function hideAuthError() {
-  if (!authError) return;
-  authError.classList.remove('visible');
-}
-
-/** Map Firebase error codes to user-friendly messages */
-function friendlyAuthError(err) {
-  const code = err?.code || '';
-  const map = {
-    'auth/email-already-in-use':    'This email is already registered. Try logging in instead.',
-    'auth/invalid-email':           'Please enter a valid email address.',
-    'auth/user-not-found':          'No account found with this email.',
-    'auth/wrong-password':          'Incorrect password. Try again or reset your password.',
-    'auth/invalid-credential':      'Incorrect email or password.',
-    'auth/weak-password':           'Password must be at least 6 characters.',
-    'auth/too-many-requests':       'Too many attempts. Please wait a moment and try again.',
-    'auth/popup-closed-by-user':    'Sign-in popup was closed. Please try again.',
-    'auth/popup-blocked':           'Sign-in popup was blocked. Please allow popups for this site.',
-    'auth/network-request-failed':  'Network error. Please check your connection.',
-    'auth/user-disabled':           'This account has been disabled. Contact support.',
-  };
-  return map[code] || err?.message || 'Something went wrong. Please try again.';
 }
 
 // ═══════════════════════════════════════════════════════════

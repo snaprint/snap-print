@@ -5,12 +5,9 @@
 
 import { showToast, CONFIG, fetchCSV } from './utils.js';
 import { escapeHtml } from './helpers.js';
+import { initAuthGate } from './auth-gate.js';
+import { getStateName } from './states.js';
 import {
-  signInWithGoogle,
-  signUpWithEmail,
-  signInWithEmail,
-  resetPassword,
-  signOutUser,
   onAuthChange,
   getCurrentUser,
   getBuyerProfile,
@@ -27,12 +24,6 @@ import {
 // ── DOM refs ──
 const loginGate      = document.getElementById('account-login-gate');
 const accountContent = document.getElementById('account-content');
-const authGoogleBtn  = document.getElementById('auth-google-btn');
-const authTabs       = document.getElementById('auth-tabs');
-const signupForm     = document.getElementById('auth-signup-form');
-const loginForm      = document.getElementById('auth-login-form');
-const authError      = document.getElementById('auth-error');
-const authForgotBtn  = document.getElementById('auth-forgot-btn');
 const logoutBtn      = document.getElementById('account-logout-btn');
 
 // Profile
@@ -77,7 +68,8 @@ async function reloadAddresses(uid) {
 
 // ── Init ──
 function init() {
-  initAuthGate();
+  initAuthGate({ signOutButton: logoutBtn }); // shared sign-in gate (F-16)
+  initAccountForms();
 
   onAuthChange(async (user) => {
     if (user) {
@@ -89,32 +81,10 @@ function init() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// AUTH GATE (mirrors checkout logic)
+// PAGE FORMS (sign-in handlers live in auth-gate.js)
 // ═══════════════════════════════════════════════════════════
 
-function initAuthGate() {
-  authGoogleBtn?.addEventListener('click', handleGoogleSignIn);
-
-  authTabs?.querySelectorAll('.auth-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      authTabs.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      if (tab.dataset.tab === 'signup') {
-        signupForm.style.display = '';
-        loginForm.style.display = 'none';
-      } else {
-        signupForm.style.display = 'none';
-        loginForm.style.display = '';
-      }
-      hideAuthError();
-    });
-  });
-
-  signupForm?.addEventListener('submit', handleEmailSignUp);
-  loginForm?.addEventListener('submit', handleEmailLogin);
-  authForgotBtn?.addEventListener('click', handleForgotPassword);
-  logoutBtn?.addEventListener('click', handleSignOut);
-
+function initAccountForms() {
   // Profile edit/cancel
   profileEditBtn?.addEventListener('click', showProfileEdit);
   profileCancelBtn?.addEventListener('click', hideProfileEdit);
@@ -124,82 +94,6 @@ function initAuthGate() {
   addressAddBtn?.addEventListener('click', showAddressFormForNew);
   addressCancelBtn?.addEventListener('click', hideAddressForm);
   addressForm?.addEventListener('submit', handleAddressSave);
-}
-
-async function handleGoogleSignIn() {
-  hideAuthError();
-  authGoogleBtn.disabled = true;
-  try {
-    await signInWithGoogle();
-  } catch (err) {
-    showAuthError(friendlyAuthError(err));
-  } finally {
-    authGoogleBtn.disabled = false;
-  }
-}
-
-async function handleEmailSignUp(e) {
-  e.preventDefault();
-  hideAuthError();
-  const email = document.getElementById('auth-signup-email').value.trim();
-  const password = document.getElementById('auth-signup-password').value;
-  const confirm = document.getElementById('auth-signup-password-confirm').value;
-
-  if (password !== confirm) { showAuthError('Passwords do not match.'); return; }
-  if (password.length < 6) { showAuthError('Password must be at least 6 characters.'); return; }
-
-  const btn = document.getElementById('auth-signup-btn');
-  const btnText = document.getElementById('auth-signup-btn-text');
-  btn.disabled = true;
-  btnText.textContent = 'Creating account…';
-  try {
-    await signUpWithEmail(email, password);
-  } catch (err) {
-    showAuthError(friendlyAuthError(err));
-  } finally {
-    btn.disabled = false;
-    btnText.textContent = 'Create Account';
-  }
-}
-
-async function handleEmailLogin(e) {
-  e.preventDefault();
-  hideAuthError();
-  const email = document.getElementById('auth-login-email').value.trim();
-  const password = document.getElementById('auth-login-password').value;
-
-  const btn = document.getElementById('auth-login-btn');
-  const btnText = document.getElementById('auth-login-btn-text');
-  btn.disabled = true;
-  btnText.textContent = 'Logging in…';
-  try {
-    await signInWithEmail(email, password);
-  } catch (err) {
-    showAuthError(friendlyAuthError(err));
-  } finally {
-    btn.disabled = false;
-    btnText.textContent = 'Log In';
-  }
-}
-
-async function handleForgotPassword() {
-  hideAuthError();
-  const email = document.getElementById('auth-login-email')?.value.trim();
-  if (!email) { showAuthError('Enter your email address above, then click "Forgot password?"'); return; }
-  try {
-    await resetPassword(email);
-    showToast('Password reset email sent — check your inbox.', 'success', 5000);
-  } catch (err) {
-    showAuthError(friendlyAuthError(err));
-  }
-}
-
-async function handleSignOut() {
-  try {
-    await signOutUser();
-  } catch (err) {
-    showToast('Sign out failed. Please try again.', 'error');
-  }
 }
 
 // ── Show/hide ──
@@ -228,35 +122,6 @@ async function showAccountContent(user) {
 
   // Load orders
   loadOrders(user.uid);
-}
-
-// ── Auth error helpers ──
-function showAuthError(msg) {
-  if (!authError) return;
-  authError.textContent = msg;
-  authError.classList.add('visible');
-}
-
-function hideAuthError() {
-  if (!authError) return;
-  authError.classList.remove('visible');
-}
-
-function friendlyAuthError(err) {
-  const code = err?.code || '';
-  const map = {
-    'auth/email-already-in-use':    'This email is already registered. Try logging in instead.',
-    'auth/invalid-email':           'Please enter a valid email address.',
-    'auth/user-not-found':          'No account found with this email.',
-    'auth/wrong-password':          'Incorrect password. Try again or reset your password.',
-    'auth/invalid-credential':      'Incorrect email or password.',
-    'auth/weak-password':           'Password must be at least 6 characters.',
-    'auth/too-many-requests':       'Too many attempts. Please wait a moment and try again.',
-    'auth/popup-closed-by-user':    'Sign-in popup was closed. Please try again.',
-    'auth/popup-blocked':           'Sign-in popup was blocked. Please allow popups for this site.',
-    'auth/network-request-failed':  'Network error. Please check your connection.',
-  };
-  return map[code] || err?.message || 'Something went wrong. Please try again.';
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -391,19 +256,6 @@ function updateAddressCounter(count) {
   }
 }
 
-function getStateName(code) {
-  const states = {
-    AN:'Andaman & Nicobar', AP:'Andhra Pradesh', AR:'Arunachal Pradesh', AS:'Assam',
-    BR:'Bihar', CH:'Chandigarh', CT:'Chhattisgarh', DN:'Dadra & Nagar Haveli',
-    DD:'Daman & Diu', DL:'Delhi', GA:'Goa', GJ:'Gujarat', HR:'Haryana',
-    HP:'Himachal Pradesh', JK:'Jammu & Kashmir', JH:'Jharkhand', KA:'Karnataka',
-    KL:'Kerala', LA:'Ladakh', LD:'Lakshadweep', MP:'Madhya Pradesh', MH:'Maharashtra',
-    MN:'Manipur', ML:'Meghalaya', MZ:'Mizoram', NL:'Nagaland', OR:'Odisha',
-    PY:'Puducherry', PB:'Punjab', RJ:'Rajasthan', SK:'Sikkim', TN:'Tamil Nadu',
-    TG:'Telangana', TR:'Tripura', UP:'Uttar Pradesh', UT:'Uttarakhand', WB:'West Bengal',
-  };
-  return states[code] || code || '';
-}
 
 // ── Address form show/hide ──
 function showAddressFormForNew() {

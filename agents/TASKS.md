@@ -86,7 +86,7 @@ Skipped this session: F-1 (needs B-14, still `planned`), F-3 second half (needs 
 | 10 | F-10 | Fix PIN → state auto-fill | — | on preview |
 | 10 | F-9 | Render shipping options from the sheet | — | on preview |
 | 10 | F-18 | Seller dashboard: check token expiry client-side | — | on preview |
-| 11 | F-16 | Remove dead / duplicated code | — | todo |
+| 11 | F-16 | Remove dead / duplicated code | — | on preview |
 | 11 | F-17 | Move raw images out of `public/` | — | todo |
 | 11 | F-19 | Repo hygiene (`.gitignore`, `.env.example`) | — | todo |
 | 12 | F-20 | Turnstile widget on quote + cancel forms (only when `VITE_TURNSTILE_SITE_KEY` is set) | B-6, O-5 | todo |

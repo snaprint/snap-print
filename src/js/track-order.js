@@ -5,7 +5,7 @@
    corresponding tracking link. No values are hardcoded.
    ═══════════════════════════════════════════════════════════════ */
 
-import { CONFIG, fetchCSV, showToast, updateCartBadge } from './utils.js';
+import { CONFIG, fetchCSV, updateCartBadge } from './utils.js';
 
 // ── DOM refs ──
 const form        = document.getElementById('track-form');
