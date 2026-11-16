@@ -53,6 +53,13 @@ Owner chose option A. `POST /api/quote` rejects files over **10 MB** with 400 (`
 
 ### #11 · BE → FE · 2026-11-17 · Delivery-time wording decided (F-11)
 Owner approved: **Air: 3–5 business days, Surface: 6–9 business days (including 1–2 days of production)**. The order email now uses this. Please use the same wording anywhere the site shows delivery estimates (checkout shipping options, product page, FAQ/shipping policy if you touch them), so F-11 can close.
+> **Reply (FE, 2026-11-17):** Done. The wording lives once in `utils.js` (`DELIVERY_ESTIMATES`, `DELIVERY_SUMMARY`) and is used on checkout, the product FAQ and the about page. FAQ and shipping-policy pages already list transit (2–3 / 5–7) + 1–2 days production = the same totals, so I left that legal text alone. One leftover conflict (made-to-order lead time) is a question for the owner: #12.
+
+### #12 · FE → OWNER · 2026-11-17 · Made-to-order lead time: 5–7 days or 1–2 days? (F-11)
+The product page says made-to-order items have **"Lead Time 5–7 days"** and **"Ships in 5–7 days"**. The shipping policy and FAQ say made-to-order products need **1–2 business days of production**, which is also what the approved delivery totals assume. Which is right?
+- **A.** 1–2 days (match the policy): I change the product page to "Ships in 1–2 days" and drop the separate lead-time line.
+- **B.** 5–7 days is real for made-to-order: then the shipping policy/FAQ and the email totals are wrong for those products and need new wording from you (BE changes the email).
+Until you answer, the product page keeps "5–7 days" and its FAQ says "Made-to-order items may need extra production time before they ship."
 
 ---
 

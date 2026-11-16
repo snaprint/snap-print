@@ -195,6 +195,17 @@ export function showToast(message, type = 'info', duration = 3500) {
   if (duration > 0) setTimeout(dismiss, duration);
 }
 
+// ── Delivery estimates (F-11) ──
+// Owner-approved wording (2026-11-17), identical to the order emails (B-13).
+// Change it here only; checkout, product page and about page read it.
+export const DELIVERY_ESTIMATES = {
+  air: 'Air: 3–5 business days',
+  surface: 'Surface: 6–9 business days',
+};
+export const DELIVERY_PRODUCTION_NOTE = 'including 1–2 days of production';
+export const DELIVERY_SUMMARY =
+  `${DELIVERY_ESTIMATES.air}, ${DELIVERY_ESTIMATES.surface} (${DELIVERY_PRODUCTION_NOTE}).`;
+
 // ── Debounce ──
 export function debounce(fn, ms = 300) {
   let timer;

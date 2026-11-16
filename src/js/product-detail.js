@@ -5,7 +5,7 @@
 
 import {
   getSampleProducts, CONFIG, fetchCSV, normalizeProduct, addToCart,
-  formatCurrency, getDiscountPercent, showToast, resolveImageUrl, unavailableLabel,
+  formatCurrency, getDiscountPercent, showToast, resolveImageUrl, unavailableLabel, DELIVERY_SUMMARY,
 } from './utils.js';
 import {
   parseBulkPricing, getBulkPrice, getPurchasability, isEngineering, isMadeToOrder,
@@ -243,7 +243,7 @@ function renderProduct(product) {
         <div class="faq-list" id="product-faq-list">
           <div class="faq-item">
             <button class="faq-item__question">How long will delivery take?<svg class="faq-item__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button>
-            <div class="faq-item__answer">${madeToOrder ? 'Made-to-order items take 5–7 days to produce, then' : 'We'} ship via Normal (7–10 days) or Speed (3–5 days) delivery.</div>
+            <div class="faq-item__answer">${DELIVERY_SUMMARY}${madeToOrder ? ' Made-to-order items may need extra production time before they ship.' : ''}</div>
           </div>
           <div class="faq-item">
             <button class="faq-item__question">What if my item arrives damaged?<svg class="faq-item__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button>

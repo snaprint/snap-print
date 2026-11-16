@@ -24,6 +24,7 @@ Update the row when status changes. New tasks: add a row with the next free ID i
 | O-8 | After B-14 + F-1 are live: **unpublish** the order-tracking sheet from "Publish to web" and give BE a private access method | F-1 | todo |
 | O-9 | Approve design direction (R-1) | R-2+ | todo |
 | O-10 | Deploy Firestore rules from `firestore.rules` once BE commits it | B-17 | todo |
+| O-15 | Decide the made-to-order lead time: 5–7 days (product page) vs 1–2 days (policy) (MESSAGES #12) | F-11 | todo |
 
 ---
 
@@ -77,7 +78,7 @@ Skipped this session: F-1 (needs B-14, still `planned`), F-3 second half (needs 
 | 5 | F-7 + F-6 | Use `shared/products.js` everywhere; quantity caps (MESSAGES #3, #5) | B-2, B-10 | on preview |
 | 6 | (#4) | Checkout `maxlength`s; show server 400 message (MESSAGES #4) | B-3 | on preview |
 | 7 | (#10) | Quote upload limit 25 → 10 MB (MESSAGES #10) | B-8 | on preview |
-| 8 | F-11 | Single delivery-time copy (MESSAGES #11) | owner decision (done) | todo |
+| 8 | F-11 | Single delivery-time copy (MESSAGES #11) | owner decision (done); made-to-order lead time: MESSAGES #12 | on preview |
 | 9 | F-12 | Escape all interpolated HTML (shared `escapeHtml`) | — | todo |
 | 10 | F-8 | Cart refreshes price/name/image; flags unavailable items | — | todo |
 | 10 | F-13 | Shuffle catalog once per load | — | todo |

@@ -222,6 +222,7 @@ Cart items store `price`, `name` and `image` at add-time. Only `bulk_pricing` is
 - Order email: "Surface 5–10 / Air 3–5"
 
 Pick one source of truth (ideally the shipping sheet's `field_content`).
+**✅ Fixed 2026-11-17** with the owner-approved wording "Air: 3–5 business days, Surface: 6–9 business days (including 1–2 days of production)", defined once in `utils.js` (`DELIVERY_ESTIMATES`, `DELIVERY_PRODUCTION_NOTE`, `DELIVERY_SUMMARY`) and used by checkout, the product FAQ and about. **Open:** made-to-order "Lead Time / Ships in 5–7 days" on the product page vs "1–2 days production" in the policy (owner question, MESSAGES #12 / O-15).
 
 ### 🟡 F-12 Unescaped HTML interpolation
 Sheet fields (`name`, `description`, `material`, `category`, image URLs), localStorage cart items, and Firestore address/profile fields are inserted with `innerHTML` across `catalog.js`, `product-detail.js`, `cart.js`, `checkout.js`, `account.js` and `main.js`; `showToast` also uses `innerHTML` ([utils.js:196](src/js/utils.js#L196)). The sheet is trusted, but a stray `<` or `"` breaks markup, and a compromised sheet becomes stored XSS on every page. `seller-dashboard.js` already has a proper `escapeHtml`; move it to `utils.js` and use it.
