@@ -16,8 +16,8 @@ Update the row when status changes. New tasks: add a row with the next free ID i
 | O-4 | Bind a KV namespace as `ORDERS_KV` (Production + Preview) | B-5 | todo |
 | O-5 | Create Cloudflare Turnstile site (hostnames `snaprint.in`, `www.snaprint.in`, `dev.snap-print.pages.dev`). Add `VITE_TURNSTILE_SITE_KEY` now; add `TURNSTILE_SECRET_KEY` **only after F-20 (widget) is live** in that environment, or the quote/cancel forms will return 403 | B-6 / F-20 | todo |
 | O-12 | Razorpay **Test mode** → Webhooks: add `https://dev.snap-print.pages.dev/api/webhook`, event `payment.captured`, secret = Preview `RAZORPAY_WEBHOOK_SECRET`; so test payments on preview send emails | verifying B-3/B-4/B-5 | done |
-| O-13 | Decide delivery-time wording (MESSAGES #8) and quote upload option A/B (MESSAGES #9) | B-13, B-8 | todo |
-| O-14 | Allow BE to edit `package.json` to fix `npm run dev:full` (B-19), or fix it yourself (add `--compatibility-date 2026-08-01`) | B-19 | todo |
+| O-13 | Decide delivery-time wording (MESSAGES #8) and quote upload option A/B (MESSAGES #9) | B-13, B-8 | done (A; policy wording) |
+| O-14 | Allow BE to edit `package.json` to fix `npm run dev:full` (B-19), or fix it yourself (add `--compatibility-date 2026-08-01`) | B-19 | done (approved) |
 | O-11 | Add a WAF rate-limiting rule for `POST /api/quote`, `/api/cancel-order`, `/api/seller-login` (exact settings in `BACKEND_CONTEXT.md` → B-6) | B-6 / B-7 | todo |
 | O-6 | Create Firebase service account; add `FIREBASE_SERVICE_ACCOUNT_JSON` to Pages env | B-16 | todo |
 | O-7 | Add `SELLER_TOKEN_SECRET` (random 32+ chars) to Production + Preview; replace plaintext passwords in `SELLER_ACCOUNTS` with `passwordHash` values (command in `BACKEND_CONTEXT.md` → B-7) | B-7 | todo |
@@ -45,10 +45,10 @@ No new features this phase: B-14, B-16, B-17, B-18 wait. A shared module is crea
 | 8 | B-7 | `SELLER_TOKEN_SECRET` (optional), hashed passwords (plaintext still works), no username logs | O-7 to switch on | on preview (switch on via O-7) |
 | 9 | B-11 | Sitemap: add faq/contact | — | on preview |
 | 9 | B-12 | De-duplicate helpers into one shared module | — | on preview |
-| 9 | B-13 | Minor items (escaping, `SELLER_EMAIL` default, tracking-link scheme) | delivery copy: owner decision (F-11) | on preview (delivery copy: owner, MESSAGES #8) |
-| 10 | B-8 | Quote upload memory: owner chooses between options | owner decision | blocked (owner decision, MESSAGES #9) |
+| 9 | B-13 | Minor items (escaping, `SELLER_EMAIL` default, tracking-link scheme) | delivery copy: owner decision (F-11) | on preview |
+| 10 | B-8 | Quote upload memory: owner chooses between options | owner decision | on preview |
 | — | B-15 | `shared/` module for FE + BE (CSV, bulk pricing, `isPurchasable`) | done as part of B-10/B-12 | on preview (core in shared/products.js) |
-| — | B-19 | `npm run dev:full` fails (compat date newer than local workerd); fix the script (package.json) | owner OK to edit package.json | todo |
+| — | B-19 | `npm run dev:full` fails (compat date newer than local workerd); fix the script (package.json) | owner OK to edit package.json | on preview |
 
 **Later (not this phase)**
 

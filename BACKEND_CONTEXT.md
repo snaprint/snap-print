@@ -284,19 +284,18 @@ A 25 MB upload is held as `ArrayBuffer` + a binary JS string (UTF-16, about 50 M
 Comments in create-order, seller-login, send-shipment and sitemap say Pages Functions "can't import" other files. They can: Pages bundles functions with esbuild, so relative imports work. The duplicated CSV parser, bulk-pricing logic, HMAC/token code and `sendEmailWithRetry` (4 copies) can live in one shared module, e.g. `functions/_lib/*.js` (no handler exports) or a top-level `lib/`. The bulk-pricing logic is also duplicated with `src/js/utils.js`, and the two copies must stay identical or prices diverge.
 **Fixed:** helpers live in `functions/_lib/` (see file map) and `shared/products.js`; every endpoint imports them (≈450 duplicated lines removed). The FE copy of bulk pricing goes away with F-7 (MESSAGES #5). Verified that `/_lib/*` URLs are not routable.
 
-### 🟡 B-13 Minor — ✅ fixed 2026-11-17 except delivery copy (owner decision)
+### 🟡 B-13 Minor — ✅ fixed 2026-11-17 (delivery copy decided by owner)
 - Webhook email interpolates `orderId`/`paymentId` without `escapeHtml` (trusted Razorpay data after signature check; low risk).
 - `send-shipment` puts `trackingLink` into an `href` without scheme validation (`javascript:` possible; seller-only input).
 - `SELLER_EMAIL` defaults differ: `snaprint.orders@gmail.com` (webhook, cancel) vs `queries@snaprint.in` (quote).
 - Delivery estimates in the confirmation email (Air 3–5, Surface 5–10 days) disagree with `shipping-policy.html` (Air 2–3, Surface 5–7).
 
 **Fixed:** ids/timestamp escaped in webhook emails; `send-shipment` tracking link must be http(s) (a link without a scheme gets `https://` added; `javascript:`/`data:`/other schemes → 400); one `SELLER_EMAIL` fallback for every endpoint (`snaprint.orders@gmail.com`, via `getSellerEmail`, logs a warning when unset; quote used to fall back to `queries@snaprint.in`); email subjects are plain text (no `&amp;`) with line breaks stripped; stale "Google Sheets" / "rate limiting" header comments corrected.
-**Open — owner decision (MESSAGES #8):** delivery copy. Policy page: Surface 5–7, Air 2–3 business days **+ 1–2 days production** (6–9 / 3–5 total). Email: Surface 5–10, Air 3–5. Not changed until the owner picks the wording (ties to F-11).
+**Delivery copy (owner-approved 2026-11-17):** emails now say Air **3–5**, Surface **6–9** business days *including 1–2 days of production*, matching the policy page totals. (Code change landed in commit `51e4ea1` alongside B-8.) FE uses the same wording (F-11, MESSAGES #11).
 
-### 🟡 B-19 `npm run dev:full` fails to start (local only)
+### 🟡 B-19 `npm run dev:full` fails to start (local only) — ✅ fixed 2026-11-17
 Found 2026-11-17. With no `wrangler.toml`, `wrangler pages dev` uses today's date as the compatibility date, and the bundled workerd (wrangler 4.120) rejects dates after 2026-08-08: *"This Worker requires compatibility date …, but the newest date supported by this server binary is 2026-08-08"*. Production/preview builds are unaffected (they use the dashboard's compatibility date).
-**Workaround (works today):** `npm run build && npx wrangler pages dev dist --port 8788 --compatibility-date 2026-08-01`.
-**Fix (needs a `package.json` edit, which this session wasn't allowed to make):** add `--compatibility-date 2026-08-01` to the `dev:full` script, or upgrade wrangler. Ideally match the date set in Pages → Settings → Functions → Compatibility date.
+**Fixed (owner-approved):** `dev:full` now passes `--compatibility-date 2026-08-01`; verified it starts and serves `/sitemap.xml`. If wrangler is upgraded later, the date can be raised (ideally to match Pages → Settings → Functions → Compatibility date).
 
 ## 9. Planned work (new IDs, not existing bugs)
 
