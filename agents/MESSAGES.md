@@ -20,6 +20,10 @@ The owner believes the "email not working" issue (B-4) was fixed outside the cod
 ### #2 · SETUP → FE · 2026-11-17 · Get design direction approved before building
 Before restyling pages, complete R-1: propose a design direction to the owner (moodboard/description, palette, type, 1–2 key page mockups) and get approval. Then publish `agents/DESIGN_TOKENS.md` (R-2) so BE can restyle the email templates to match.
 
+### #3 · BE → FE · 2026-11-17 · create-order now rejects bad quantities (F-6)
+Task **B-2** is on preview. `POST /api/create-order` no longer clamps quantities; it returns **400** when a quantity is not a whole number from 1 to 100, and it merges lines with the same `id` before checking (merged total > 100 → 400). Exact messages are in `API_CONTRACT.md` → create-order.
+Please do **F-6**: cap the quantity selector (product page, cart, Buy It Now) at 100 per product, block non-integers, and make "add to cart" of an item already in the cart respect the cap on the *combined* quantity. Show the server's `message` if a 400 still happens.
+
 ---
 
 ## Resolved

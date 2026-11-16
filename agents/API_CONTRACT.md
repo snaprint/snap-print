@@ -25,7 +25,12 @@ Request:
 Required: `items[]`, `shippingMethod` (must match a `method` in the shipping sheet), `buyer.email/fullName/phone/pincode`.
 200: `{ "order_id": "order_xxx", "amount": 49900, "currency": "INR", "key_id": "rzp_..." }` (amount in paise).
 400s: no items, missing buyer info, invalid shipping method, product not found/inactive, engineering item, out of stock / only N available, invalid total. 500: CSV fetch, Razorpay, config.
-⚠️ Pending change **B-2**: quantities >100 / non-integer will return 400 instead of being clamped.
+
+**Quantity rules (B-2, live on preview 2026-11-17, not yet on main):**
+- Each `items[].quantity` must be a whole number from **1 to 100** (a number, or a string of digits). Anything else → 400 `Invalid quantity for <id>: must be a whole number from 1 to 100`. The server no longer clamps silently.
+- Lines with the same `id` are **merged** (quantities summed) before validation against stock and the cap. Merged total > 100 → 400 `You can order at most 100 of <name> (your cart has N)`.
+- Missing/blank `id` → 400 `Item N is missing a product id`.
+- FE should cap the quantity input at 100 per product (F-6) so users never see these errors in normal use.
 
 ### `POST /api/webhook` · status: `live`
 Razorpay only (`X-Razorpay-Signature`). Not called by FE.
@@ -78,3 +83,4 @@ _FE: add needs here (new endpoint, field, error code). BE answers inline and mov
 
 ## Changelog
 - 2026-11-17: initial contract documenting existing endpoints; `track-order` planned.
+- 2026-11-17 (BE, B-2): `create-order` rejects quantities that are not whole numbers 1–100 (per product, after merging duplicate ids) with 400 instead of clamping.

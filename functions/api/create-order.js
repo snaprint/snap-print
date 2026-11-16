@@ -136,6 +136,15 @@ function getBulkPrice(tiers, quantity, basePrice) {
   return Number(basePrice);
 }
 
+// B-2: quantities are validated, never clamped. Max per product, after merging duplicate lines.
+const MAX_QTY_PER_PRODUCT = 100;
+
+/** Accepts an integer (or an all-digits string). Returns the number, or null if invalid. */
+function parseQuantity(value) {
+  const n = typeof value === 'string' && /^\s*\d+\s*$/.test(value) ? Number(value) : value;
+  return Number.isInteger(n) ? n : null;
+}
+
 export async function onRequestPost(context) {
   const { env } = context;
 
@@ -154,6 +163,20 @@ export async function onRequestPost(context) {
     }
     if (!buyer || !buyer.email || !buyer.fullName || !buyer.phone || !buyer.pincode) {
       return jsonError('Missing buyer information', 400);
+    }
+
+    // B-2: validate every line, then merge duplicate product ids (id → total quantity).
+    const requested = new Map();
+    for (const [index, cartItem] of items.entries()) {
+      const id = typeof cartItem?.id === 'string' ? cartItem.id.trim() : '';
+      if (!id) {
+        return jsonError(`Item ${index + 1} is missing a product id`, 400);
+      }
+      const qty = parseQuantity(cartItem.quantity);
+      if (qty === null || qty < 1 || qty > MAX_QTY_PER_PRODUCT) {
+        return jsonError(`Invalid quantity for ${id}: must be a whole number from 1 to ${MAX_QTY_PER_PRODUCT}`, 400);
+      }
+      requested.set(id, (requested.get(id) || 0) + qty);
     }
 
     // Fetch Products + Shipping CSVs server-side
@@ -191,10 +214,13 @@ export async function onRequestPost(context) {
     let subtotal = 0;
     const resolvedItems = [];
 
-    for (const cartItem of items) {
-      const product = products.find(p => p.id === cartItem.id && p.active?.toLowerCase() === 'yes');
+    for (const [id, quantity] of requested) {
+      const product = products.find(p => p.id === id && p.active?.toLowerCase() === 'yes');
       if (!product) {
-        return jsonError(`Product ${cartItem.id} not found or inactive`, 400);
+        return jsonError(`Product ${id} not found or inactive`, 400);
+      }
+      if (quantity > MAX_QTY_PER_PRODUCT) {
+        return jsonError(`You can order at most ${MAX_QTY_PER_PRODUCT} of ${product.name} (your cart has ${quantity})`, 400);
       }
 
       // Engineering items can't be purchased directly
@@ -203,7 +229,6 @@ export async function onRequestPost(context) {
       }
 
       const basePrice = Number(product.price);
-      const quantity = Math.max(1, Math.min(100, Number(cartItem.quantity)));
 
       // Compute effective per-unit price using bulk pricing tiers
       const bulkTiers = parseBulkPricing(product.bulk_pricing);

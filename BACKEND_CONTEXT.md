@@ -63,7 +63,7 @@ Flow:
 1. Validates presence of items / shippingMethod / buyer.email, fullName, phone, pincode.
 2. Fetches Products CSV + Shipping CSV (`PRODUCTS_CSV_URL` / `SHIPPING_RATES_CSV_URL`, falls back to the `VITE_` names).
 3. Shipping method is normalised once (`trim().toLowerCase()`) and must exist in the sheet's `method` column; the normalised value is used for the rate lookup and the notes (B-1).
-4. Per item: must be `active=yes`, not `category=engineering`; quantity clamped to `[1,100]`; bulk price via `parseBulkPricing`/`getBulkPrice` (copied from `src/js/utils.js`); stock checked unless `made_to_order=yes` **or** product has bulk pricing.
+4. Validates every line: `id` present, quantity a whole number 1–100 (400 otherwise, never clamped). Duplicate ids are merged (summed); merged total > 100 → 400 (B-2). Per product: must be `active=yes`, not `category=engineering`; bulk price via `parseBulkPricing`/`getBulkPrice` (copied from `src/js/utils.js`); stock checked unless `made_to_order=yes` **or** product has bulk pricing.
 5. Shipping: if `subtotal >= item_total` (sheet column) → free, else `shipping_cost`. Blank/non-numeric `item_total` = no free-shipping threshold; blank/invalid `shipping_cost` → 500 (never silently free).
 6. Creates Razorpay order (`amount` in paise, `currency: INR`, `receipt: order_<ts>`) with buyer + order details stuffed into `notes` (14 keys: `buyer_*`, `shipping_method`, `shipping_cost`, `subtotal`, `item_count`, `items_summary`, `items_detail` = JSON `[{n,q,p}]`).
 7. Returns `{ order_id, amount, currency, key_id }`.
@@ -176,9 +176,9 @@ Severity: 🔴 high · 🟠 medium · 🟡 low. Each has a concrete location and
 [create-order.js:183](functions/api/create-order.js#L183) validates `shippingMethod.trim().toLowerCase()`, but [create-order.js:238](functions/api/create-order.js#L238) looks up the rate row with the **raw** `shippingMethod`. Sending `"AIR"` or `" air"` passes validation, finds no row, and `shippingCost` becomes `0`.
 **Fixed:** `method` is normalised once and used for validation, lookup and notes. A sheet row with a blank `shipping_cost` now returns 500 instead of free shipping; a blank `item_total` means shipping is always charged.
 
-### 🔴 B-2 Silent quantity clamp, unvalidated quantities, duplicate line items
+### 🔴 B-2 Silent quantity clamp, unvalidated quantities, duplicate line items — ✅ fixed 2026-11-17
 [create-order.js:204](functions/api/create-order.js#L204) clamps to 100 without telling the client. The UI allows any quantity (see F-6), so a buyer who chose 150 is charged for 100 while their Firestore record and cart say 150. `Number("abc")` → `NaN` survives the clamp; fractional quantities (`1.5`) are accepted. Two cart lines with the same `id` each pass the stock check independently.
-**Fix:** reject (400) non-integer, `<1` or `>max` quantities instead of clamping; merge duplicate ids before the stock check.
+**Fixed:** non-integer, `<1` or `>100` quantities → 400 with a clear message; duplicate ids merged before the stock and cap checks (contract updated; FE asked to cap the UI, F-6, MESSAGES #3).
 
 ### 🔴 B-3 Razorpay `notes` values exceed Razorpay's per-value limit
 [create-order.js:286](functions/api/create-order.js#L286) and [:290](functions/api/create-order.js#L290) slice `items_summary` / `items_detail` to 512 chars. Razorpay documents notes as max 15 keys × **256 chars** each, so larger carts can make order creation fail ("Failed to create payment order"). Even under the limit, slicing JSON mid-string yields invalid JSON, so the webhook silently falls back to the plain summary. `buyer_address` is also unbounded.
