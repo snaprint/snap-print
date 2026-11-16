@@ -64,6 +64,7 @@ Screenshot ≤5 MB, png/jpeg/webp. 200: `{ "success": true, "message": "..." }`.
   "trackingLink": "", "items": [{ "name": "", "quantity": 1 }] }
 ```
 `orderId`, `trackingLink`, `items` optional. 200 `{ "success": true, "message": "..." }`; 401 expired/invalid token (FE: clear token, go to login).
+**B-13 (live on preview 2026-11-17):** `trackingLink` must be a web link. Without a scheme (`www.dtdc.in/…`) the server adds `https://`; any other scheme (`javascript:`, `data:`, `ftp:` …) → 400 `Tracking link must be a full web address starting with https:// or http://`.
 
 ### `GET /sitemap.xml` · status: `live`
 Not called by FE. BE must add any new public FE page (FE: send a message when you add one).
@@ -90,6 +91,7 @@ _FE: add needs here (new endpoint, field, error code). BE answers inline and mov
 
 ## Changelog
 - 2026-11-17: initial contract documenting existing endpoints; `track-order` planned.
+- 2026-11-17 (BE, B-13): `send-shipment` rejects non-http(s) tracking links (400); scheme-less links get `https://`.
 - 2026-11-17 (BE, B-7): no shape change; seller tokens may be signed with a new secret (one-time 401 for logged-in sellers).
 - 2026-11-17 (BE, B-6): `quote` and `cancel-order` accept `turnstileToken`; enforced (403 without a valid token) only once `TURNSTILE_SECRET_KEY` is set.
 - 2026-11-17 (BE, B-9): `quote` and `cancel-order` return 502 when the seller email fails (was 200); `quote` returns 503 when email is not configured (was 200).

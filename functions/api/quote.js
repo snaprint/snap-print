@@ -58,7 +58,7 @@ export async function onRequestPost(context) {
 
     // Send email notifications
     const resendApiKey = env.RESEND_API_KEY;
-    const sellerEmail = env.SELLER_EMAIL || 'queries@snaprint.in';
+    const sellerEmail = getSellerEmail(env);
 
     // B-9: the request only counts as received once the SELLER has the email.
     if (!resendApiKey) {
@@ -78,7 +78,7 @@ export async function onRequestPost(context) {
         from: FROM_ORDERS,
         to: sellerEmail,
         reply_to: email,
-        subject: `🔧 New Quote Request from ${escapeHtml(name)}`,
+        subject: subjectText(`🔧 New Quote Request from ${name}`),
         html: buildSellerEmail({ name, email, phone, material, notes, fileName: file.name, fileSizeFormatted, timestamp }),
         attachments: [
           {

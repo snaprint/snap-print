@@ -4,7 +4,8 @@
    Applied to all /api/* routes.
    - CORS headers
    - Security headers
-   - Rate limiting (basic, using CF headers)
+   (No rate limiting here — use a Cloudflare WAF rate-limiting rule; see
+   BACKEND_CONTEXT.md B-6 / TASKS O-11.)
    ═══════════════════════════════════════════════════════════════ */
 
 export async function onRequest(context) {

@@ -101,10 +101,10 @@ The server total is authoritative — the client never sends prices.
 8. Header comment says "Logs order to Google Sheets" — **not implemented** (no Sheets code exists).
 
 ### 3.4 `POST /api/quote` (multipart/form-data)
-Fields `name, email, phone, material, notes, file`. File must be `.stl/.step/.stp`, ≤ 25 MB. Converts file to base64 (chunked) and emails it to `SELLER_EMAIL` (default `queries@snaprint.in`) as an attachment, then sends a confirmation to the submitter. If `RESEND_API_KEY` is missing → 503. If the **seller** email fails → 502 and no buyer confirmation is sent; if only the buyer confirmation fails → still 200 (the seller has it) (B-9).
+Fields `name, email, phone, material, notes, file`. File must be `.stl/.step/.stp`, ≤ 25 MB. Converts file to base64 (chunked) and emails it to `SELLER_EMAIL` (fallback `snaprint.orders@gmail.com`) as an attachment, then sends a confirmation to the submitter. If `RESEND_API_KEY` is missing → 503. If the **seller** email fails → 502 and no buyer confirmation is sent; if only the buyer confirmation fails → still 200 (the seller has it) (B-9).
 
 ### 3.5 `POST /api/cancel-order` (JSON)
-`{ orderId, name, email, phone, reason, screenshot: { data(base64), filename, contentType } }`. Screenshot required, ≤ 5 MB, png/jpeg/webp. Emails seller (with attachment, `reply_to` = buyer) and buyer (confirmation). Unauthenticated, no check that the order exists. Seller email fails → 502 (buyer not emailed); only buyer confirmation fails → 200 (B-9). Default seller email here is `snaprint.orders@gmail.com` (differs from quote.js).
+`{ orderId, name, email, phone, reason, screenshot: { data(base64), filename, contentType } }`. Screenshot required, ≤ 5 MB, png/jpeg/webp. Emails seller (with attachment, `reply_to` = buyer) and buyer (confirmation). Unauthenticated, no check that the order exists. Seller email fails → 502 (buyer not emailed); only buyer confirmation fails → 200 (B-9).
 
 ### 3.6 `POST /api/seller-login`
 `{ username, password }` checked against `SELLER_ACCOUNTS` (JSON array; each account `{username, passwordHash}` or legacy plaintext `{username, password}`). Usernames are compared in constant time against every account, then exactly one password check runs (a dummy PBKDF2 with the same iteration count for unknown usernames). Failed attempts log only `Failed seller login attempt` (no username). On success returns `{ success, token, username }`. Logic: `functions/_lib/seller-auth.js` (B-7).
@@ -163,7 +163,7 @@ Free tier: 2 req/s, 3,000 emails/month. Every function spaces calls 500 ms apart
 | `RAZORPAY_WEBHOOK_SECRET` | webhook (+ seller tokens while `SELLER_TOKEN_SECRET` is unset) | |
 | `SELLER_TOKEN_SECRET` | seller-login, send-shipment | **Switch for B-7.** Signs seller tokens. Unset = falls back to `RAZORPAY_WEBHOOK_SECRET` (old behaviour). Setting it logs sellers out once. |
 | `RESEND_API_KEY` | webhook, quote, cancel-order, send-shipment | |
-| `SELLER_EMAIL` | webhook, quote, cancel-order | defaults differ per file |
+| `SELLER_EMAIL` | webhook, quote, cancel-order | one fallback everywhere: `snaprint.orders@gmail.com` (B-13). Set it in every environment. |
 | `SELLER_ACCOUNTS` | seller-login | JSON array; `passwordHash` (PBKDF2) preferred, plaintext `password` still accepted |
 | `ORDERS_KV` (KV binding) | webhook | optional; strongly recommended |
 | `TURNSTILE_SECRET_KEY` | quote, cancel-order | **Switch for B-6.** Unset = no bot check (old behaviour). Set = token required. Add only after the FE widget (F-20) is live in that environment. |
@@ -282,11 +282,14 @@ A 25 MB upload is held as `ArrayBuffer` + a binary JS string (UTF-16, about 50 M
 Comments in create-order, seller-login, send-shipment and sitemap say Pages Functions "can't import" other files. They can: Pages bundles functions with esbuild, so relative imports work. The duplicated CSV parser, bulk-pricing logic, HMAC/token code and `sendEmailWithRetry` (4 copies) can live in one shared module, e.g. `functions/_lib/*.js` (no handler exports) or a top-level `lib/`. The bulk-pricing logic is also duplicated with `src/js/utils.js`, and the two copies must stay identical or prices diverge.
 **Fixed:** helpers live in `functions/_lib/` (see file map) and `shared/products.js`; every endpoint imports them (≈450 duplicated lines removed). The FE copy of bulk pricing goes away with F-7 (MESSAGES #5). Verified that `/_lib/*` URLs are not routable.
 
-### 🟡 B-13 Minor
+### 🟡 B-13 Minor — ✅ fixed 2026-11-17 except delivery copy (owner decision)
 - Webhook email interpolates `orderId`/`paymentId` without `escapeHtml` (trusted Razorpay data after signature check; low risk).
 - `send-shipment` puts `trackingLink` into an `href` without scheme validation (`javascript:` possible; seller-only input).
 - `SELLER_EMAIL` defaults differ: `snaprint.orders@gmail.com` (webhook, cancel) vs `queries@snaprint.in` (quote).
 - Delivery estimates in the confirmation email (Air 3–5, Surface 5–10 days) disagree with `shipping-policy.html` (Air 2–3, Surface 5–7).
+
+**Fixed:** ids/timestamp escaped in webhook emails; `send-shipment` tracking link must be http(s) (a link without a scheme gets `https://` added; `javascript:`/`data:`/other schemes → 400); one `SELLER_EMAIL` fallback for every endpoint (`snaprint.orders@gmail.com`, via `getSellerEmail`, logs a warning when unset; quote used to fall back to `queries@snaprint.in`); email subjects are plain text (no `&amp;`) with line breaks stripped; stale "Google Sheets" / "rate limiting" header comments corrected.
+**Open — owner decision (MESSAGES #8):** delivery copy. Policy page: Surface 5–7, Air 2–3 business days **+ 1–2 days production** (6–9 / 3–5 total). Email: Surface 5–10, Air 3–5. Not changed until the owner picks the wording (ties to F-11).
 
 ### 🟡 B-19 `npm run dev:full` fails to start (local only)
 Found 2026-11-17. With no `wrangler.toml`, `wrangler pages dev` uses today's date as the compatibility date, and the bundled workerd (wrangler 4.120) rejects dates after 2026-08-08: *"This Worker requires compatibility date …, but the newest date supported by this server binary is 2026-08-08"*. Production/preview builds are unaffected (they use the dashboard's compatibility date).

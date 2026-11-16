@@ -7,9 +7,10 @@
    
    1. Verifies HMAC-SHA256 signature using RAZORPAY_WEBHOOK_SECRET
    2. Filters events: only processes payment.captured
-   3. Idempotency: checks payment ID against processed set
-   4. Logs order to Google Sheets via Sheets API
-   5. Sends itemized confirmation emails to buyer + seller via Resend
+   3. Idempotency via ORDERS_KV (see "Processing state" below)
+   4. Fetches the order + product names, sends itemized buyer + seller
+      emails via Resend; marks the payment done only if they succeed
+   (No Google Sheets logging — never implemented.)
    
    Buyer + item details come from the Razorpay ORDER's notes (set
    server-side by create-order.js), fetched via GET /v1/orders/{id};
@@ -380,14 +381,14 @@ async function sendConfirmationEmails(env, data) {
     return { ok: false, reason: 'RESEND_API_KEY not configured', buyerEmailStatus: 'not_sent' };
   }
 
-  const sellerEmail = env.SELLER_EMAIL || 'snaprint.orders@gmail.com';
+  const sellerEmail = getSellerEmail(env);
 
   // Build itemized table rows
   const itemRows = data.itemsDetail.length > 0
     ? data.itemsDetail.map(item =>
         `<tr>
           <td style="padding:8px 12px;border-bottom:1px solid #eee;">${escapeHtml(item.n)}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;">${item.q}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center;">${Number(item.q) || 0}</td>
           <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:right;">₹${(item.p * item.q).toLocaleString('en-IN')}</td>
         </tr>`
       ).join('')
@@ -448,8 +449,8 @@ async function sendConfirmationEmails(env, data) {
             </table>
 
             <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
-              <tr><td style="padding:4px 0;color:#666;">Order ID</td><td style="padding:4px 0;">${data.orderId}</td></tr>
-              <tr><td style="padding:4px 0;color:#666;">Payment ID</td><td style="padding:4px 0;">${data.paymentId}</td></tr>
+              <tr><td style="padding:4px 0;color:#666;">Order ID</td><td style="padding:4px 0;">${escapeHtml(data.orderId)}</td></tr>
+              <tr><td style="padding:4px 0;color:#666;">Payment ID</td><td style="padding:4px 0;">${escapeHtml(data.paymentId)}</td></tr>
               <tr><td style="padding:4px 0;color:#666;">Estimated Delivery</td><td style="padding:4px 0;font-weight:600;">${deliveryEstimate}</td></tr>
             </table>
 
@@ -481,9 +482,9 @@ async function sendConfirmationEmails(env, data) {
 
           <h3 style="margin:16px 0 8px;font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">Order Details</h3>
           <table style="width:100%;border-collapse:collapse;font-size:14px;">
-            <tr><td style="padding:6px 0;color:#666;width:140px;">Order ID</td><td style="padding:6px 0;font-weight:600;">${data.orderId}</td></tr>
-            <tr><td style="padding:6px 0;color:#666;">Payment ID</td><td style="padding:6px 0;">${data.paymentId}</td></tr>
-            <tr><td style="padding:6px 0;color:#666;">Timestamp</td><td style="padding:6px 0;">${data.timestamp}</td></tr>
+            <tr><td style="padding:6px 0;color:#666;width:140px;">Order ID</td><td style="padding:6px 0;font-weight:600;">${escapeHtml(data.orderId)}</td></tr>
+            <tr><td style="padding:6px 0;color:#666;">Payment ID</td><td style="padding:6px 0;">${escapeHtml(data.paymentId)}</td></tr>
+            <tr><td style="padding:6px 0;color:#666;">Timestamp</td><td style="padding:6px 0;">${escapeHtml(data.timestamp)}</td></tr>
           </table>
 
           <h3 style="margin:20px 0 8px;font-size:14px;color:#666;text-transform:uppercase;letter-spacing:0.5px;">Items Ordered</h3>

@@ -41,6 +41,15 @@ export async function onRequestPost(context) {
     if (!shipmentPartner || !shipmentPartner.trim()) {
       return jsonError('Shipment partner is required', 400);
     }
+    // B-13: the link goes into an <a href>; only allow web links (no javascript:, data:, …).
+    let cleanTrackingLink = typeof trackingLink === 'string' ? trackingLink.trim() : '';
+    // "www.dtdc.in/track…" (no scheme) → assume https://
+    if (cleanTrackingLink && !/^[a-z][a-z0-9+.-]*:/i.test(cleanTrackingLink)) {
+      cleanTrackingLink = 'https://' + cleanTrackingLink;
+    }
+    if (cleanTrackingLink && !isHttpUrl(cleanTrackingLink)) {
+      return jsonError('Tracking link must be a full web address starting with https:// or http://', 400);
+    }
 
     // ── 3. Check Resend config ──
     const resendApiKey = env.RESEND_API_KEY;
@@ -54,13 +63,13 @@ export async function onRequestPost(context) {
       buyerName: buyerName.trim(),
       orderId: orderId?.trim() || '',
       shipmentPartner: shipmentPartner.trim(),
-      trackingLink: trackingLink?.trim() || '',
+      trackingLink: cleanTrackingLink,
       items: Array.isArray(items) ? items : [],
     });
 
-    const subject = orderId?.trim()
+    const subject = subjectText(orderId?.trim()
       ? `Your Order Has Been Shipped! 📦 — ${orderId.trim()}`
-      : 'Your Order Has Been Shipped! 📦';
+      : 'Your Order Has Been Shipped! 📦');
 
     await sendEmailWithRetry(resendApiKey, {
       from: FROM_ORDERS,
@@ -165,3 +174,11 @@ function buildShipmentEmail({ buyerName, orderId, shipmentPartner, trackingLink,
 // Helpers
 // ═══════════════════════════════════════════════════════════════
 
+function isHttpUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}

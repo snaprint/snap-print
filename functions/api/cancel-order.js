@@ -86,7 +86,7 @@ export async function onRequestPost(context) {
       hour12: true,
     });
 
-    const sellerEmail = env.SELLER_EMAIL || 'snaprint.orders@gmail.com';
+    const sellerEmail = getSellerEmail(env);
 
     const emailData = {
       orderId: orderId.trim(),
@@ -109,7 +109,7 @@ export async function onRequestPost(context) {
         from: FROM_ORDERS,
         to: sellerEmail,
         reply_to: email.trim(),
-        subject: `⚠️ Cancellation Request — ${emailData.orderId}`,
+        subject: subjectText(`⚠️ Cancellation Request — ${emailData.orderId}`),
         html: buildSellerEmail(emailData),
         attachments: [
           {
@@ -134,7 +134,7 @@ export async function onRequestPost(context) {
         from: FROM_ORDERS,
         to: emailData.email,
         reply_to: REPLY_TO_QUERIES,
-        subject: `Cancellation Request Received — ${emailData.orderId}`,
+        subject: subjectText(`Cancellation Request Received — ${emailData.orderId}`),
         html: buildBuyerEmail(emailData),
       }, { idempotencyKey: `cancel-buyer/${emailData.orderId}-${emailData.email}`, userAgent: 'SnapPrint-CancelOrder/1.0' });
     } catch (buyerErr) {
