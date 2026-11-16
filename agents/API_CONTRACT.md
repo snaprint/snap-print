@@ -43,7 +43,8 @@ Razorpay only (`X-Razorpay-Signature`). Not called by FE.
 ### `POST /api/quote` · status: `live`
 `multipart/form-data`: `name, email, phone, material, notes?, file` (`.stl/.step/.stp`, ≤25 MB).
 200: `{ "success": true, "message": "Quote request submitted" }`.
-⚠️ Pending **B-6**: will require a `turnstileToken` field. ⚠️ Pending **B-9**: will return 502 if the seller email fails.
+**Errors (B-9, live on preview 2026-11-17):** 502 if the seller email could not be sent (nothing was received; user should retry), 503 if email isn't configured on the server. Both use the standard error shape with a user-facing `message`. A failed *confirmation* email to the user still returns 200.
+⚠️ Pending **B-6**: Turnstile token.
 
 ### `POST /api/cancel-order` · status: `live`
 ```json
@@ -51,7 +52,7 @@ Razorpay only (`X-Razorpay-Signature`). Not called by FE.
   "screenshot": { "data": "<base64, no data: prefix>", "filename": "x.png", "contentType": "image/png" } }
 ```
 Screenshot ≤5 MB, png/jpeg/webp. 200: `{ "success": true, "message": "..." }`.
-⚠️ Pending **B-6** / **B-9**: same as quote.
+**Errors (B-9, live on preview):** 502 if the seller email failed (retry), 500 if email isn't configured. ⚠️ Pending **B-6**: Turnstile token.
 
 ### `POST /api/seller-login` · status: `live`
 `{ "username": "", "password": "" }` → 200 `{ "success": true, "token": "<payload>.<sig>", "username": "" }`; 401 invalid credentials. Token lasts 4 h; FE stores it in `sessionStorage.seller_token`. Token payload is base64 JSON `{ sub, exp, iat }` (FE may decode `exp`, never trust it for auth).
@@ -88,6 +89,7 @@ _FE: add needs here (new endpoint, field, error code). BE answers inline and mov
 
 ## Changelog
 - 2026-11-17: initial contract documenting existing endpoints; `track-order` planned.
+- 2026-11-17 (BE, B-9): `quote` and `cancel-order` return 502 when the seller email fails (was 200); `quote` returns 503 when email is not configured (was 200).
 - 2026-11-17 (BE, B-10): `create-order` uses the shared purchasability rule (`shared/products.js`); new 400 "currently unavailable" for price ≤ 0.
 - 2026-11-17 (BE, B-3): `create-order` adds 400s for over-long buyer fields and for carts with too many different products.
 - 2026-11-17 (BE, B-2): `create-order` rejects quantities that are not whole numbers 1–100 (per product, after merging duplicate ids) with 400 instead of clamping.

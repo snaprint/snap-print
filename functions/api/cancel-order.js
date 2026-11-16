@@ -110,7 +110,9 @@ export async function onRequestPost(context) {
         ],
       }, 3, `cancel-seller/${emailData.orderId}-${emailData.email}`);
     } catch (sellerErr) {
-      console.error('Seller cancellation email failed:', sellerErr);
+      // B-9: without the seller email the request is lost — tell the buyer.
+      console.error('Seller cancellation email failed — returning 502:', sellerErr);
+      return jsonError("We couldn't submit your cancellation request right now. Please try again in a few minutes, or email queries@snaprint.in with your order ID.", 502);
     }
 
     // Space calls ≥500ms apart to stay under Resend's 2 req/s rate limit
@@ -126,7 +128,8 @@ export async function onRequestPost(context) {
         html: buildBuyerEmail(emailData),
       }, 3, `cancel-buyer/${emailData.orderId}-${emailData.email}`);
     } catch (buyerErr) {
-      console.error('Buyer cancellation confirmation email failed:', buyerErr);
+      // The seller has the request; a failed confirmation must not make the buyer resubmit.
+      console.error('Buyer cancellation confirmation email failed (seller already notified):', buyerErr);
     }
 
     console.log(`Cancellation request processed: ${emailData.orderId} by ${emailData.name} (${emailData.email})`);

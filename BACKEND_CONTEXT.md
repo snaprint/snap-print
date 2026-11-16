@@ -86,10 +86,10 @@ The server total is authoritative — the client never sends prices.
 6. Header comment says "Logs order to Google Sheets" — **not implemented** (no Sheets code exists).
 
 ### 3.4 `POST /api/quote` (multipart/form-data)
-Fields `name, email, phone, material, notes, file`. File must be `.stl/.step/.stp`, ≤ 25 MB. Converts file to base64 (chunked) and emails it to `SELLER_EMAIL` (default `queries@snaprint.in`) as an attachment, then sends a confirmation to the submitter. If `RESEND_API_KEY` is missing it just logs and still returns success. Email failures are logged, response is still `success: true`.
+Fields `name, email, phone, material, notes, file`. File must be `.stl/.step/.stp`, ≤ 25 MB. Converts file to base64 (chunked) and emails it to `SELLER_EMAIL` (default `queries@snaprint.in`) as an attachment, then sends a confirmation to the submitter. If `RESEND_API_KEY` is missing → 503. If the **seller** email fails → 502 and no buyer confirmation is sent; if only the buyer confirmation fails → still 200 (the seller has it) (B-9).
 
 ### 3.5 `POST /api/cancel-order` (JSON)
-`{ orderId, name, email, phone, reason, screenshot: { data(base64), filename, contentType } }`. Screenshot required, ≤ 5 MB, png/jpeg/webp. Emails seller (with attachment, `reply_to` = buyer) and buyer (confirmation). Unauthenticated, no check that the order exists. Returns success even if both emails fail. Default seller email here is `snaprint.orders@gmail.com` (differs from quote.js).
+`{ orderId, name, email, phone, reason, screenshot: { data(base64), filename, contentType } }`. Screenshot required, ≤ 5 MB, png/jpeg/webp. Emails seller (with attachment, `reply_to` = buyer) and buyer (confirmation). Unauthenticated, no check that the order exists. Seller email fails → 502 (buyer not emailed); only buyer confirmation fails → 200 (B-9). Default seller email here is `snaprint.orders@gmail.com` (differs from quote.js).
 
 ### 3.6 `POST /api/seller-login`
 `{ username, password }` checked against `SELLER_ACCOUNTS` (JSON array `[{username,password}]`, plaintext) with constant-time compare over every account. On success returns `{ success, token, username }`.
@@ -234,8 +234,8 @@ The webhook marks the payment processed **before** sending ([webhook.js:107](fun
 A 25 MB upload is held as `ArrayBuffer` + a binary JS string (UTF-16, about 50 MB) + a base64 string (about 33 MB) + the JSON body for Resend, which is close to the Workers 128 MB memory limit. Large uploads may crash the isolate (500).
 **Fix:** lower the limit (e.g. 10 MB), or upload to R2 and email a signed link instead of attaching.
 
-### 🟡 B-9 Success returned when emails fail
-`quote.js` and `cancel-order.js` catch email errors and still return `success: true`, so the user believes the request was received. Return 502 if the **seller** email fails.
+### 🟡 B-9 Success returned when emails fail — ✅ fixed 2026-11-17
+`quote.js` and `cancel-order.js` catch email errors and still return `success: true`, so the user believes the request was received. Return 502 if the **seller** email fails. **Fixed** as described in §3.4/3.5.
 
 ### 🟡 B-10 Data-handling edge cases in create-order — ✅ fixed 2026-11-17 (rule in §4.1; FE alignment = F-7)
 - `category === 'engineering'` is case-sensitive ([create-order.js:199](functions/api/create-order.js#L199)); sitemap and frontend lowercase it.

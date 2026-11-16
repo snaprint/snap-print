@@ -49,7 +49,13 @@ export async function onRequestPost(context) {
     const resendApiKey = env.RESEND_API_KEY;
     const sellerEmail = env.SELLER_EMAIL || 'queries@snaprint.in';
 
-    if (resendApiKey) {
+    // B-9: the request only counts as received once the SELLER has the email.
+    if (!resendApiKey) {
+      console.error('RESEND_API_KEY not configured — quote request NOT delivered', { fileName: file.name, material });
+      return jsonError('Our quote service is temporarily unavailable. Please email your file to queries@snaprint.in.', 503);
+    }
+
+    {
       // Convert file to base64 for email attachment (chunked to avoid stack overflow)
       const fileBuffer = await file.arrayBuffer();
       const fileBase64 = uint8ArrayToBase64(new Uint8Array(fileBuffer));
@@ -73,7 +79,8 @@ export async function onRequestPost(context) {
         });
         console.log(`Quote notification sent to seller (${sellerEmail})`);
       } catch (sellerErr) {
-        console.error('Seller email failed:', sellerErr);
+        console.error('Seller email failed — returning 502:', sellerErr);
+        return jsonError("We couldn't submit your request right now. Please try again in a few minutes, or email your file to queries@snaprint.in.", 502);
       }
 
       // Rate-limit gap (Resend allows 2 req/s)
@@ -90,10 +97,9 @@ export async function onRequestPost(context) {
         });
         console.log(`Quote confirmation sent to client (${email})`);
       } catch (clientErr) {
-        console.error('Client confirmation email failed:', clientErr);
+        // The seller has the request; a failed confirmation must not make the user resubmit.
+        console.error('Client confirmation email failed (seller already notified):', clientErr);
       }
-    } else {
-      console.log('Email skipped (RESEND_API_KEY not set). Quote data:', { name, email, phone, material, notes, fileName: file.name });
     }
 
     return new Response(JSON.stringify({ success: true, message: 'Quote request submitted' }), {

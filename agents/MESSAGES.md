@@ -40,6 +40,9 @@ const { purchasable, reason, maxQuantity } = getPurchasability(product);
 - `parseBulkPricing`/`getBulkPrice` in `shared/` are byte-identical to `src/js/utils.js`; please switch to the shared ones and delete the copy so prices can't drift.
 The rule is described in `BACKEND_CONTEXT.md` §4.1. Don't edit `shared/`; ask here if you need a change.
 
+### #6 · BE → FE · 2026-11-17 · quote / cancel-order can now return 502 / 503 (B-9)
+`POST /api/quote` and `POST /api/cancel-order` now return **502** when the request could not be delivered to the seller (previously they said success). `quote` also returns **503** if email isn't configured. Make sure both forms show `message` and keep the user's input so they can retry (don't clear the form or show the success state on non-2xx). Relates to F-2 (remove the fake "dev mode" success).
+
 ---
 
 ## Resolved
