@@ -14,7 +14,8 @@ Update the row when status changes. New tasks: add a row with the next free ID i
 | O-2 | Confirm Cloudflare Pages builds `dev` and note the preview URL here (expected `https://dev.snap-print.pages.dev`) | everything | todo |
 | O-3 | Check Preview env vars in Cloudflare (CSV URLs, Razorpay **test** keys, Resend, `RAZORPAY_WEBHOOK_SECRET`, `SELLER_ACCOUNTS`, Firebase `VITE_*`) | testing on preview | todo |
 | O-4 | Bind a KV namespace as `ORDERS_KV` (Production + Preview) | B-5 | todo |
-| O-5 | Create Cloudflare Turnstile site; add `TURNSTILE_SITE_KEY` / `VITE_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` | B-6 / F-20 | todo |
+| O-5 | Create Cloudflare Turnstile site (hostnames `snaprint.in`, `www.snaprint.in`, `dev.snap-print.pages.dev`). Add `VITE_TURNSTILE_SITE_KEY` now; add `TURNSTILE_SECRET_KEY` **only after F-20 (widget) is live** in that environment, or the quote/cancel forms will return 403 | B-6 / F-20 | todo |
+| O-11 | Add a WAF rate-limiting rule for `POST /api/quote`, `/api/cancel-order`, `/api/seller-login` (exact settings in `BACKEND_CONTEXT.md` → B-6) | B-6 / B-7 | todo |
 | O-6 | Create Firebase service account; add `FIREBASE_SERVICE_ACCOUNT_JSON` to Pages env | B-16 | todo |
 | O-7 | Add a separate `SELLER_TOKEN_SECRET` env var | B-7 | todo |
 | O-8 | After B-14 + F-1 are live: **unpublish** the order-tracking sheet from "Publish to web" and give BE a private access method | F-1 | todo |

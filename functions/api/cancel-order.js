@@ -10,6 +10,8 @@
    Env vars: RESEND_API_KEY, SELLER_EMAIL
    ═══════════════════════════════════════════════════════════════ */
 
+import { verifyTurnstile } from '../_lib/turnstile.js';
+
 const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024; // 5 MB
 
 export async function onRequestPost(context) {
@@ -17,7 +19,7 @@ export async function onRequestPost(context) {
 
   try {
     const body = await request.json();
-    const { orderId, name, email, phone, reason, screenshot } = body;
+    const { orderId, name, email, phone, reason, screenshot, turnstileToken } = body;
 
     // ── 1. Validate required fields ──
     if (!orderId || !orderId.trim()) {
@@ -50,6 +52,12 @@ export async function onRequestPost(context) {
     const allowedTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/jpg'];
     if (!allowedTypes.includes(screenshot.contentType)) {
       return jsonError('Screenshot must be a PNG, JPG, or WebP image', 400);
+    }
+
+    // ── 2b. Bot check (B-6; only enforced when TURNSTILE_SECRET_KEY is set) ──
+    const turnstile = await verifyTurnstile(env, request, turnstileToken);
+    if (!turnstile.ok) {
+      return jsonError(turnstile.message, turnstile.status);
     }
 
     // ── 3. Check Resend config ──

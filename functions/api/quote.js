@@ -10,6 +10,8 @@
    Env vars: RESEND_API_KEY, SELLER_EMAIL
    ═══════════════════════════════════════════════════════════════ */
 
+import { verifyTurnstile } from '../_lib/turnstile.js';
+
 export async function onRequestPost(context) {
   const { env, request } = context;
 
@@ -41,6 +43,13 @@ export async function onRequestPost(context) {
     // Validate file size (25MB)
     if (file.size > 25 * 1024 * 1024) {
       return jsonError('File too large. Maximum size is 25MB.', 400);
+    }
+
+    // B-6: bot check (only enforced when TURNSTILE_SECRET_KEY is set).
+    // Accepts our field name or the widget's auto-injected one.
+    const turnstile = await verifyTurnstile(env, request, formData.get('turnstileToken') || formData.get('cf-turnstile-response'));
+    if (!turnstile.ok) {
+      return jsonError(turnstile.message, turnstile.status);
     }
 
     console.log(`Quote request from ${name} (${email}) — Material: ${material}, File: ${file.name}`);

@@ -158,7 +158,8 @@ Free tier: 2 req/s, 3,000 emails/month. Every function spaces calls 500 ms apart
 | `SELLER_EMAIL` | webhook, quote, cancel-order | defaults differ per file |
 | `SELLER_ACCOUNTS` | seller-login | JSON array, plaintext passwords |
 | `ORDERS_KV` (KV binding) | webhook | optional; strongly recommended |
-| `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | — | in `.env`/`.env.example` but **unused** |
+| `TURNSTILE_SECRET_KEY` | quote, cancel-order | **Switch for B-6.** Unset = no bot check (old behaviour). Set = token required. Add only after the FE widget (F-20) is live in that environment. |
+| `TURNSTILE_SITE_KEY` / `VITE_TURNSTILE_SITE_KEY` | FE widget (F-20) | public site key; not read by functions |
 | `GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_SPREADSHEET_ID` | — | in `.env.example` but **unused** |
 
 Local dev: `.dev.vars` (read by `wrangler pages dev`). The current `.dev.vars` has **no `RAZORPAY_WEBHOOK_SECRET`**, so locally `/api/seller-login` returns 500 and `/api/webhook` rejects everything.
@@ -227,9 +228,14 @@ Was: the webhook read every buyer field from `payment.entity.notes`, but the not
 The webhook marks the payment processed **before** sending ([webhook.js:107](functions/api/webhook.js#L107)), so a Resend failure means the emails are never retried and Razorpay retries are swallowed as duplicates. Google Sheets logging is advertised ([webhook.js:11](functions/api/webhook.js#L11)) but not implemented. If `ORDERS_KV` isn't bound, idempotency is per-isolate only, so duplicates are possible (Resend idempotency keys partly cover this for 24 h).
 **Fixed:** the payment is marked `done` only after the emails succeed; failures answer 5xx so Razorpay retries (details §3.3). Works with `ORDERS_KV` bound (O-4) and degrades to per-isolate memory + Resend idempotency without it. **Still open:** a durable *order record* (planned as B-16, Firestore). **Risk to know:** if emails fail for 24 h straight (e.g. Resend key revoked), Razorpay stops retrying and may disable the webhook; it emails the account owner when webhooks fail, which is the alert.
 
-### 🟠 B-6 Public endpoints are open email relays (no rate limit / bot check)
+### 🟠 B-6 Public endpoints are open email relays (no rate limit / bot check) — ✅ code ready 2026-11-17 (off until `TURNSTILE_SECRET_KEY` is set)
 `/api/cancel-order` and `/api/quote` send mail from `orders@snaprint.in` to **any** address supplied in the request, with attacker-controlled name/reason text, unauthenticated and unlimited. This can burn the 3,000/month Resend quota and damage domain reputation. Turnstile keys exist in `.env` but are never verified. The middleware's "rate limiting" comment ([_middleware.js:7](functions/api/_middleware.js#L7)) is not implemented.
-**Fix:** verify a Turnstile token in both endpoints; add Cloudflare rate-limiting rules for `/api/*` (WAF → Rate limiting).
+**Fixed in code:** `functions/_lib/turnstile.js` verifies the token with Cloudflare siteverify (`secret`, `response`, `remoteip` = `CF-Connecting-IP`). quote reads `turnstileToken` or the widget's auto field `cf-turnstile-response`; cancel-order reads `turnstileToken` from the JSON body. Missing/invalid token → 403; siteverify unreachable → 503. Verification runs after field validation (so a 400 doesn't burn the single-use token) and before any email.
+**Owner: rate-limit rule** (Cloudflare dashboard → snaprint.in zone → Security → WAF → Rate limiting rules → Create):
+- Name `api-forms`; expression: `(http.request.method eq "POST" and http.request.uri.path in {"/api/quote" "/api/cancel-order" "/api/seller-login"})`
+- Counting characteristic: IP. Free plan: **5 requests / 10 s, action Block for 10 s** (the only period the free plan allows). Paid plans: 5 requests / 1 min, block 10 min.
+- Applies to `snaprint.in` only; `*.pages.dev` preview URLs are not covered by zone rules.
+Local testing: Cloudflare's test secret `1x0000000000000000000000000000000AA` always passes, `2x0000000000000000000000000000000AA` always fails.
 
 ### 🟠 B-7 Seller login hardening
 - No brute-force protection on `/api/seller-login`.

@@ -43,6 +43,9 @@ The rule is described in `BACKEND_CONTEXT.md` §4.1. Don't edit `shared/`; ask h
 ### #6 · BE → FE · 2026-11-17 · quote / cancel-order can now return 502 / 503 (B-9)
 `POST /api/quote` and `POST /api/cancel-order` now return **502** when the request could not be delivered to the seller (previously they said success). `quote` also returns **503** if email isn't configured. Make sure both forms show `message` and keep the user's input so they can retry (don't clear the form or show the success state on non-2xx). Relates to F-2 (remove the fake "dev mode" success).
 
+### #7 · BE → FE · 2026-11-17 · Turnstile is ready server-side (F-20)
+B-6 is on preview. `/api/quote` (form field `turnstileToken`, or the widget's auto `cf-turnstile-response`) and `/api/cancel-order` (JSON `turnstileToken`) verify a Turnstile token **once the owner sets `TURNSTILE_SECRET_KEY`**. Until then the token is ignored, so you can ship the widget first. Use `VITE_TURNSTILE_SITE_KEY` for the widget. On any non-2xx, call `turnstile.reset()` (tokens are single-use). When the enforcing key is set: 403 = show "complete the security check"; 503 = try again later. Tell the owner (here) when F-20 is live on preview so they can add the secret.
+
 ---
 
 ## Resolved

@@ -44,7 +44,7 @@ Razorpay only (`X-Razorpay-Signature`). Not called by FE.
 `multipart/form-data`: `name, email, phone, material, notes?, file` (`.stl/.step/.stp`, ≤25 MB).
 200: `{ "success": true, "message": "Quote request submitted" }`.
 **Errors (B-9, live on preview 2026-11-17):** 502 if the seller email could not be sent (nothing was received; user should retry), 503 if email isn't configured on the server. Both use the standard error shape with a user-facing `message`. A failed *confirmation* email to the user still returns 200.
-⚠️ Pending **B-6**: Turnstile token.
+**Turnstile (B-6, code live on preview, enforcement OFF until the owner sets `TURNSTILE_SECRET_KEY`):** send the widget token as form field `turnstileToken` (the widget's auto-injected `cf-turnstile-response` field is also accepted). When enforcement is on: missing/invalid token → 403 `Please complete the security check and try again.`; Cloudflare unreachable → 503. Tokens are single-use: get a fresh one (`turnstile.reset()`) after any error response.
 
 ### `POST /api/cancel-order` · status: `live`
 ```json
@@ -52,7 +52,8 @@ Razorpay only (`X-Razorpay-Signature`). Not called by FE.
   "screenshot": { "data": "<base64, no data: prefix>", "filename": "x.png", "contentType": "image/png" } }
 ```
 Screenshot ≤5 MB, png/jpeg/webp. 200: `{ "success": true, "message": "..." }`.
-**Errors (B-9, live on preview):** 502 if the seller email failed (retry), 500 if email isn't configured. ⚠️ Pending **B-6**: Turnstile token.
+**Errors (B-9, live on preview):** 502 if the seller email failed (retry), 500 if email isn't configured.
+**Turnstile (B-6, same switch as quote):** add `"turnstileToken": "<widget token>"` to the JSON body. Same 403/503 behaviour as quote.
 
 ### `POST /api/seller-login` · status: `live`
 `{ "username": "", "password": "" }` → 200 `{ "success": true, "token": "<payload>.<sig>", "username": "" }`; 401 invalid credentials. Token lasts 4 h; FE stores it in `sessionStorage.seller_token`. Token payload is base64 JSON `{ sub, exp, iat }` (FE may decode `exp`, never trust it for auth).
@@ -89,6 +90,7 @@ _FE: add needs here (new endpoint, field, error code). BE answers inline and mov
 
 ## Changelog
 - 2026-11-17: initial contract documenting existing endpoints; `track-order` planned.
+- 2026-11-17 (BE, B-6): `quote` and `cancel-order` accept `turnstileToken`; enforced (403 without a valid token) only once `TURNSTILE_SECRET_KEY` is set.
 - 2026-11-17 (BE, B-9): `quote` and `cancel-order` return 502 when the seller email fails (was 200); `quote` returns 503 when email is not configured (was 200).
 - 2026-11-17 (BE, B-10): `create-order` uses the shared purchasability rule (`shared/products.js`); new 400 "currently unavailable" for price ≤ 0.
 - 2026-11-17 (BE, B-3): `create-order` adds 400s for over-long buyer fields and for carts with too many different products.
