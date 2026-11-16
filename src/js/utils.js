@@ -475,31 +475,70 @@ export function hidePageLoader() {
   document.body.style.overflow = '';
 }
 
-// ── Indian PIN Code → State/District Lookup ──
-// Common PIN prefixes → state mapping (first 2 digits)
-const PIN_STATE_MAP = {
+// ── Indian PIN code → state (F-10) ──
+// India Post assigns PIN codes by postal circle, and several circles span more
+// than one state/UT. So: 2-digit prefixes give the usual state, 3-digit (and a
+// few longer) prefixes override them, and prefixes shared by two states map to
+// null (no guess). 90–99 are Army Postal Service codes (no state).
+// Checked against India Post's circle/district ranges (Nov 2026). It is only a
+// convenience: checkout fills the state only when the buyer hasn't picked one.
+const PIN_PREFIX_STATE = {
+  // 2-digit defaults
   '11': 'DL', '12': 'HR', '13': 'HR', '14': 'PB', '15': 'PB', '16': 'PB',
   '17': 'HP', '18': 'JK', '19': 'JK',
   '20': 'UP', '21': 'UP', '22': 'UP', '23': 'UP', '24': 'UP', '25': 'UP', '26': 'UP', '27': 'UP', '28': 'UP',
   '30': 'RJ', '31': 'RJ', '32': 'RJ', '33': 'RJ', '34': 'RJ',
   '36': 'GJ', '37': 'GJ', '38': 'GJ', '39': 'GJ',
-  '40': 'MH', '41': 'MH', '42': 'MH', '43': 'MH', '44': 'MH', '45': 'MP',
-  '46': 'MP', '47': 'MP', '48': 'MP', '49': 'CT',
-  '50': 'TG', '51': 'TG', '52': 'AP', '53': 'AP',
+  '40': 'MH', '41': 'MH', '42': 'MH', '43': 'MH', '44': 'MH',
+  '45': 'MP', '46': 'MP', '47': 'MP', '48': 'MP', '49': 'CT',
+  '50': 'TG', '51': 'AP', '52': 'AP', '53': 'AP',
   '56': 'KA', '57': 'KA', '58': 'KA', '59': 'KA',
   '60': 'TN', '61': 'TN', '62': 'TN', '63': 'TN', '64': 'TN',
   '67': 'KL', '68': 'KL', '69': 'KL',
   '70': 'WB', '71': 'WB', '72': 'WB', '73': 'WB', '74': 'WB',
   '75': 'OR', '76': 'OR', '77': 'OR',
-  '78': 'AS', '79': 'AR',
-  '80': 'BR', '81': 'BR', '82': 'BR', '83': 'BR', '84': 'BR', '85': 'BR',
-  '86': 'JH', '90': 'MN', '91': 'MZ', '93': 'NL',
+  '78': 'AS',
+  '80': 'BR', '81': 'BR', '82': 'BR', '83': 'JH', '84': 'BR', '85': 'BR',
+  // 3-digit overrides
+  '160': null,                 // Chandigarh and Mohali (Punjab) share 160
+  '194': 'LA',                 // Ladakh (Leh, Kargil)
+  '244': null, '246': null, '247': null, '262': null, // UP / Uttarakhand mixed
+  '248': 'UT', '249': 'UT', '263': 'UT',               // Uttarakhand
+  '362': null,                 // Junagadh (GJ) and Diu (DD)
+  '396': null,                 // Valsad (GJ), Daman (DD), Silvassa (DN)
+  '403': 'GA',                 // Goa
+  '533': null,                 // East Godavari (AP) and Yanam (PY)
+  '605': null, '609': null,    // Puducherry / Karaikal mixed with Tamil Nadu
+  '737': 'SK',                 // Sikkim
+  '744': 'AN',                 // Andaman & Nicobar
+  '790': 'AR', '791': 'AR', '792': 'AR',
+  '793': 'ML', '794': 'ML',
+  '795': 'MN', '796': 'MZ',
+  '797': 'NL', '798': 'NL',
+  '799': 'TR',
+  '813': null,                 // Bihar / Jharkhand mixed
+  '814': 'JH', '815': 'JH', '816': 'JH',
+  '821': 'BR', '822': 'JH', '823': 'BR', '824': 'BR',
+  '825': 'JH', '826': 'JH', '827': 'JH', '828': 'JH', '829': 'JH',
+  '831': 'JH', '832': 'JH', '833': 'JH', '834': 'JH', '835': 'JH',
+  // Longer exceptions
+  '68255': 'LD',               // Lakshadweep (682551–682559)
+  '673310': 'PY', '673311': 'PY', // Mahe (Puducherry)
 };
 
+/**
+ * Best-guess state code for a 6-digit PIN, or null when unknown / ambiguous.
+ * @returns {{state: string} | null}
+ */
 export function lookupPIN(pincode) {
-  if (!pincode || pincode.length !== 6) return null;
-  const prefix = pincode.substring(0, 2);
-  const state = PIN_STATE_MAP[prefix];
-  if (!state) return null;
-  return { state };
+  const pin = String(pincode ?? '').trim();
+  if (!/^[1-9]\d{5}$/.test(pin)) return null;
+  for (const len of [6, 5, 3, 2]) {
+    const key = pin.slice(0, len);
+    if (key in PIN_PREFIX_STATE) {
+      const state = PIN_PREFIX_STATE[key];
+      return state ? { state } : null;
+    }
+  }
+  return null;
 }

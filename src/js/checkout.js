@@ -580,17 +580,27 @@ function initPINLookup() {
   const stateSelect = document.getElementById('buyer-state');
   if (!pinInput || !stateSelect) return;
 
+  // F-10: only fill the state when the buyer hasn't chosen one themselves
+  // (empty, or the value we filled earlier). Ambiguous PINs fill nothing.
+  stateSelect.addEventListener('change', () => { delete stateSelect.dataset.autoFilled; });
+
   pinInput.addEventListener('input', () => {
     const val = pinInput.value.replace(/\D/g, '');
     pinInput.value = val;
+    if (val.length !== 6) return;
 
-    if (val.length === 6) {
-      const result = lookupPIN(val);
-      if (result && result.state) {
-        stateSelect.value = result.state;
-        stateSelect.classList.add('has-value');
-        stateSelect.closest('.form-group')?.classList.remove('has-error');
-      }
+    const canFill = !stateSelect.value || stateSelect.dataset.autoFilled === '1';
+    if (!canFill) return;
+    const result = lookupPIN(val);
+    if (result?.state) {
+      stateSelect.value = result.state;
+      stateSelect.dataset.autoFilled = '1';
+      stateSelect.classList.add('has-value');
+      stateSelect.closest('.form-group')?.classList.remove('has-error');
+    } else if (stateSelect.dataset.autoFilled === '1') {
+      // our earlier guess no longer applies
+      stateSelect.value = '';
+      delete stateSelect.dataset.autoFilled;
     }
   });
 }

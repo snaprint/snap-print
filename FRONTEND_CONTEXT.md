@@ -98,7 +98,7 @@ If `PRODUCTS_CSV_URL` is empty, catalog and product pages fall back to `getSampl
 - **Data:** `fetchCSV(url)` uses PapaParse with header trim/BOM strip and value trim, plus a cache-buster `?_t=` and `cache: 'no-store'`. `fetchActiveProducts()` is a module-level memoised promise of active rows (shared `isActive`), used by **every** page that needs products (F-15). Don't call `fetchCSV(PRODUCTS_CSV_URL)` directly. `normalizeProduct` maps legacy `compare_price` → `actual_price`. `resolveImageUrl` converts GitHub `blob` URLs to `raw.githubusercontent.com`.
 - **UI:** `showToast(msg, type, ms)` (innerHTML), `renderSkeletons` (hamster loader in a grid), `showPageLoader/hidePageLoader` (full-screen overlay), `debounce`.
 - **Validation:** `isValidEmail`, `isValidPhone` (Indian 10-digit starting 6–9, strips +91).
-- **`lookupPIN(pin)`**: 2-digit prefix → state code table (approximate; see **F-10**).
+- **`lookupPIN(pin)`**: PIN prefix → state code, `null` when unknown or shared by two states (F-10).
 
 ### `main.js` (every public page)
 Mobile menu toggle on `.navbar__hamburger` / `.navbar__mobile-menu`; active-link highlighting; `[data-copy-email]` copy buttons; **injects** a search icon + slide-down search panel and a mobile search box (Enter → `/?q=` or filters in place on home); wraps the "Shop" link in a category dropdown built from product categories; fills `#footer-shop-links` with category links; `.scroll-animate` IntersectionObserver; if `localStorage.snaprint_logged_in` is set, rewrites Track Order links to `/account.html#orders`.
@@ -213,7 +213,8 @@ Cart items store `price`, `name` and `image` at add-time. Only `bulk_pricing` is
 ### 🟡 F-9 Shipping methods hard-coded in the UI
 `checkout.html` has fixed `surface`/`air` radios; [checkout.js:31](src/js/checkout.js#L31) and [:476](src/js/checkout.js#L476) assume those names, while the server accepts whatever is in the sheet. Renaming or adding a method in the sheet breaks checkout. Render the options from the shipping CSV instead.
 
-### 🟡 F-10 PIN → state auto-fill is wrong for several regions
+### 🟡 F-10 PIN → state auto-fill is wrong for several regions — ✅ fixed 2026-11-17
+**Fixed:** `lookupPIN` uses 2-digit defaults plus 3-digit (and a few 5/6-digit) overrides: Goa 403, Ladakh 194, Uttarakhand 248/249/263, Sikkim 737, Andaman 744, the North-East 790–799 by state, Jharkhand 814–816/822/825–835, Lakshadweep 68255, Mahe 673310/1. Prefixes shared by two states (160, 244, 246, 247, 262, 362, 396, 533, 605, 609, 813) and Army Postal 90–99 return `null` (no guess). Checkout fills the state only when it's empty or was filled by us, and clears its own guess if the PIN changes to an unknown one. Unit-tested on 52 real PIN codes; the checkout form behaviour (needs login) is not browser-tested.
 `PIN_STATE_MAP` ([utils.js:474](src/js/utils.js#L474)) maps all `79xxxx` to Arunachal (it also covers Meghalaya, Manipur, Mizoram, Nagaland, Tripura), maps `90/91/93` to Manipur/Mizoram/Nagaland (these prefixes are Army Postal Service), maps Goa `403` to Maharashtra, Jharkhand `81–83` to Bihar, Uttarakhand `24x/26x` to Uttar Pradesh, and Sikkim `737` to West Bengal. Because it silently overwrites the state select, buyers can submit a wrong state.
 **Fix:** use 3-digit prefixes, or an India Post pincode API, and only auto-fill when the state field is empty.
 
