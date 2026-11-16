@@ -53,6 +53,22 @@ const ordersLoading  = document.getElementById('orders-loading');
 
 // ── State ──
 let currentProfile = null;
+let profileLoadFailed = false;
+
+const SAVE_FAILED = 'Could not save your changes. Check your connection and try again.';
+
+/** Reload the profile after a successful write; a failed reload is not a failed save. */
+async function reloadAddresses(uid) {
+  try {
+    currentProfile = await getBuyerProfile(uid);
+    profileLoadFailed = false;
+  } catch (err) {
+    console.error('[Account] Reload failed:', err);
+    showToast('Saved, but the list could not be refreshed. Refresh the page to see it.', 'info', 6000);
+    return;
+  }
+  renderAddressList(currentProfile);
+}
 
 // ── Init ──
 function init() {
@@ -191,8 +207,16 @@ async function showAccountContent(user) {
   if (loginGate) loginGate.style.display = 'none';
   if (accountContent) accountContent.style.display = '';
 
-  // Load profile
-  currentProfile = await getBuyerProfile(user.uid);
+  // Load profile (F-4: a failed read shows an error instead of an empty profile)
+  try {
+    currentProfile = await getBuyerProfile(user.uid);
+    profileLoadFailed = false;
+  } catch (err) {
+    console.error('[Account] Failed to load profile:', err);
+    currentProfile = null;
+    profileLoadFailed = true;
+    showToast('Could not load your saved details. Check your connection and refresh the page.', 'error', 8000);
+  }
   renderProfileView(user, currentProfile);
   populateProfileForm(user, currentProfile);
   renderAddressList(currentProfile);
@@ -289,7 +313,8 @@ async function handleProfileSave(e) {
     hideProfileEdit();
     showToast('Profile updated!', 'success');
   } catch (err) {
-    showToast('Failed to save profile. Please try again.', 'error');
+    console.error('[Account] Profile save failed:', err);
+    showToast(SAVE_FAILED, 'error', 6000);
   }
 }
 
@@ -298,6 +323,15 @@ async function handleProfileSave(e) {
 // ═══════════════════════════════════════════════════════════
 
 function renderAddressList(profile) {
+  if (profileLoadFailed) {
+    addressesListEl.innerHTML = `
+      <div class="account-empty">
+        <p>Your saved addresses could not be loaded. Please refresh the page.</p>
+      </div>
+    `;
+    if (addressAddBtn) addressAddBtn.style.display = 'none';
+    return;
+  }
   const addresses = profile?.addresses || [];
   updateAddressCounter(addresses.length);
 
@@ -435,17 +469,17 @@ async function handleAddressSave(e) {
       }
       showToast('Address saved!', 'success');
     }
-
-    // Reload profile to refresh list
-    currentProfile = await getBuyerProfile(user.uid);
-    renderAddressList(currentProfile);
     hideAddressForm();
   } catch (err) {
-    showToast('Failed to save address.', 'error');
+    console.error('[Account] Address save failed:', err);
+    showToast(err?.message?.includes('no longer exists') ? err.message : SAVE_FAILED, 'error', 6000);
+    return; // keep the form open with the user's input
   } finally {
     saveBtn.disabled = false;
   }
+  await reloadAddresses(user.uid);
 }
+
 
 async function handleAddressAction(e) {
   const action = e.currentTarget.dataset.action;
@@ -460,21 +494,23 @@ async function handleAddressAction(e) {
     if (!confirm('Delete this address?')) return;
     try {
       await deleteBuyerAddress(user.uid, id);
-      currentProfile = await getBuyerProfile(user.uid);
-      renderAddressList(currentProfile);
-      showToast('Address deleted.', 'success');
     } catch (err) {
-      showToast('Failed to delete address.', 'error');
+      console.error('[Account] Address delete failed:', err);
+      showToast('Could not delete the address. Check your connection and try again.', 'error', 6000);
+      return;
     }
+    showToast('Address deleted.', 'success');
+    await reloadAddresses(user.uid);
   } else if (action === 'set-default') {
     try {
       await setDefaultAddress(user.uid, id);
-      currentProfile = await getBuyerProfile(user.uid);
-      renderAddressList(currentProfile);
-      showToast('Default address updated.', 'success');
     } catch (err) {
-      showToast('Failed to set default address.', 'error');
+      console.error('[Account] Set default failed:', err);
+      showToast('Could not change the default address. Check your connection and try again.', 'error', 6000);
+      return;
     }
+    showToast('Default address updated.', 'success');
+    await reloadAddresses(user.uid);
   }
 }
 
@@ -486,10 +522,23 @@ async function loadOrders(uid) {
   if (ordersLoading) ordersLoading.style.display = 'flex';
 
   // Fetch Firestore orders + Google Sheets tracking data in parallel
-  const [orders, trackingRows] = await Promise.all([
-    getBuyerOrders(uid),
-    fetchTrackingData(),
-  ]);
+  let orders, trackingRows;
+  try {
+    [orders, trackingRows] = await Promise.all([
+      getBuyerOrders(uid),
+      fetchTrackingData(),
+    ]);
+  } catch (err) {
+    // F-4: don't claim "No orders yet" when the orders couldn't be read.
+    console.error('[Account] Failed to load orders:', err);
+    if (ordersLoading) ordersLoading.style.display = 'none';
+    ordersListEl.innerHTML = `
+      <div class="account-empty">
+        <p>Your orders could not be loaded. Check your connection and refresh the page.</p>
+      </div>
+    `;
+    return;
+  }
 
   if (ordersLoading) ordersLoading.style.display = 'none';
 

@@ -113,7 +113,7 @@ buyers/{uid}/orders/{razorpayOrderId}
                           subtotal, shippingCost, shippingMethod, total, buyerEmail, status:'paid', createdAt }
 Address = { id:'addr_xxxxxxxx', label, name, phone, address, apartment, city, state(2-letter code), pincode, isDefault }
 ```
-Address CRUD (`add/update/delete/setDefault`) is read-modify-write of the whole array with `{merge:true}`. Old flat profiles (`address`, `city`… at top level) are auto-migrated into `addresses[]` on read. **All helpers catch and swallow errors** (see **F-4**). Firestore security rules are configured manually in the Firebase console and are **not versioned in this repo**.
+Address CRUD (`add/update/delete/setDefault`) is read-modify-write of the whole array with `{merge:true}`. Old flat profiles (`address`, `city`… at top level) are auto-migrated into `addresses[]` on read. **All helpers throw on Firestore errors; callers must catch** (F-4). `addBuyerAddress` returns `null` only when the 16-address limit is reached. Firestore security rules are configured manually in the Firebase console and are **not versioned in this repo**.
 
 ---
 
@@ -180,7 +180,8 @@ Severity: 🔴 high · 🟠 medium · 🟡 low.
 In the Razorpay `handler` ([checkout.js:740-786](src/js/checkout.js#L740-L786)) three writes are fired without `await`, then the page navigates away immediately ([checkout.js:786](src/js/checkout.js#L786)). In-flight Firestore writes are aborted on navigation, so orders can be missing from **My Account**. The record also uses `price: item.price` (base price, not the bulk price actually charged, [checkout.js:774](src/js/checkout.js#L774)), a client-computed subtotal/total, and `status: 'paid'` without verifying `razorpay_signature`.
 **Fix:** `await Promise.allSettled([...])` (with a ~3 s timeout) before redirecting. Better: have the webhook write the order with the Firebase Admin REST API, so the record is server-authored and always present. Commit the Firestore rules (`firestore.rules`) and make `orders` read-only for clients.
 
-### 🟠 F-4 Firestore helpers swallow errors → false "saved!" toasts
+### 🟠 F-4 Firestore helpers swallow errors → false "saved!" toasts — ✅ fixed 2026-11-17
+**Fixed:** all helpers in `firebase.js` now throw (reads too). This also closes a data-loss path: a failed profile read used to look like "no addresses", and the next address save would have overwritten every saved address. `account.js` shows an error toast and keeps the form open on failure; a failed read shows "could not be loaded" instead of "No orders yet"/an empty list; a failed *reload after a successful save* says "Saved, but…".
 Every helper in `firebase.js` catches and only `console.warn`s (e.g. [firebase.js:194](src/js/firebase.js#L194), [:321](src/js/firebase.js#L321)). So `account.js` always shows "Profile updated!" ([account.js:290](src/js/account.js#L290)), "Address saved!", or "Address deleted." even when the write failed, and the `.catch()` handlers in `checkout.js` are dead code.
 **Fix:** let helpers re-throw (or return `{ok:false}`) and handle the result in callers.
 

@@ -127,6 +127,12 @@ export function getCurrentUser() {
 }
 
 // ── Firestore helpers (buyers collection) ──
+//
+// F-4: every helper lets Firestore errors propagate (they used to be
+// swallowed, so the UI said "saved" when nothing was saved). Callers must
+// catch and tell the user. Reads throw too: the address helpers do a
+// read-modify-write of the whole array, so treating a failed read as "no
+// addresses" would overwrite the buyer's saved addresses.
 
 const BUYERS_COLLECTION = 'buyers';
 const MAX_ADDRESSES = 16;
@@ -135,28 +141,24 @@ const MAX_ADDRESSES = 16;
  * Fetch the buyer profile for a given uid.
  * Auto-migrates flat address fields → addresses[] array on read.
  * @param {string} uid
- * @returns {Promise<object|null>} profile data or null if not found
+ * @returns {Promise<object|null>} profile data, or null if there is no profile yet
+ * @throws if Firestore can't be read
  */
 export async function getBuyerProfile(uid) {
-  try {
-    const snap = await getDoc(doc(db, BUYERS_COLLECTION, uid));
-    if (!snap.exists()) return null;
-    const data = snap.data();
+  const snap = await getDoc(doc(db, BUYERS_COLLECTION, uid));
+  if (!snap.exists()) return null;
+  const data = snap.data();
 
-    // Auto-migrate: if flat address fields exist but no addresses array
-    if (!data.addresses && data.address) {
-      const migrated = migrateFlatProfile(data);
-      // Fire-and-forget save of migrated data
-      setDoc(doc(db, BUYERS_COLLECTION, uid), migrated, { merge: true })
-        .catch(err => console.warn('[Firebase] Migration save failed:', err));
-      return { ...data, ...migrated };
-    }
-
-    return data;
-  } catch (err) {
-    console.warn('[Firebase] Failed to read buyer profile:', err);
-    return null;
+  // Auto-migrate: if flat address fields exist but no addresses array
+  if (!data.addresses && data.address) {
+    const migrated = migrateFlatProfile(data);
+    // Best-effort save of migrated data; the next read migrates again if it fails.
+    setDoc(doc(db, BUYERS_COLLECTION, uid), migrated, { merge: true })
+      .catch(err => console.warn('[Firebase] Migration save failed:', err));
+    return { ...data, ...migrated };
   }
+
+  return data;
 }
 
 /**
@@ -181,121 +183,84 @@ function migrateFlatProfile(data) {
 /**
  * Save or update the buyer profile for a given uid.
  * Uses merge so partial updates don't wipe other fields.
- * @param {string} uid
- * @param {object} data — fields to save (name, phone, email, addresses, etc.)
+ * @throws if the write fails
  */
 export async function saveBuyerProfile(uid, data) {
-  try {
-    await setDoc(doc(db, BUYERS_COLLECTION, uid), {
-      ...data,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
-  } catch (err) {
-    console.warn('[Firebase] Failed to save buyer profile:', err);
-  }
+  await setDoc(doc(db, BUYERS_COLLECTION, uid), {
+    ...data,
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+}
+
+async function writeAddresses(uid, addresses) {
+  await setDoc(doc(db, BUYERS_COLLECTION, uid), {
+    addresses,
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
 }
 
 // ── Address CRUD helpers ──
 
 /**
  * Add a new address to the buyer's addresses array. Max 16.
- * @param {string} uid
- * @param {object} addressData — { label, address, apartment, city, state, pincode }
- * @returns {Promise<string|null>} the new address id, or null if at max
+ * @returns {Promise<string|null>} the new address id, or null if the limit is reached
+ * @throws if Firestore can't be read or written
  */
 export async function addBuyerAddress(uid, addressData) {
-  try {
-    const profile = await getBuyerProfile(uid);
-    const addresses = profile?.addresses || [];
-    if (addresses.length >= MAX_ADDRESSES) return null;
+  const profile = await getBuyerProfile(uid);
+  const addresses = profile?.addresses || [];
+  if (addresses.length >= MAX_ADDRESSES) return null;
 
-    const newAddr = {
-      id: generateAddressId(),
-      ...addressData,
-      isDefault: addresses.length === 0, // first address is default
-    };
-    addresses.push(newAddr);
-
-    await setDoc(doc(db, BUYERS_COLLECTION, uid), {
-      addresses,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
-
-    return newAddr.id;
-  } catch (err) {
-    console.warn('[Firebase] Failed to add address:', err);
-    return null;
-  }
+  const newAddr = {
+    id: generateAddressId(),
+    ...addressData,
+    isDefault: addresses.length === 0, // first address is default
+  };
+  addresses.push(newAddr);
+  await writeAddresses(uid, addresses);
+  return newAddr.id;
 }
 
 /**
  * Update an existing address by its id.
- * @param {string} uid
- * @param {string} addressId
- * @param {object} addressData — partial fields to update
+ * @throws if the address no longer exists or Firestore fails
  */
 export async function updateBuyerAddress(uid, addressId, addressData) {
-  try {
-    const profile = await getBuyerProfile(uid);
-    const addresses = profile?.addresses || [];
-    const idx = addresses.findIndex(a => a.id === addressId);
-    if (idx === -1) return;
+  const profile = await getBuyerProfile(uid);
+  const addresses = profile?.addresses || [];
+  const idx = addresses.findIndex(a => a.id === addressId);
+  if (idx === -1) throw new Error('This address no longer exists. Please refresh the page.');
 
-    addresses[idx] = { ...addresses[idx], ...addressData };
-
-    await setDoc(doc(db, BUYERS_COLLECTION, uid), {
-      addresses,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
-  } catch (err) {
-    console.warn('[Firebase] Failed to update address:', err);
-  }
+  addresses[idx] = { ...addresses[idx], ...addressData };
+  await writeAddresses(uid, addresses);
 }
 
 /**
  * Delete an address by its id.
- * @param {string} uid
- * @param {string} addressId
+ * @throws if Firestore fails
  */
 export async function deleteBuyerAddress(uid, addressId) {
-  try {
-    const profile = await getBuyerProfile(uid);
-    let addresses = (profile?.addresses || []).filter(a => a.id !== addressId);
+  const profile = await getBuyerProfile(uid);
+  const addresses = (profile?.addresses || []).filter(a => a.id !== addressId);
 
-    // Ensure at least one is default
-    if (addresses.length > 0 && !addresses.some(a => a.isDefault)) {
-      addresses[0].isDefault = true;
-    }
-
-    await setDoc(doc(db, BUYERS_COLLECTION, uid), {
-      addresses,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
-  } catch (err) {
-    console.warn('[Firebase] Failed to delete address:', err);
+  // Ensure at least one is default
+  if (addresses.length > 0 && !addresses.some(a => a.isDefault)) {
+    addresses[0].isDefault = true;
   }
+  await writeAddresses(uid, addresses);
 }
 
 /**
  * Set a specific address as the default.
- * @param {string} uid
- * @param {string} addressId
+ * @throws if Firestore fails
  */
 export async function setDefaultAddress(uid, addressId) {
-  try {
-    const profile = await getBuyerProfile(uid);
-    const addresses = (profile?.addresses || []).map(a => ({
-      ...a,
-      isDefault: a.id === addressId,
-    }));
-
-    await setDoc(doc(db, BUYERS_COLLECTION, uid), {
-      addresses,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
-  } catch (err) {
-    console.warn('[Firebase] Failed to set default address:', err);
-  }
+  const profile = await getBuyerProfile(uid);
+  const addresses = (profile?.addresses || []).map(a => ({
+    ...a,
+    isDefault: a.id === addressId,
+  }));
+  await writeAddresses(uid, addresses);
 }
 
 /** Generate a short random ID for addresses */
@@ -307,38 +272,27 @@ function generateAddressId() {
 
 /**
  * Save an order record under buyers/{uid}/orders/{orderId}.
- * @param {string} uid
- * @param {string} orderId
- * @param {object} data — order details (items, total, shipping, etc.)
+ * @throws if the write fails
  */
 export async function saveBuyerOrder(uid, orderId, data) {
-  try {
-    await setDoc(doc(db, BUYERS_COLLECTION, uid, 'orders', orderId), {
-      ...data,
-      createdAt: serverTimestamp(),
-    });
-  } catch (err) {
-    console.warn('[Firebase] Failed to save order:', err);
-  }
+  await setDoc(doc(db, BUYERS_COLLECTION, uid, 'orders', orderId), {
+    ...data,
+    createdAt: serverTimestamp(),
+  });
 }
 
 /**
  * Fetch all orders for a buyer, newest first.
- * @param {string} uid
- * @returns {Promise<object[]>} array of order objects
+ * @returns {Promise<object[]>}
+ * @throws if Firestore can't be read
  */
 export async function getBuyerOrders(uid) {
-  try {
-    const q = query(
-      collection(db, BUYERS_COLLECTION, uid, 'orders'),
-      orderBy('createdAt', 'desc')
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  } catch (err) {
-    console.warn('[Firebase] Failed to read orders:', err);
-    return [];
-  }
+  const q = query(
+    collection(db, BUYERS_COLLECTION, uid, 'orders'),
+    orderBy('createdAt', 'desc')
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
 export { auth, db, MAX_ADDRESSES };
