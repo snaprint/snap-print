@@ -121,7 +121,7 @@ Address CRUD (`add/update/delete/setDefault`) is read-modify-write of the whole 
 ## 5. Page flows
 
 ### Home / catalog (`catalog.js`)
-Loads active products → builds category tiles (first product image per category) and material chips (only if ≥ 2 materials) → restores state from URL (`category, q, sort, price_min, price_max, in_stock=1, material`) → filter → sort → render, then writes state back with `history.replaceState`. Default sort is a **random shuffle**. Engineering products link to `/quote.html` and show "Get a Quote". Hero carousel from the hero CSV, autoplay every 4.5 s.
+Loads active products → builds category tiles (first product image per category) and material chips (only if ≥ 2 materials) → restores state from URL (`category, q, sort, price_min, price_max, in_stock=1, material`) → filter → sort → render, then writes state back with `history.replaceState`. Default sort is a **random order chosen once per page load** (F-13). Engineering products link to `/quote.html` and show "Get a Quote". Hero carousel from the hero CSV, autoplay every 4.5 s.
 
 ### Product (`product-detail.js`)
 `?id=` → shared product cache → redirects engineering items to the quote page. Gallery with thumbs, prev/next, fullscreen lightbox (keyboard nav), Web Share / clipboard. Quantity selector updates the price and highlights the active bulk-pricing tier. Add to Cart / Buy It Now (adds and goes to checkout). Static FAQ, related products (same category, up to 4), Instagram embeds from `instagram_url`.
@@ -228,7 +228,7 @@ Pick one source of truth (ideally the shipping sheet's `field_content`).
 **Fixed:** one `escapeHtml` in `src/js/helpers.js` (escapes `& < > " '`), used for every sheet / cart / Firestore value in templates in catalog, product, cart, checkout, account, main and seller-dashboard (its private copy is deleted). `showToast` sets the message with `textContent`. Product ids and categories in links use `encodeURIComponent`; account tracking links only allow http(s); Instagram embeds only use parsed instagram.com permalinks; the category-tile `onerror` no longer builds HTML from the label. Tested with a sheet row containing `<img onerror>` and quotes: nothing executes, the text shows literally. **Rule for new code:** never put a data value into `innerHTML` without `escapeHtml`.
 Sheet fields (`name`, `description`, `material`, `category`, image URLs), localStorage cart items, and Firestore address/profile fields are inserted with `innerHTML` across `catalog.js`, `product-detail.js`, `cart.js`, `checkout.js`, `account.js` and `main.js`; `showToast` also uses `innerHTML` ([utils.js:196](src/js/utils.js#L196)). The sheet is trusted, but a stray `<` or `"` breaks markup, and a compromised sheet becomes stored XSS on every page. `seller-dashboard.js` already has a proper `escapeHtml`; move it to `utils.js` and use it.
 
-### 🟡 F-13 Catalog reshuffles on every interaction
+### 🟡 F-13 Catalog reshuffles on every interaction — ✅ fixed 2026-11-17 (shuffled once after load; default sort keeps that order; a reload reshuffles)
 With default sort, `sortProducts` runs Fisher-Yates ([catalog.js:217](src/js/catalog.js#L217)) on every filter change and every debounced search keystroke, so the grid order jumps. Shuffle once after load and keep that order.
 
 ### 🟡 F-14 Page inconsistencies

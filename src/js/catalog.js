@@ -54,6 +54,9 @@ async function loadProducts() {
   try {
     // F-15: shared cached list (same download main.js uses for the nav)
     allProducts = [...await fetchActiveProducts()];
+    // F-13: random showcase order, decided ONCE per page load. The default
+    // sort keeps this order, so filtering/searching doesn't reshuffle the grid.
+    shuffleInPlace(allProducts);
 
     // Build dynamic UI elements from the data
     buildCategoryTiles();
@@ -210,13 +213,18 @@ function sortProducts(products, sortKey) {
       products.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
       break;
     default:
-      // Fisher-Yates shuffle — random product showcase on every visit
-      for (let i = products.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [products[i], products[j]] = [products[j], products[i]];
-      }
+      // Keep the load-time shuffled order (F-13)
       break;
   }
+}
+
+function shuffleInPlace(list) {
+  // Fisher-Yates
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
 }
 
 // ═══════════════════════════════════════════════════════════════
