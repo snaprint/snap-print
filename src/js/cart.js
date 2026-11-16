@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
    SNAP PRINT — Cart
    Renders cart items, quantity controls, summary, checkout link.
-   Fetches live bulk pricing from the products sheet on load.
+   Refreshes every line from the products sheet on load (F-8).
    ═══════════════════════════════════════════════════════════════ */
 
 import {
@@ -15,51 +15,64 @@ import {
   showToast,
   fetchActiveProducts,
   getItemMaxQuantity,
+  cartFieldsFromProduct,
+  unavailableLabel,
 } from './utils.js';
 import { parseBulkPricing, getBulkPrice, getPurchasability } from '../../shared/products.js';
 import { escapeHtml } from './helpers.js';
 
-// Live product data (fetched from Google Sheets) keyed by product ID
-let liveProductMap = {};
+// F-8: cart lines that can't be bought right now, id → reason
+// ('inactive' when the product is gone from the sheet). Filled by the refresh.
+let unavailableItems = {};
 
 /**
- * Fetches the latest product data from Sheets and updates
- * the cart's stored bulk_pricing strings to stay in sync.
+ * F-8: brings every cart line up to date with the products sheet (name,
+ * price, compare price, image, material, bulk tiers, quantity cap) and flags
+ * lines that can no longer be bought. Lines are kept (not silently removed)
+ * so the buyer sees what happened; checkout is blocked until they're removed.
  */
-async function refreshBulkPricingFromSheet() {
+async function refreshCartFromSheet() {
+  let products;
   try {
-    const products = await fetchActiveProducts();
-    liveProductMap = {};
-    products.forEach(p => { if (p.id) liveProductMap[p.id] = p; });
-
-    // Sync bulk_pricing strings in the stored cart
-    const cart = getCart();
-    let changed = false;
-    cart.forEach(item => {
-      const live = liveProductMap[item.id];
-      if (live) {
-        const newBulk = live.bulk_pricing || '';
-        if (item.bulk_pricing !== newBulk) {
-          item.bulk_pricing = newBulk;
-          changed = true;
-        }
-        // F-6: the per-product cap (stock-limited) comes from the shared rule.
-        const { maxQuantity } = getPurchasability(live);
-        if (maxQuantity >= 1 && item.max_quantity !== maxQuantity) {
-          item.max_quantity = maxQuantity;
-          changed = true;
-        }
-        if (maxQuantity >= 1 && item.quantity > maxQuantity) {
-          showToast(`Only ${maxQuantity} of ${item.name} can be ordered. Your cart was updated.`, 'info', 6000);
-          item.quantity = maxQuantity;
-          changed = true;
-        }
-      }
-    });
-    if (changed) setCart(cart);
+    products = await fetchActiveProducts();
   } catch (err) {
-    console.warn('[Cart] Could not refresh bulk pricing from sheet:', err);
+    console.warn('[Cart] Could not refresh the cart from the sheet:', err);
+    return; // keep showing stored data; the server re-checks everything at payment
   }
+  const live = new Map(products.map(p => [p.id, p]));
+  const cart = getCart();
+  const notes = [];
+  let changed = false;
+  let pricesChanged = false;
+  unavailableItems = {};
+
+  for (const item of cart) {
+    const product = live.get(item.id);
+    if (!product) { unavailableItems[item.id] = 'inactive'; continue; }
+
+    const { purchasable, reason, maxQuantity } = getPurchasability(product);
+    const fresh = cartFieldsFromProduct(product);
+    if (!purchasable) {
+      unavailableItems[item.id] = reason;
+      delete fresh.max_quantity; // 0 for unbuyable products; keep the old cap
+    }
+    for (const [key, value] of Object.entries(fresh)) {
+      if (item[key] !== value) {
+        if (key === 'price' || key === 'bulk_pricing') pricesChanged = true;
+        item[key] = value;
+        changed = true;
+      }
+    }
+    if (purchasable && item.quantity > maxQuantity) {
+      notes.push(`Only ${maxQuantity} of ${item.name} can be ordered. Your cart was updated.`);
+      item.quantity = maxQuantity;
+      changed = true;
+    }
+  }
+
+  if (changed) setCart(cart);
+  if (pricesChanged) notes.push('Some prices changed since you added these items. Your cart shows the current prices.');
+  notes.forEach(n => showToast(n, 'info', 7000));
 }
 
 function renderCart() {
@@ -98,9 +111,10 @@ function renderCart() {
     const lineTotal = effectivePrice * item.quantity;
     const id = escapeHtml(item.id);
     const name = escapeHtml(item.name);
+    const unavailableReason = unavailableItems[item.id];
 
     return `
-    <div class="cart-item animate-fade-in" data-id="${id}">
+    <div class="cart-item animate-fade-in${unavailableReason ? ' cart-item--unavailable' : ''}" data-id="${id}">
       <div class="cart-item__image">
         <img src="${escapeHtml(item.image)}" alt="${name}" loading="lazy"
           onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 80 80%22%3E%3Crect fill=%22%23f3f4f6%22 width=%2280%22 height=%2280%22/%3E%3C/svg%3E'" />
@@ -113,6 +127,10 @@ function renderCart() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
             Bulk Discount
           </span>
+        ` : ''}
+        ${unavailableReason ? `
+          <span class="badge badge-out-of-stock" style="align-self:flex-start;">${escapeHtml(unavailableLabel(unavailableReason))}</span>
+          <span style="font-size:var(--text-xs);color:var(--text-sale);">Please remove this item to continue.</span>
         ` : ''}
       </div>
       <div class="qty-selector">
@@ -137,6 +155,7 @@ function renderCart() {
   // Summary sidebar
   const subtotal = getCartSubtotal();
   const count = getCartCount();
+  const blocked = cart.some(item => unavailableItems[item.id]);
 
   summaryContainer.innerHTML = `
     <div class="summary-card">
@@ -153,10 +172,14 @@ function renderCart() {
         <span class="summary-card__label">Subtotal</span>
         <span class="summary-card__value price">${formatCurrency(subtotal)}</span>
       </div>
+      ${blocked ? `
+        <button class="btn btn-primary btn-lg" style="width: 100%; margin-top: var(--space-5);" disabled>Proceed to Checkout</button>
+        <p id="cart-blocked-note" style="margin-top:var(--space-2);font-size:var(--text-sm);color:var(--text-sale);">Some items are no longer available. Remove them to continue.</p>
+      ` : `
       <a href="/checkout.html" class="btn btn-primary btn-lg" style="width: 100%; margin-top: var(--space-5);">
         Proceed to Checkout
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-      </a>
+      </a>`}
       <a href="/" class="btn btn-ghost" style="width: 100%; margin-top: var(--space-2);">Continue Shopping</a>
     </div>
   `;
@@ -211,9 +234,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // 1. Render immediately from localStorage (instant, no network)
   renderCart();
 
-  // 2. Refresh bulk pricing from Sheets in the background,
-  //    then silently re-render if prices changed
-  refreshBulkPricingFromSheet().then(() => {
-    renderCart();
-  });
+  // 2. Refresh every line from the sheet in the background (F-8), then re-render
+  refreshCartFromSheet().then(renderCart);
 });

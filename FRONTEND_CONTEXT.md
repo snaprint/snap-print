@@ -127,7 +127,7 @@ Loads active products → builds category tiles (first product image per categor
 `?id=` → shared product cache → redirects engineering items to the quote page. Gallery with thumbs, prev/next, fullscreen lightbox (keyboard nav), Web Share / clipboard. Quantity selector updates the price and highlights the active bulk-pricing tier. Add to Cart / Buy It Now (adds and goes to checkout). Static FAQ, related products (same category, up to 4), Instagram embeds from `instagram_url`.
 
 ### Cart (`cart.js`)
-Renders instantly from localStorage, then refreshes **only `bulk_pricing`** from the sheet and re-renders. ± and remove controls. Shipping shows "Calculated at checkout".
+Renders instantly from localStorage, then refreshes every line from the sheet (F-8), flags unbuyable lines and blocks checkout until they are removed. ± (capped, F-6) and remove controls. Shipping shows "Calculated at checkout".
 
 ### Checkout (`checkout.js`)
 1. Empty cart → redirect to cart. Render order summary.
@@ -205,7 +205,8 @@ For a product with a blank `stock` cell and `made_to_order != yes`:
 The engineering check is also case-sensitive on the product page ([product-detail.js:31](src/js/product-detail.js#L31)).
 **Fix:** one shared `isPurchasable(product)` in `utils.js` matching the server rules.
 
-### 🟠 F-8 Cart shows stale prices and dead products
+### 🟠 F-8 Cart shows stale prices and dead products — ✅ fixed 2026-11-17
+**Fixed:** on load the cart refreshes every line from the shared product cache (`cartFieldsFromProduct`: name, price, compare price, image, material, bulk tiers, cap) and toasts when prices changed. Lines that are inactive / sold out / unpriced stay visible with a badge ("No longer available", "Sold Out", "Currently unavailable") and "Please remove this item"; "Proceed to Checkout" is disabled until they're removed. If the sheet can't be loaded, the stored cart is shown unchanged (the server still re-checks at payment).
 Cart items store `price`, `name` and `image` at add-time. Only `bulk_pricing` is refreshed ([cart.js](src/js/cart.js)), so price changes in the sheet aren't reflected and deactivated products stay in the cart until `create-order` rejects them.
 **Fix:** during the refresh, also update `price`/`actual_price`/`name`/`image`, and flag or remove items missing from the active list.
 
