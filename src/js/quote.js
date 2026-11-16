@@ -5,13 +5,16 @@
 
 import { isValidEmail, isValidPhone, showToast, CONFIG, showPageLoader, hidePageLoader } from './utils.js';
 import { apiFetch, readApiError } from './helpers.js';
+import { mountTurnstile, SECURITY_CHECK_MESSAGE } from './turnstile.js';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB, same as /api/quote (B-8)
 const ALLOWED_EXTENSIONS = ['.stl', '.step', '.stp'];
 
 let selectedFile = null;
+let securityCheck = null; // F-20 Turnstile controller
 
 function init() {
+  securityCheck = mountTurnstile(document.getElementById('quote-turnstile'), 'quote');
   initFileUpload();
   initFormSubmission();
 }
@@ -159,6 +162,13 @@ function initFormSubmission() {
       return;
     }
 
+    // F-20: when the widget is on, a token is required
+    if (securityCheck.enabled && !securityCheck.getToken()) {
+      showToast(SECURITY_CHECK_MESSAGE, 'error', 6000);
+      document.getElementById('quote-turnstile')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
     // Submit
     const submitBtn = document.getElementById('quote-submit');
     const submitText = document.getElementById('quote-submit-text');
@@ -175,6 +185,7 @@ function initFormSubmission() {
       formData.append('name', name.value.trim());
       formData.append('email', email.value.trim());
       formData.append('phone', phone.value.trim());
+      if (securityCheck.enabled) formData.append('turnstileToken', securityCheck.getToken());
 
       // F-2 / MESSAGES #6: success is shown only for a 2xx answer. On any
       // error (400/403/502/503, network) the form keeps everything the user
@@ -199,6 +210,7 @@ function initFormSubmission() {
       console.error('Quote submission error:', err);
       showToast(err.message || 'Failed to submit quote request. Please try again or email us directly.', 'error', 8000);
     } finally {
+      securityCheck.reset(); // tokens are single-use (B-6)
       hidePageLoader();
       submitBtn.disabled = false;
       submitText.textContent = 'Submit Quote Request';

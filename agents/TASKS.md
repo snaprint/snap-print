@@ -89,7 +89,7 @@ Skipped this session: F-1 (needs B-14, still `planned`), F-3 second half (needs 
 | 11 | F-16 | Remove dead / duplicated code | — | on preview |
 | 11 | F-17 | Move raw images out of `public/` | — | on preview (excluded from dist; move = MESSAGES #13) |
 | 11 | F-19 | Repo hygiene (`.gitignore`, `.env.example`) | — | on preview |
-| 12 | F-20 | Turnstile widget on quote + cancel forms (only when `VITE_TURNSTILE_SITE_KEY` is set) | B-6, O-5 | todo |
+| 12 | F-20 | Turnstile widget on quote + cancel forms (only when `VITE_TURNSTILE_SITE_KEY` is set) | B-6, O-5 | on preview (hidden until O-5 site key) |
 | — | F-21 | Local builds ignored `.env` (Vite `envDir`); found 2026-11-17 | — | on preview |
 | — | F-3b | Remove the client order write | B-16 | blocked (B-16) |
 | — | F-1 | Track order + account statuses via `/api/track-order`; remove `VITE_ORDER_TRACKING_CSV_URL` | B-14 | blocked (B-14 planned) |

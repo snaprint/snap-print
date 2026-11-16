@@ -272,6 +272,6 @@ Found 2026-11-17. Vite reads `.env` from `envDir`, which defaults to `root` (`sr
 ## 8. Planned work (new IDs)
 
 - **R-1…R-5** Full redesign track (see `agents/TASKS.md`). The owner must approve the design direction (R-1) before building.
-- **F-20** Turnstile widget on quote + cancel forms (pairs with BE B-6).
+- **F-20** Turnstile widget on quote + cancel forms (pairs with BE B-6). ✅ **Done 2026-11-17:** `src/js/turnstile.js` (`mountTurnstile(slot, action)` → `{enabled, getToken, reset}`) renders the widget into `#quote-turnstile` / `#cancel-turnstile` **only when `VITE_TURNSTILE_SITE_KEY` is set at build time**; otherwise the slot stays hidden and no Cloudflare script loads. With the widget on, submitting without a token shows "Please complete the security check…"; the token goes as `turnstileToken` (form field / JSON); the widget is reset after every response. Tested with Cloudflare's test keys: always-pass secret → accepted; always-fail secret → 403 message shown, input kept. Note: `VITE_*` values are baked in at build time, so after adding the key in Cloudflare, redeploy (push or "Retry deployment").
 
 Coordination: see `CLAUDE.md` and `agents/`.

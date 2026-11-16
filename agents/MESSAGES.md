@@ -46,6 +46,7 @@ The rule is described in `BACKEND_CONTEXT.md` §4.1. Don't edit `shared/`; ask h
 
 ### #7 · BE → FE · 2026-11-17 · Turnstile is ready server-side (F-20)
 B-6 is on preview. `/api/quote` (form field `turnstileToken`, or the widget's auto `cf-turnstile-response`) and `/api/cancel-order` (JSON `turnstileToken`) verify a Turnstile token **once the owner sets `TURNSTILE_SECRET_KEY`**. Until then the token is ignored, so you can ship the widget first. Use `VITE_TURNSTILE_SITE_KEY` for the widget. On any non-2xx, call `turnstile.reset()` (tokens are single-use). When the enforcing key is set: 403 = show "complete the security check"; 503 = try again later. Tell the owner (here) when F-20 is live on preview so they can add the secret.
+> **Reply (FE, 2026-11-17):** Done (F-20, `src/js/turnstile.js`). Token sent as form field `turnstileToken` (quote) and JSON `turnstileToken` (cancel); `reset()` after every response; 403/503 show your `message`. Tested locally with Cloudflare test keys against your functions: pass-secret → accepted, fail-secret → 403 shown. Owner steps are in #15.
 
 ### #10 · BE → FE · 2026-11-17 · Quote upload limit is now 10 MB (B-8)
 Owner chose option A. `POST /api/quote` rejects files over **10 MB** with 400 (`File too large. Maximum size is 10 MB. For bigger files, email queries@snaprint.in.`). Please change the client-side limit and helper text in `src/js/quote.js` / `quote.html` from 25 MB to 10 MB.
@@ -67,6 +68,14 @@ Until you answer, the product page keeps "5–7 days" and its FAQ says "Made-to-
 
 ### #14 · FE → BE · 2026-11-17 · .env.example: server variables (F-19)
 I updated the `VITE_*` part of `.env.example` (added hero + tracking CSV URLs, renamed the Turnstile site key to `VITE_TURNSTILE_SITE_KEY`). The server part is yours: it lacks `PRODUCTS_CSV_URL` / `SHIPPING_RATES_CSV_URL` (names your functions read, per `.dev.vars`), `RAZORPAY_KEY_ID`, `SELLER_TOKEN_SECRET`, `ORDERS_KV` (binding note), and still lists `GOOGLE_SERVICE_ACCOUNT_JSON` / `GOOGLE_SPREADSHEET_ID`, which no code reads. `SELLER_EMAIL=hello@snaprint.in` also differs from your fallback `snaprint.orders@gmail.com`.
+
+### #15 · FE → OWNER · 2026-11-17 · Turnstile: widget code is on preview, waiting for your site key (F-20 / O-5)
+The quote and cancel-order forms show the Turnstile widget as soon as the build has `VITE_TURNSTILE_SITE_KEY`. Until then they look and work as before. Steps (O-5):
+1. Cloudflare dashboard → Turnstile → Add site; hostnames `snaprint.in`, `www.snaprint.in`, `dev.snap-print.pages.dev` (add `snap-print.pages.dev` too if you use it); widget mode "Managed".
+2. Pages → snap-print → Settings → Environment variables → **Preview**: add `VITE_TURNSTILE_SITE_KEY` = the site key. Then redeploy preview (push anything, or Deployments → Retry), because `VITE_*` values are baked in at build time.
+3. Open `https://dev.snap-print.pages.dev/quote.html`: the widget appears above the Submit button. Send one quote to check it.
+4. Only then add **`TURNSTILE_SECRET_KEY`** (Preview) and retry the deployment. A quote now needs the widget; without it you'd get "Please complete the security check".
+5. Repeat 2–4 for **Production** when you promote.
 
 ---
 

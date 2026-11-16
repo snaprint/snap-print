@@ -4,6 +4,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 import { apiFetch, readApiError } from './helpers.js';
+import { mountTurnstile, SECURITY_CHECK_MESSAGE } from './turnstile.js';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
@@ -31,6 +32,7 @@ const screenshotRemove = document.getElementById('screenshot-remove');
 
 let selectedFile = null;
 let fileBase64 = null;
+let securityCheck = null; // F-20 Turnstile controller
 
 // ═══════════════════════════════════════════════════════════════
 // Screenshot Drag & Drop + File Selection
@@ -206,6 +208,12 @@ async function handleSubmit(e) {
     return;
   }
 
+  // F-20: when the widget is on, a token is required
+  if (securityCheck.enabled && !securityCheck.getToken()) {
+    showToast(SECURITY_CHECK_MESSAGE, true);
+    return;
+  }
+
   setLoading(true);
 
   try {
@@ -221,6 +229,7 @@ async function handleSubmit(e) {
         contentType: selectedFile.type,
       },
     };
+    if (securityCheck.enabled) payload.turnstileToken = securityCheck.getToken();
 
     const response = await apiFetch('/api/cancel-order', {
       method: 'POST',
@@ -247,6 +256,7 @@ async function handleSubmit(e) {
     console.error('Cancel order error:', err);
     showToast(err.message || 'Something went wrong. Please try again.', true);
   } finally {
+    securityCheck.reset(); // tokens are single-use (B-6)
     setLoading(false);
   }
 }
@@ -275,6 +285,7 @@ function showToast(message, isError = false) {
 // ═══════════════════════════════════════════════════════════════
 
 function init() {
+  securityCheck = mountTurnstile(document.getElementById('cancel-turnstile'), 'cancel');
   initFileUpload();
   initFieldListeners();
   if (form) form.addEventListener('submit', handleSubmit);

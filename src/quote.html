@@ -93,6 +93,9 @@
               <span class="form-error">Enter a valid phone number</span>
             </div>
 
+            <!-- F-20: Cloudflare Turnstile (shown only when VITE_TURNSTILE_SITE_KEY is set) -->
+            <div class="form-group turnstile-slot" id="quote-turnstile" hidden></div>
+
             <button type="submit" class="btn btn-primary btn-lg btn-full" id="quote-submit">
               <span id="quote-submit-text">Submit Quote Request</span>
             </button>
