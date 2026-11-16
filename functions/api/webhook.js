@@ -398,15 +398,15 @@ async function sendConfirmationEmails(env, data) {
 
   const methodLower = (data.shippingMethod || '').toLowerCase();
   const shippingLabel = methodLower === 'air'
-    ? 'Air Shipping (3–5 business days)'
+    ? 'Air Shipping (3–5 business days incl. production)'
     : methodLower === 'surface'
-      ? 'Surface Shipping (5–10 business days)'
+      ? 'Surface Shipping (6–9 business days incl. production)'
       : `${data.shippingMethod} Shipping`;
 
   const deliveryEstimate = methodLower === 'air'
-    ? '3–5 business days'
+    ? '3–5 business days (including 1–2 days of production)'
     : methodLower === 'surface'
-      ? '5–10 business days'
+      ? '6–9 business days (including 1–2 days of production)'
       : 'We will notify you';
 
   // ── BUYER EMAIL ──

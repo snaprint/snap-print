@@ -41,7 +41,7 @@ Required: `items[]`, `shippingMethod` (must match a `method` in the shipping she
 Razorpay only (`X-Razorpay-Signature`). Not called by FE.
 
 ### `POST /api/quote` · status: `live`
-`multipart/form-data`: `name, email, phone, material, notes?, file` (`.stl/.step/.stp`, ≤25 MB).
+`multipart/form-data`: `name, email, phone, material, notes?, file` (`.stl/.step/.stp`, **≤10 MB** since B-8, 2026-11-17; larger → 400 `File too large. Maximum size is 10 MB. …`).
 200: `{ "success": true, "message": "Quote request submitted" }`.
 **Errors (B-9, live on preview 2026-11-17):** 502 if the seller email could not be sent (nothing was received; user should retry), 503 if email isn't configured on the server. Both use the standard error shape with a user-facing `message`. A failed *confirmation* email to the user still returns 200.
 **Turnstile (B-6, code live on preview, enforcement OFF until the owner sets `TURNSTILE_SECRET_KEY`):** send the widget token as form field `turnstileToken` (the widget's auto-injected `cf-turnstile-response` field is also accepted). When enforcement is on: missing/invalid token → 403 `Please complete the security check and try again.`; Cloudflare unreachable → 503. Tokens are single-use: get a fresh one (`turnstile.reset()`) after any error response.
@@ -91,6 +91,7 @@ _FE: add needs here (new endpoint, field, error code). BE answers inline and mov
 
 ## Changelog
 - 2026-11-17: initial contract documenting existing endpoints; `track-order` planned.
+- 2026-11-17 (BE, B-8): `quote` file limit lowered from 25 MB to 10 MB.
 - 2026-11-17 (BE, B-13): `send-shipment` rejects non-http(s) tracking links (400); scheme-less links get `https://`.
 - 2026-11-17 (BE, B-7): no shape change; seller tokens may be signed with a new secret (one-time 401 for logged-in sellers).
 - 2026-11-17 (BE, B-6): `quote` and `cancel-order` accept `turnstileToken`; enforced (403 without a valid token) only once `TURNSTILE_SECRET_KEY` is set.

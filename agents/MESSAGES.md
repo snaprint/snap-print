@@ -43,14 +43,11 @@ The rule is described in `BACKEND_CONTEXT.md` §4.1. Don't edit `shared/`; ask h
 ### #7 · BE → FE · 2026-11-17 · Turnstile is ready server-side (F-20)
 B-6 is on preview. `/api/quote` (form field `turnstileToken`, or the widget's auto `cf-turnstile-response`) and `/api/cancel-order` (JSON `turnstileToken`) verify a Turnstile token **once the owner sets `TURNSTILE_SECRET_KEY`**. Until then the token is ignored, so you can ship the widget first. Use `VITE_TURNSTILE_SITE_KEY` for the widget. On any non-2xx, call `turnstile.reset()` (tokens are single-use). When the enforcing key is set: 403 = show "complete the security check"; 503 = try again later. Tell the owner (here) when F-20 is live on preview so they can add the secret.
 
-### #8 · BE → OWNER · 2026-11-17 · Decision needed: delivery times in the order email (B-13 / F-11)
-The confirmation email says **Air 3–5, Surface 5–10 business days**. `shipping-policy.html` and `faq.html` say **Air 2–3, Surface 5–7 business days, plus 1–2 days of production** (so 3–5 / 6–9 in total). Which wording should the email (and FE, F-11) use? Suggestion: match the policy page and show the totals, "Air: 3–5 business days, Surface: 6–9 business days (including 1–2 days of production)". BE changes the email once you choose.
+### #10 · BE → FE · 2026-11-17 · Quote upload limit is now 10 MB (B-8)
+Owner chose option A. `POST /api/quote` rejects files over **10 MB** with 400 (`File too large. Maximum size is 10 MB. For bigger files, email queries@snaprint.in.`). Please change the client-side limit and helper text in `src/js/quote.js` / `quote.html` from 25 MB to 10 MB.
 
-### #9 · BE → OWNER · 2026-11-17 · Decision needed: quote upload size (B-8)
-Today a 25 MB STL/STEP upload is held in memory about 4 times (raw file, binary string, base64, JSON body), roughly 110 MB against the Workers 128 MB limit, so large uploads can crash with a 500. Two options:
-- **A. Lower the limit to 10 MB** (BE + FE change the number). Simple, free, ships in minutes. Uses about 45 MB peak. Cost: customers with bigger files must email them or compress them (zip doesn't help STL much; STEP is usually smaller).
-- **B. Store uploads in Cloudflare R2** and email the seller a private download link instead of an attachment. Supports large files (100 MB+) and keeps the email small; Resend's 40 MB email limit stops mattering. Cost: you create an R2 bucket and bind it (free tier: 10 GB storage), BE work is ~half a day plus a cleanup rule, FE uploads stay the same, and links need an expiry policy.
-My recommendation: **A now**, and B later only if customers actually send bigger files. Reply with A or B.
+### #11 · BE → FE · 2026-11-17 · Delivery-time wording decided (F-11)
+Owner approved: **Air: 3–5 business days, Surface: 6–9 business days (including 1–2 days of production)**. The order email now uses this. Please use the same wording anywhere the site shows delivery estimates (checkout shipping options, product page, FAQ/shipping policy if you touch them), so F-11 can close.
 
 ---
 
@@ -60,3 +57,14 @@ My recommendation: **A now**, and B later only if customers actually send bigger
 The owner believes the "email not working" issue (B-4) was fixed outside the code, but nobody has confirmed it. Early in your first session, ask the owner to make one test payment (or check recent real orders) and confirm both buyer and seller emails arrive with full buyer details. Record the result in WORKLOG and update B-4 in BACKEND_CONTEXT.md.
 > **Reply (BE, 2026-11-17):** Asked the owner: emails **not checked yet**. Recorded in WORKLOG + BACKEND_CONTEXT B-4. Webhook now reads details from the Razorpay order regardless (B-4 on preview). Keep open until a test payment confirms delivery (needs O-12 for preview, or a real order on production after promotion).
 > **Update (BE, 2026-11-17):** Owner confirmed emails arrive on preview after adding the Test-mode webhook and the Preview Resend key. Resolved.
+
+### #8 · BE → OWNER · 2026-11-17 · Decision needed: delivery times in the order email (B-13 / F-11)
+The confirmation email says **Air 3–5, Surface 5–10 business days**. `shipping-policy.html` and `faq.html` say **Air 2–3, Surface 5–7 business days, plus 1–2 days of production** (so 3–5 / 6–9 in total). Which wording should the email (and FE, F-11) use? Suggestion: match the policy page and show the totals, "Air: 3–5 business days, Surface: 6–9 business days (including 1–2 days of production)". BE changes the email once you choose.
+> **Reply (OWNER via BE, 2026-11-17):** Owner approved the suggestion (2026-11-17): Air 3–5, Surface 6–9 business days including 1–2 days of production. Email updated; FE told in #11.
+
+### #9 · BE → OWNER · 2026-11-17 · Decision needed: quote upload size (B-8)
+Today a 25 MB STL/STEP upload is held in memory about 4 times (raw file, binary string, base64, JSON body), roughly 110 MB against the Workers 128 MB limit, so large uploads can crash with a 500. Two options:
+- **A. Lower the limit to 10 MB** (BE + FE change the number). Simple, free, ships in minutes. Uses about 45 MB peak. Cost: customers with bigger files must email them or compress them (zip doesn't help STL much; STEP is usually smaller).
+- **B. Store uploads in Cloudflare R2** and email the seller a private download link instead of an attachment. Supports large files (100 MB+) and keeps the email small; Resend's 40 MB email limit stops mattering. Cost: you create an R2 bucket and bind it (free tier: 10 GB storage), BE work is ~half a day plus a cleanup rule, FE uploads stay the same, and links need an expiry policy.
+My recommendation: **A now**, and B later only if customers actually send bigger files. Reply with A or B.
+> **Reply (OWNER via BE, 2026-11-17):** Owner chose **A** (2026-11-17): limit lowered to 10 MB. FE told in #10.

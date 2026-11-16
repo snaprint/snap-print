@@ -101,7 +101,7 @@ The server total is authoritative — the client never sends prices.
 8. Header comment says "Logs order to Google Sheets" — **not implemented** (no Sheets code exists).
 
 ### 3.4 `POST /api/quote` (multipart/form-data)
-Fields `name, email, phone, material, notes, file`. File must be `.stl/.step/.stp`, ≤ 25 MB. Converts file to base64 (chunked) and emails it to `SELLER_EMAIL` (fallback `snaprint.orders@gmail.com`) as an attachment, then sends a confirmation to the submitter. If `RESEND_API_KEY` is missing → 503. If the **seller** email fails → 502 and no buyer confirmation is sent; if only the buyer confirmation fails → still 200 (the seller has it) (B-9).
+Fields `name, email, phone, material, notes, file`. File must be `.stl/.step/.stp`, ≤ **10 MB** (B-8). Converts file to base64 (chunked) and emails it to `SELLER_EMAIL` (fallback `snaprint.orders@gmail.com`) as an attachment, then sends a confirmation to the submitter. If `RESEND_API_KEY` is missing → 503. If the **seller** email fails → 502 and no buyer confirmation is sent; if only the buyer confirmation fails → still 200 (the seller has it) (B-9).
 
 ### 3.5 `POST /api/cancel-order` (JSON)
 `{ orderId, name, email, phone, reason, screenshot: { data(base64), filename, contentType } }`. Screenshot required, ≤ 5 MB, png/jpeg/webp. Emails seller (with attachment, `reply_to` = buyer) and buyer (confirmation). Unauthenticated, no check that the order exists. Seller email fails → 502 (buyer not emailed); only buyer confirmation fails → 200 (B-9).
@@ -262,9 +262,9 @@ node -e "const c=require('crypto'),s=c.randomBytes(16),i=20000;console.log('pbkd
 Then `SELLER_ACCOUNTS=[{"username":"alice","passwordHash":"pbkdf2-sha256:20000:…:…"}]`. The password appears in shell history; clear it afterwards (PowerShell: `Clear-History` and delete the line from `(Get-PSReadLineOption).HistorySavePath`; bash: `history -d <n>`).
 **CPU note:** one login = one PBKDF2 run. 100,000 iterations ≈ 25 ms CPU (measured in Node); the Workers **Free** plan allows 10 ms CPU per request, so use **20,000** on Free (≈5 ms) and up to 100,000 on Paid. Not verifiable locally (wrangler doesn't enforce CPU limits): if login on preview returns a Cloudflare 1102 / "exceeded resource limits" error, lower the iterations.
 
-### 🟠 B-8 Quote upload memory pressure
+### 🟠 B-8 Quote upload memory pressure — ✅ fixed 2026-11-17 (option A: 10 MB limit, owner-approved)
 A 25 MB upload is held as `ArrayBuffer` + a binary JS string (UTF-16, about 50 MB) + a base64 string (about 33 MB) + the JSON body for Resend, which is close to the Workers 128 MB memory limit. Large uploads may crash the isolate (500).
-**Fix:** lower the limit (e.g. 10 MB), or upload to R2 and email a signed link instead of attaching.
+**Fixed:** limit lowered to 10 MB (owner chose option A; R2 upload + link remains the path if bigger files are needed). Over the limit → 400 `File too large. Maximum size is 10 MB. For bigger files, email queries@snaprint.in.`
 
 ### 🟡 B-9 Success returned when emails fail — ✅ fixed 2026-11-17
 `quote.js` and `cancel-order.js` catch email errors and still return `success: true`, so the user believes the request was received. Return 502 if the **seller** email fails. **Fixed** as described in §3.4/3.5.

@@ -14,6 +14,8 @@ import { verifyTurnstile } from '../_lib/turnstile.js';
 import { jsonError, jsonResponse } from '../_lib/http.js';
 import { sendEmailWithRetry, sleep, escapeHtml, subjectText, getSellerEmail, FROM_ORDERS, REPLY_TO_QUERIES } from '../_lib/email.js';
 
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+
 export async function onRequestPost(context) {
   const { env, request } = context;
 
@@ -42,9 +44,10 @@ export async function onRequestPost(context) {
       return jsonError('Invalid file type. Please upload STL, STEP, or STP files.', 400);
     }
 
-    // Validate file size (25MB)
-    if (file.size > 25 * 1024 * 1024) {
-      return jsonError('File too large. Maximum size is 25MB.', 400);
+    // Validate file size (B-8: 10 MB keeps peak memory well under the Workers 128 MB limit;
+    // the file is held as bytes + binary string + base64 + JSON body while emailing it)
+    if (file.size > MAX_FILE_BYTES) {
+      return jsonError('File too large. Maximum size is 10 MB. For bigger files, email queries@snaprint.in.', 400);
     }
 
     // B-6: bot check (only enforced when TURNSTILE_SECRET_KEY is set).
