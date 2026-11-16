@@ -55,3 +55,13 @@ Append-only. Newest entry at the **bottom**. Never edit or delete past entries.
 6. Seller dashboard on preview: log in with your existing credentials (still works); send a shipment email to yourself with tracking link `www.dtdc.in/track` → email link is `https://www.dtdc.in/track`; try `javascript:alert(1)` → error message shown.
 **Needs from other agent / owner:** FE: MESSAGES #3–#7 (F-6, F-7, maxlengths, 502 handling, F-20). Owner: MESSAGES #8 + #9, TASKS O-1, O-4, O-5, O-7, O-11, O-12, O-13, O-14.
 **Next:** B-8 once the owner picks A/B; delivery copy once #8 is answered; B-19 if allowed to edit package.json; then Phase 2 features (B-14, B-16, B-17).
+
+## 2026-11-17 · BACKEND (follow-up)
+**Tasks:** O-1, O-12 done; B-4 email delivery verified on preview.
+**Changed:** docs only. Owner added Razorpay Test-mode webhook → `dev.snap-print.pages.dev/api/webhook` and updated the Preview Resend key; test-order emails now arrive. Corrected BACKEND_CONTEXT: the **Live** webhook is `https://snap-print.pages.dev/api/webhook` (enabled), not snaprint.in. Two empty commits were pushed to trigger preview rebuilds after env var changes.
+**Contract changes:** none
+**Pushed to dev:** yes
+**How to verify on preview:** place a test order on preview → buyer + seller emails arrive.
+**Needs from other agent / owner:** unchanged (MESSAGES #8, #9; O-4, O-5, O-7, O-11, O-14).
+**Next:** unchanged.
+

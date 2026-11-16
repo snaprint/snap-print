@@ -145,7 +145,9 @@ Hero images (column B = image URL), Order tracking (`order_id, customer_name, cu
 
 ### Razorpay
 - Order created server-side; payment completed in Razorpay Checkout on the client; client handler does **not** verify `razorpay_signature` — confirmation relies solely on the webhook.
-- Webhook URL: `https://snaprint.in/api/webhook`, event `payment.captured`. Live mode and test mode have **separate** webhook configs and secrets.
+- Webhooks (checked 2026-11-17), event `payment.captured`; Live and Test mode have **separate** webhook lists and secrets:
+  - **Live:** `https://snap-print.pages.dev/api/webhook` (production deployment; same code/env as snaprint.in), enabled.
+  - **Test:** `https://dev.snap-print.pages.dev/api/webhook` (preview), enabled. An old Test-mode `https://snaprint.in/api/webhook` is disabled (since 29 Aug 2026).
 
 ### Resend
 Free tier: 2 req/s, 3,000 emails/month. Every function spaces calls 500 ms apart and retries only on 429 (honours `retry-after`, else 500 ms × 2^n). Non-429 errors throw immediately. Sender domain `snaprint.in` must be verified in Resend.
@@ -220,7 +222,7 @@ Severity: 🔴 high · 🟠 medium · 🟡 low. Each has a concrete location and
 **Fixed:** compact `id:qty:unitPrice` chunks (no JSON, never cut mid-item), summary shortened at item boundaries, buyer fields length-checked. The webhook decodes the chunks and looks up product names in the Products CSV (falls back to the id if the sheet is unreachable); the unit price in the notes is what was charged, so emails show the charged price even if the sheet changes.
 
 ### 🔴 B-4 Order emails depend on `payment.notes` being populated — ✅ code fixed (2026-11-17), delivery still unverified
-> **Owner check (O-1):** as of 2026-11-17 the owner had **not yet checked** whether buyer + seller emails arrive. Verify with one test payment on preview.
+> **Owner check (O-1): ✅ verified on preview 2026-11-17** — after adding the Test-mode webhook (O-12) and updating the Preview Resend key, order emails arrive.
 
 Was: the webhook read every buyer field from `payment.entity.notes`, but the notes are set on the **order** and the client opens Checkout with `notes: {}` ([checkout.js:738](src/js/checkout.js#L738)), so buyer email/details could be blank.
 **Now:** the webhook fetches the order (`GET /v1/orders/{order_id}`) and uses its notes; `payment.notes` is a key-by-key fallback, and `payment.email` / `payment.contact` are the last fallback for buyer email/phone. Needs `RAZORPAY_KEY_ID` + `RAZORPAY_KEY_SECRET` in the same environment as the webhook (already required by create-order). Logs `buyer details incomplete` if name/email are still missing.

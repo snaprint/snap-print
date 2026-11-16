@@ -10,12 +10,12 @@ Update the row when status changes. New tasks: add a row with the next free ID i
 
 | ID | Action | Needed by | Status |
 |---|---|---|---|
-| O-1 | Confirm order emails work: one test payment, check buyer + seller inbox | B-4 | todo |
+| O-1 | Confirm order emails work: one test payment, check buyer + seller inbox | B-4 | done (preview, 2026-11-17) |
 | O-2 | Confirm Cloudflare Pages builds `dev` and note the preview URL here (expected `https://dev.snap-print.pages.dev`) | everything | todo |
 | O-3 | Check Preview env vars in Cloudflare (CSV URLs, Razorpay **test** keys, Resend, `RAZORPAY_WEBHOOK_SECRET`, `SELLER_ACCOUNTS`, Firebase `VITE_*`) | testing on preview | todo |
 | O-4 | Bind a KV namespace as `ORDERS_KV` (Production + Preview) | B-5 | todo |
 | O-5 | Create Cloudflare Turnstile site (hostnames `snaprint.in`, `www.snaprint.in`, `dev.snap-print.pages.dev`). Add `VITE_TURNSTILE_SITE_KEY` now; add `TURNSTILE_SECRET_KEY` **only after F-20 (widget) is live** in that environment, or the quote/cancel forms will return 403 | B-6 / F-20 | todo |
-| O-12 | Razorpay **Test mode** → Webhooks: add `https://dev.snap-print.pages.dev/api/webhook`, event `payment.captured`, secret = Preview `RAZORPAY_WEBHOOK_SECRET`; so test payments on preview send emails | verifying B-3/B-4/B-5 | todo |
+| O-12 | Razorpay **Test mode** → Webhooks: add `https://dev.snap-print.pages.dev/api/webhook`, event `payment.captured`, secret = Preview `RAZORPAY_WEBHOOK_SECRET`; so test payments on preview send emails | verifying B-3/B-4/B-5 | done |
 | O-13 | Decide delivery-time wording (MESSAGES #8) and quote upload option A/B (MESSAGES #9) | B-13, B-8 | todo |
 | O-14 | Allow BE to edit `package.json` to fix `npm run dev:full` (B-19), or fix it yourself (add `--compatibility-date 2026-08-01`) | B-19 | todo |
 | O-11 | Add a WAF rate-limiting rule for `POST /api/quote`, `/api/cancel-order`, `/api/seller-login` (exact settings in `BACKEND_CONTEXT.md` → B-6) | B-6 / B-7 | todo |
@@ -34,7 +34,7 @@ No new features this phase: B-14, B-16, B-17, B-18 wait. A shared module is crea
 
 | # | ID | Task | Depends on | Status |
 |---|---|---|---|---|
-| 1 | B-4 | Verify order emails (O-1); webhook reads buyer/items from the Razorpay **order**, payment notes as fallback | O-1 (verification only) | on preview (email delivery not yet verified, O-1) |
+| 1 | B-4 | Verify order emails (O-1); webhook reads buyer/items from the Razorpay **order**, payment notes as fallback | O-1 (verification only) | on preview (emails verified on preview) |
 | 2 | B-1 | Normalise shipping method once, use everywhere | — | on preview |
 | 3 | B-2 | Reject non-integer / <1 / >100 quantities (400); merge duplicate ids before stock check; contract + FE message (F-6) | — | on preview |
 | 4 | B-3 | Every Razorpay notes value ≤256 chars; never truncate JSON | — | on preview |
