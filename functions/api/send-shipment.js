@@ -7,88 +7,11 @@
    /api/seller-login. Sends a branded "order shipped" notification
    email to the buyer via Resend.
    
-   Env vars: RESEND_API_KEY, SELLER_ACCOUNTS, RAZORPAY_WEBHOOK_SECRET
+   Env vars: RESEND_API_KEY, SELLER_TOKEN_SECRET (optional; falls back to
+   RAZORPAY_WEBHOOK_SECRET). Token logic: functions/_lib/seller-auth.js
    ═══════════════════════════════════════════════════════════════ */
 
-// ── Session Token Verification (inlined — Pages Functions don't support cross-file imports) ──
-
-async function verifySessionToken(token, env) {
-  if (!token || typeof token !== 'string') {
-    return { valid: false, reason: 'Missing token' };
-  }
-
-  const signingSecret = env.RAZORPAY_WEBHOOK_SECRET;
-  if (!signingSecret) {
-    return { valid: false, reason: 'Server configuration error' };
-  }
-
-  const parts = token.split('.');
-  if (parts.length !== 2) {
-    return { valid: false, reason: 'Malformed token' };
-  }
-
-  const [payloadB64, providedSignature] = parts;
-
-  // Verify signature
-  const expectedSignature = await hmacSign(payloadB64, signingSecret);
-  if (!constantTimeEqual(providedSignature, expectedSignature)) {
-    return { valid: false, reason: 'Invalid signature' };
-  }
-
-  // Parse and check expiry
-  let payload;
-  try {
-    payload = JSON.parse(atob(payloadB64));
-  } catch {
-    return { valid: false, reason: 'Invalid payload' };
-  }
-
-  const now = Math.floor(Date.now() / 1000);
-  if (!payload.exp || payload.exp < now) {
-    return { valid: false, reason: 'Token expired' };
-  }
-
-  if (!payload.sub) {
-    return { valid: false, reason: 'Invalid token: missing subject' };
-  }
-
-  return { valid: true, username: payload.sub };
-}
-
-async function hmacSign(data, secret) {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-
-  const signatureBuffer = await crypto.subtle.sign(
-    'HMAC',
-    key,
-    encoder.encode(data)
-  );
-
-  return Array.from(new Uint8Array(signatureBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-function constantTimeEqual(a, b) {
-  const strA = String(a);
-  const strB = String(b);
-  const maxLen = Math.max(strA.length, strB.length);
-  if (maxLen === 0) return true;
-  let mismatch = strA.length !== strB.length ? 1 : 0;
-  for (let i = 0; i < maxLen; i++) {
-    const charA = i < strA.length ? strA.charCodeAt(i) : 0;
-    const charB = i < strB.length ? strB.charCodeAt(i) : 0;
-    mismatch |= charA ^ charB;
-  }
-  return mismatch === 0;
-}
+import { verifySessionToken } from '../_lib/seller-auth.js';
 
 export async function onRequestPost(context) {
   const { env, request } = context;

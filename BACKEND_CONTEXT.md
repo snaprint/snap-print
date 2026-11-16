@@ -100,11 +100,11 @@ Fields `name, email, phone, material, notes, file`. File must be `.stl/.step/.st
 `{ orderId, name, email, phone, reason, screenshot: { data(base64), filename, contentType } }`. Screenshot required, ≤ 5 MB, png/jpeg/webp. Emails seller (with attachment, `reply_to` = buyer) and buyer (confirmation). Unauthenticated, no check that the order exists. Seller email fails → 502 (buyer not emailed); only buyer confirmation fails → 200 (B-9). Default seller email here is `snaprint.orders@gmail.com` (differs from quote.js).
 
 ### 3.6 `POST /api/seller-login`
-`{ username, password }` checked against `SELLER_ACCOUNTS` (JSON array `[{username,password}]`, plaintext) with constant-time compare over every account. On success returns `{ success, token, username }`.
-Token format: `base64(JSON{sub, exp, iat}) + "." + hex(HMAC-SHA256(payloadB64, RAZORPAY_WEBHOOK_SECRET))`, 4-hour expiry. Stored by the client in `sessionStorage`.
+`{ username, password }` checked against `SELLER_ACCOUNTS` (JSON array; each account `{username, passwordHash}` or legacy plaintext `{username, password}`). Usernames are compared in constant time against every account, then exactly one password check runs (a dummy PBKDF2 with the same iteration count for unknown usernames). Failed attempts log only `Failed seller login attempt` (no username). On success returns `{ success, token, username }`. Logic: `functions/_lib/seller-auth.js` (B-7).
+Token format: `base64(JSON{sub, exp, iat}) + "." + hex(HMAC-SHA256(payloadB64, key))`, 4-hour expiry, where key = `SELLER_TOKEN_SECRET` if set, else `RAZORPAY_WEBHOOK_SECRET`. Stored by the client in `sessionStorage`.
 
 ### 3.7 `POST /api/send-shipment`
-`{ token, buyerName, buyerEmail, orderId?, shipmentPartner, trackingLink?, items?: [{name, quantity}] }`. Verifies token (inlined copy of `verifySessionToken`), then emails the buyer a "shipped" notice with a link to `https://snaprint.in/track-order.html` and the optional carrier link. Token travels in the JSON body, not an `Authorization` header.
+`{ token, buyerName, buyerEmail, orderId?, shipmentPartner, trackingLink?, items?: [{name, quantity}] }`. Verifies token (`verifySessionToken` from `functions/_lib/seller-auth.js`), then emails the buyer a "shipped" notice with a link to `https://snaprint.in/track-order.html` and the optional carrier link. Token travels in the JSON body, not an `Authorization` header.
 
 ### 3.8 `GET /sitemap.xml`
 Static page list + `product.html?id=<id>` for every active, non-engineering product (CSV fetched with `cf.cacheTtl: 300`). Response cached 1 h. Falls back to static pages on error.
@@ -153,10 +153,11 @@ Free tier: 2 req/s, 3,000 emails/month. Every function spaces calls 500 ms apart
 | `SHIPPING_RATES_CSV_URL` / `VITE_SHIPPING_RATES_CSV_URL` | create-order | |
 | `RAZORPAY_KEY_ID` / `VITE_RAZORPAY_KEY_ID` | create-order | returned to client as `key_id` |
 | `RAZORPAY_KEY_SECRET` | create-order | |
-| `RAZORPAY_WEBHOOK_SECRET` | webhook, seller-login, send-shipment | **also the seller-token signing key** |
+| `RAZORPAY_WEBHOOK_SECRET` | webhook (+ seller tokens while `SELLER_TOKEN_SECRET` is unset) | |
+| `SELLER_TOKEN_SECRET` | seller-login, send-shipment | **Switch for B-7.** Signs seller tokens. Unset = falls back to `RAZORPAY_WEBHOOK_SECRET` (old behaviour). Setting it logs sellers out once. |
 | `RESEND_API_KEY` | webhook, quote, cancel-order, send-shipment | |
 | `SELLER_EMAIL` | webhook, quote, cancel-order | defaults differ per file |
-| `SELLER_ACCOUNTS` | seller-login | JSON array, plaintext passwords |
+| `SELLER_ACCOUNTS` | seller-login | JSON array; `passwordHash` (PBKDF2) preferred, plaintext `password` still accepted |
 | `ORDERS_KV` (KV binding) | webhook | optional; strongly recommended |
 | `TURNSTILE_SECRET_KEY` | quote, cancel-order | **Switch for B-6.** Unset = no bot check (old behaviour). Set = token required. Add only after the FE widget (F-20) is live in that environment. |
 | `TURNSTILE_SITE_KEY` / `VITE_TURNSTILE_SITE_KEY` | FE widget (F-20) | public site key; not read by functions |
@@ -237,12 +238,20 @@ The webhook marks the payment processed **before** sending ([webhook.js:107](fun
 - Applies to `snaprint.in` only; `*.pages.dev` preview URLs are not covered by zone rules.
 Local testing: Cloudflare's test secret `1x0000000000000000000000000000000AA` always passes, `2x0000000000000000000000000000000AA` always fails.
 
-### 🟠 B-7 Seller login hardening
+### 🟠 B-7 Seller login hardening — ✅ code ready 2026-11-17 (secret + hashes switch on via env)
 - No brute-force protection on `/api/seller-login`.
 - Passwords stored in plaintext in `SELLER_ACCOUNTS`.
 - Token signing key = `RAZORPAY_WEBHOOK_SECRET` — rotating the webhook secret logs out all sellers; leaking one leaks both.
 - Failed attempts log the submitted username, which often contains a mistyped password.
-**Fix:** dedicated `SELLER_TOKEN_SECRET`; store salted hashes (PBKDF2 via `crypto.subtle`); rate-limit the route; stop logging usernames on failure.
+**Fixed in code:** optional dedicated `SELLER_TOKEN_SECRET`; `passwordHash` support (PBKDF2-SHA256) with plaintext still accepted; usernames no longer logged on failure. Rate limiting = owner WAF rule O-11 (see B-6).
+
+**Password hash format:** `pbkdf2-sha256:<iterations>:<salt base64>:<hash base64>` (32-byte hash, 16-byte salt, iterations 10,000–100,000; Workers refuses more than 100,000).
+**Generate one** (any terminal with Node; replace the password; works in PowerShell and bash):
+```
+node -e "const c=require('crypto'),s=c.randomBytes(16),i=20000;console.log('pbkdf2-sha256:'+i+':'+s.toString('base64')+':'+c.pbkdf2Sync(process.argv[1],s,i,32,'sha256').toString('base64'))" "the-password"
+```
+Then `SELLER_ACCOUNTS=[{"username":"alice","passwordHash":"pbkdf2-sha256:20000:…:…"}]`. The password appears in shell history; clear it afterwards (PowerShell: `Clear-History` and delete the line from `(Get-PSReadLineOption).HistorySavePath`; bash: `history -d <n>`).
+**CPU note:** one login = one PBKDF2 run. 100,000 iterations ≈ 25 ms CPU (measured in Node); the Workers **Free** plan allows 10 ms CPU per request, so use **20,000** on Free (≈5 ms) and up to 100,000 on Paid. Not verifiable locally (wrangler doesn't enforce CPU limits): if login on preview returns a Cloudflare 1102 / "exceeded resource limits" error, lower the iterations.
 
 ### 🟠 B-8 Quote upload memory pressure
 A 25 MB upload is held as `ArrayBuffer` + a binary JS string (UTF-16, about 50 MB) + a base64 string (about 33 MB) + the JSON body for Resend, which is close to the Workers 128 MB memory limit. Large uploads may crash the isolate (500).

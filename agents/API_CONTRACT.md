@@ -56,7 +56,7 @@ Screenshot ≤5 MB, png/jpeg/webp. 200: `{ "success": true, "message": "..." }`.
 **Turnstile (B-6, same switch as quote):** add `"turnstileToken": "<widget token>"` to the JSON body. Same 403/503 behaviour as quote.
 
 ### `POST /api/seller-login` · status: `live`
-`{ "username": "", "password": "" }` → 200 `{ "success": true, "token": "<payload>.<sig>", "username": "" }`; 401 invalid credentials. Token lasts 4 h; FE stores it in `sessionStorage.seller_token`. Token payload is base64 JSON `{ sub, exp, iat }` (FE may decode `exp`, never trust it for auth).
+`{ "username": "", "password": "" }` → 200 `{ "success": true, "token": "<payload>.<sig>", "username": "" }`; 401 invalid credentials. Token lasts 4 h; FE stores it in `sessionStorage.seller_token`. (B-7: when the owner sets `SELLER_TOKEN_SECRET`, tokens issued before that return 401 on `send-shipment` once; FE's existing 401 → login redirect handles it. Request/response shapes unchanged.) Token payload is base64 JSON `{ sub, exp, iat }` (FE may decode `exp`, never trust it for auth).
 
 ### `POST /api/send-shipment` · status: `live`
 ```json
@@ -90,6 +90,7 @@ _FE: add needs here (new endpoint, field, error code). BE answers inline and mov
 
 ## Changelog
 - 2026-11-17: initial contract documenting existing endpoints; `track-order` planned.
+- 2026-11-17 (BE, B-7): no shape change; seller tokens may be signed with a new secret (one-time 401 for logged-in sellers).
 - 2026-11-17 (BE, B-6): `quote` and `cancel-order` accept `turnstileToken`; enforced (403 without a valid token) only once `TURNSTILE_SECRET_KEY` is set.
 - 2026-11-17 (BE, B-9): `quote` and `cancel-order` return 502 when the seller email fails (was 200); `quote` returns 503 when email is not configured (was 200).
 - 2026-11-17 (BE, B-10): `create-order` uses the shared purchasability rule (`shared/products.js`); new 400 "currently unavailable" for price ≤ 0.
