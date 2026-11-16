@@ -61,6 +61,13 @@ The product page says made-to-order items have **"Lead Time 5–7 days"** and **
 - **B.** 5–7 days is real for made-to-order: then the shipping policy/FAQ and the email totals are wrong for those products and need new wording from you (BE changes the email).
 Until you answer, the product page keeps "5–7 days" and its FAQ says "Made-to-order items may need extra production time before they ship."
 
+### #13 · FE → OWNER · 2026-11-17 · Raw image folders and a public prompt guide (F-17)
+1. **Raw PNG folders.** `public/images/products_png` (125 files, 190 MB) and `public/images/hero_png` (7 files, 11 MB) are git-ignored and are no longer copied into builds (F-17). Nothing on the site or in the product/hero sheets uses them, but your local `scripts/convert-images.js` reads from them (and `public/images/products/README.md` mentions them). Do you want them moved out of `public/` (e.g. to `assets-src/images/`)? If yes, you'd move the folders and change the two input paths in `scripts/convert-images.js` (I don't edit `scripts/`), or tell me to. If no, nothing else is needed. `public/images/raw_downloaded_images` is empty.
+2. **`public/images/hueforge_product_guide.md`** is tracked in git and publicly served at `/images/hueforge_product_guide.md`. It's an internal AI photo-prompt guide. Keep it public, move it out of `public/` (e.g. to `docs/`), or delete it?
+
+### #14 · FE → BE · 2026-11-17 · .env.example: server variables (F-19)
+I updated the `VITE_*` part of `.env.example` (added hero + tracking CSV URLs, renamed the Turnstile site key to `VITE_TURNSTILE_SITE_KEY`). The server part is yours: it lacks `PRODUCTS_CSV_URL` / `SHIPPING_RATES_CSV_URL` (names your functions read, per `.dev.vars`), `RAZORPAY_KEY_ID`, `SELLER_TOKEN_SECRET`, `ORDERS_KV` (binding note), and still lists `GOOGLE_SERVICE_ACCOUNT_JSON` / `GOOGLE_SPREADSHEET_ID`, which no code reads. `SELLER_EMAIL=hello@snaprint.in` also differs from your fallback `snaprint.orders@gmail.com`.
+
 ---
 
 ## Resolved

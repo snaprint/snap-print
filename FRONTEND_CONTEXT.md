@@ -262,7 +262,8 @@ With default sort, `sortProducts` runs Fisher-Yates ([catalog.js:217](src/js/cat
 **Fixed:** `helpers.js` `sellerTokenExpiry/sellerTokenExpired` read `exp` from the token payload (display only; the server still decides). The dashboard sends missing / unreadable / expired tokens to login with "Your session expired" and logs out automatically when the token expires while open; the login page no longer bounces an expired token to the dashboard. Browser-tested with crafted tokens.
 Only checks that a token **exists**. An expired token sends `seller-login` → dashboard → (works until submit) → 401 → login. Decode `exp` client-side and redirect early.
 
-### 🟡 F-19 Repo hygiene
+### 🟡 F-19 Repo hygiene — ✅ fixed 2026-11-17 (FE part)
+**Fixed:** the `policy_pages/` rule in `.gitignore` is **kept** (it hides two local drafts, `contact-us.md` and `faq.md`; the 4 tracked files stay tracked) and now has a comment explaining that. `.env.example` now lists `VITE_HERO_IMAGES_CSV_URL`, `VITE_ORDER_TRACKING_CSV_URL` (marked temporary, F-1) and `VITE_TURNSTILE_SITE_KEY` (the old `TURNSTILE_SITE_KEY` was read by nothing). Server-side variables are BE's to tidy (MESSAGES #14). No linter/formatter added (would need an owner decision on tooling).
 `.gitignore` lists `policy_pages/` but those files are tracked, so the rule has no effect. `.env.example` lacks `VITE_HERO_IMAGES_CSV_URL` / `VITE_ORDER_TRACKING_CSV_URL`. No tests, linter or formatter are configured.
 
 ### 🟠 F-21 Local builds ignored `.env` — ✅ fixed 2026-11-17
