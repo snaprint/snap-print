@@ -15,31 +15,70 @@
    server-side by create-order.js), fetched via GET /v1/orders/{id};
    payment.notes is only a fallback. The amount comes from the payment.
    ═══════════════════════════════════════════════════════════════ */
-// In-memory fallback (only effective within a single warm isolate).
-// For true persistence, bind a KV namespace as ORDERS_KV.
-const processedPaymentsFallback = new Set();
+// ═══════════════════════════════════════════════════════════════
+// Processing state (B-5)
+// KV key `payment:<id>` holds JSON { state: 'processing' | 'done', at, ... }.
+//   - 'processing' is a short lock (PROCESSING_TTL_S) so a crashed run can't block retries.
+//   - 'done' is written ONLY after the emails succeeded (30-day TTL).
+//   - Values written before B-5 were a bare ISO timestamp → treated as 'done'.
+// If a run fails, the key is deleted and we answer 5xx so Razorpay retries
+// (it retries non-2xx responses for up to 24 h). Resend Idempotency-Keys stop a
+// retry from re-sending an email that already went out.
+// Without ORDERS_KV: same logic in a per-isolate Map (not durable). Duplicate
+// emails are then prevented only by the Resend Idempotency-Keys (24 h).
+// ═══════════════════════════════════════════════════════════════
+const PROCESSING_TTL_S = 120;                 // KV minimum TTL is 60 s
+const DONE_TTL_S = 60 * 60 * 24 * 30;
+const SYNC_BUDGET_MS = 4000;                  // answer Razorpay within its ~5 s timeout
+const memoryState = new Map();                // fallback when ORDERS_KV is not bound
 
-// Persistent idempotency check via Cloudflare KV.
-// Returns true if this payment has already been processed.
-async function isAlreadyProcessed(env, paymentId) {
-  if (env.ORDERS_KV) {
-    const existing = await env.ORDERS_KV.get(`payment:${paymentId}`);
-    return existing !== null;
-  }
-  // Fallback: in-memory (not persistent across cold starts)
-  console.warn('ORDERS_KV not bound — using in-memory idempotency (not persistent)');
-  return processedPaymentsFallback.has(paymentId);
+function stateKey(paymentId) {
+  return `payment:${paymentId}`;
 }
 
-// Mark a payment as processed in KV (or fallback Set).
-async function markProcessed(env, paymentId) {
-  if (env.ORDERS_KV) {
-    // Store with 30-day TTL (Razorpay retries are within hours, not months)
-    await env.ORDERS_KV.put(`payment:${paymentId}`, new Date().toISOString(), {
-      expirationTtl: 60 * 60 * 24 * 30,
-    });
-  } else {
-    processedPaymentsFallback.add(paymentId);
+async function getState(env, paymentId) {
+  if (!env.ORDERS_KV) {
+    console.warn('ORDERS_KV not bound — using in-memory idempotency (not durable)');
+    const entry = memoryState.get(paymentId);
+    if (entry && entry.expires < Date.now()) { memoryState.delete(paymentId); return null; }
+    return entry ? entry.value : null;
+  }
+  try {
+    const raw = await env.ORDERS_KV.get(stateKey(paymentId));
+    if (raw === null) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && parsed.state) return parsed;
+    } catch { /* legacy value */ }
+    return { state: 'done', at: raw, legacy: true };
+  } catch (err) {
+    // A KV outage must not stop order emails; Resend idempotency still prevents duplicates.
+    console.error('ORDERS_KV read failed — continuing without idempotency check:', err);
+    return null;
+  }
+}
+
+async function setState(env, paymentId, value, ttlSeconds) {
+  if (!env.ORDERS_KV) {
+    memoryState.set(paymentId, { value, expires: Date.now() + ttlSeconds * 1000 });
+    return;
+  }
+  try {
+    await env.ORDERS_KV.put(stateKey(paymentId), JSON.stringify(value), { expirationTtl: ttlSeconds });
+  } catch (err) {
+    console.error(`ORDERS_KV write failed (${value.state}) for ${paymentId}:`, err);
+  }
+}
+
+async function clearState(env, paymentId) {
+  if (!env.ORDERS_KV) {
+    memoryState.delete(paymentId);
+    return;
+  }
+  try {
+    await env.ORDERS_KV.delete(stateKey(paymentId));
+  } catch (err) {
+    console.error(`ORDERS_KV delete failed for ${paymentId}:`, err);
   }
 }
 
@@ -65,10 +104,7 @@ export async function onRequestPost(context) {
     const isValid = await verifySignature(rawBody, signature, webhookSecret);
     if (!isValid) {
       console.error('Invalid webhook signature — rejecting');
-      return new Response(JSON.stringify({ error: true, message: 'Invalid signature' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return jsonError('Invalid signature', 401);
     }
 
     // ── 3. Parse event and filter ──
@@ -88,31 +124,59 @@ export async function onRequestPost(context) {
 
     // ── 4. Extract payment data ──
     const payment = event.payload?.payment?.entity;
-    if (!payment) {
+    if (!payment || !payment.id) {
       return jsonError('Invalid payload structure', 400);
     }
 
     const paymentId = payment.id;
     const orderId = payment.order_id;
 
-    // ── 5. Idempotency check (persistent via KV) ──
-    if (await isAlreadyProcessed(env, paymentId)) {
+    // ── 5. Idempotency ──
+    const state = await getState(env, paymentId);
+    if (state?.state === 'done') {
       console.log(`Payment ${paymentId} already processed — skipping (idempotent)`);
       return jsonResponse({ received: true, order_id: orderId, duplicate: true });
     }
+    if (state?.state === 'processing') {
+      // Another run is sending the emails right now. Non-2xx → Razorpay retries later,
+      // by which time the key is 'done' (→ 200) or cleared after a failure (→ reprocess).
+      console.log(`Payment ${paymentId} is being processed by another request — asking Razorpay to retry`);
+      return jsonError('Already processing; retry later', 409);
+    }
 
-    // Mark as processed BEFORE doing any work
-    await markProcessed(env, paymentId);
-
+    await setState(env, paymentId, { state: 'processing', at: new Date().toISOString() }, PROCESSING_TTL_S);
     console.log(`Processing payment.captured: ${paymentId} for order ${orderId}, ₹${payment.amount / 100}`);
 
-    // ── 6. Return 200 immediately — run heavy work in background ──
-    // Razorpay has a ~5s webhook timeout. If we don't respond fast,
-    // it retries → hits a different edge worker → KV hasn't propagated
-    // yet (eventually consistent, up to 60s) → duplicate emails.
-    // Fix: respond instantly, do the order lookup + emails via waitUntil().
-    context.waitUntil(processOrderBackground(env, payment));
+    // ── 6. Send the emails; record 'done' only if they succeeded ──
+    const work = processPayment(env, payment)
+      .catch(err => ({ ok: false, reason: `unexpected error: ${err && err.message ? err.message : err}` }))
+      .then(async result => {
+        if (result.ok) {
+          await setState(env, paymentId, {
+            state: 'done',
+            at: new Date().toISOString(),
+            orderId,
+            buyerEmail: result.buyerEmailStatus,
+          }, DONE_TTL_S);
+        } else {
+          console.error(`Payment ${paymentId}: emails not completed (${result.reason}) — will be retried by Razorpay`);
+          await clearState(env, paymentId);
+        }
+        return result;
+      });
+    // Keep the work alive even if we answer Razorpay before it finishes.
+    context.waitUntil(work);
 
+    const outcome = await Promise.race([work, sleep(SYNC_BUDGET_MS).then(() => null)]);
+    if (outcome === null) {
+      // Still running. Answer non-2xx so Razorpay retries; the retry sees 'done' (→ 200)
+      // if this run succeeds, or reprocesses if it fails.
+      console.warn(`Payment ${paymentId}: processing exceeded ${SYNC_BUDGET_MS} ms — answering 503, continuing in background`);
+      return jsonError('Processing; retry later', 503);
+    }
+    if (!outcome.ok) {
+      return jsonError('Order emails could not be sent; please retry', 500);
+    }
     return jsonResponse({ received: true, order_id: orderId });
 
   } catch (err) {
@@ -122,16 +186,14 @@ export async function onRequestPost(context) {
 }
 
 /**
- * Runs in the background after the 200 response has been sent to Razorpay.
- * Sends buyer + seller confirmation emails.
+ * Builds the order details and sends both emails.
+ * Returns { ok, reason?, buyerEmailStatus }.
+ * ok = seller email sent AND (buyer email sent OR the buyer email failed permanently,
+ * e.g. missing/invalid address — retrying would never fix that).
  */
-async function processOrderBackground(env, payment) {
-  try {
-    const orderData = await buildOrderData(env, payment);
-    await sendConfirmationEmails(env, orderData);
-  } catch (emailErr) {
-    console.error('Email sending failed:', emailErr);
-  }
+async function processPayment(env, payment) {
+  const orderData = await buildOrderData(env, payment);
+  return sendConfirmationEmails(env, orderData);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -259,7 +321,8 @@ async function buildOrderData(env, payment) {
     itemCount: notes.item_count || String(itemsDetail.length || ''),
     itemsSummary: notes.items_summary || '',
     itemsDetail,
-    timestamp: new Date().toISOString(),
+    // Payment creation time (not "now") so a retried email has an identical payload.
+    timestamp: payment.created_at ? new Date(payment.created_at * 1000).toISOString() : '',
     notesSource: orderNotes ? 'order' : 'payment',
   };
 
@@ -307,9 +370,9 @@ async function verifySignature(body, signature, secret) {
 async function sendConfirmationEmails(env, data) {
   const resendApiKey = env.RESEND_API_KEY;
   if (!resendApiKey) {
-    console.log('Email sending skipped (RESEND_API_KEY not configured)');
-    console.log('Order data for manual processing:', JSON.stringify(data));
-    return;
+    // B-5: not marked done → Razorpay retries, so emails go out once the key is set (within 24 h).
+    console.error('RESEND_API_KEY not configured — order emails NOT sent. Order data:', JSON.stringify(data));
+    return { ok: false, reason: 'RESEND_API_KEY not configured', buyerEmailStatus: 'not_sent' };
   }
 
   const sellerEmail = env.SELLER_EMAIL || 'snaprint.orders@gmail.com';
@@ -341,7 +404,13 @@ async function sendConfirmationEmails(env, data) {
       : 'We will notify you';
 
   // ── BUYER EMAIL ──
-  try {
+  let buyerEmailStatus = 'sent';
+  let buyerRetryable = false;
+  if (!isValidEmail(data.buyerEmail)) {
+    // Permanent: retrying can't invent an address. The seller email still carries the order.
+    console.error(`Order ${data.orderId}: no valid buyer email ("${data.buyerEmail}") — buyer confirmation skipped`);
+    buyerEmailStatus = 'skipped_no_address';
+  } else try {
 
     await sendEmailWithRetry(resendApiKey, {
       from: 'Snap Print <orders@snaprint.in>',
@@ -385,7 +454,9 @@ async function sendConfirmationEmails(env, data) {
       `,
     }, 3, `order-confirmed/${data.paymentId}-buyer`);
   } catch (buyerErr) {
-    console.error('Buyer confirmation email failed:', buyerErr);
+    buyerRetryable = isRetryableEmailError(buyerErr);
+    buyerEmailStatus = buyerRetryable ? 'failed_retry' : 'failed_permanent';
+    console.error(`Buyer confirmation email failed (${buyerRetryable ? 'will retry' : 'permanent, not retried'}):`, buyerErr);
   }
 
   // Space calls ≥500ms apart to stay under Resend's 2 req/s rate limit
@@ -446,8 +517,28 @@ async function sendConfirmationEmails(env, data) {
       `,
     }, 3, `order-received/${data.paymentId}-seller`);
   } catch (sellerErr) {
-    console.error('Seller notification email failed:', sellerErr);
+    // The seller email is what gets the order made: always retry it.
+    console.error('Seller notification email failed (will retry):', sellerErr);
+    return { ok: false, reason: `seller email failed: ${sellerErr.message}`, buyerEmailStatus };
   }
+
+  if (buyerRetryable) {
+    return { ok: false, reason: 'buyer email failed (retryable)', buyerEmailStatus };
+  }
+  return { ok: true, buyerEmailStatus };
+}
+
+/** 429 / 5xx / network errors are worth retrying; other 4xx (bad address, etc.) are not. */
+function isRetryableEmailError(err) {
+  const status = err && err.status;
+  if (!status) return true;            // network / unknown
+  if (status === 429 || status >= 500) return true;
+  if (status === 409 && /concurrent/i.test(err.message || '')) return true;
+  return false;
+}
+
+function isValidEmail(email) {
+  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 // ── Delay helper ──
@@ -498,9 +589,19 @@ async function sendEmailWithRetry(apiKey, emailData, maxRetries = 3, idempotency
       continue;
     }
 
-    // Any other error — throw immediately, no retry
     const errText = await response.text();
-    throw new Error(`Resend API error (${response.status}): ${errText}`);
+
+    // Same Idempotency-Key already used with a different payload → an earlier attempt
+    // was accepted by Resend, so this email has already been sent.
+    if (response.status === 409 && idempotencyKey && /invalid_idempotent_request/.test(errText)) {
+      console.warn(`Resend: ${idempotencyKey} already used — treating as sent`);
+      return;
+    }
+
+    // Any other error — throw immediately, no retry
+    const err = new Error(`Resend API error (${response.status}): ${errText}`);
+    err.status = response.status;
+    throw err;
   }
 
   throw new Error(`Resend rate limit: exhausted ${maxRetries} retries for ${emailData.to}`);

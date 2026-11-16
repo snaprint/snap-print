@@ -80,10 +80,18 @@ The server total is authoritative — the client never sends prices.
 ### 3.3 `POST /api/webhook` (Razorpay)
 1. Reads raw body, verifies `X-Razorpay-Signature` = HMAC-SHA256(body, `RAZORPAY_WEBHOOK_SECRET`) with constant-time compare.
 2. `payment.authorized` / `payment.failed` / anything else → 200, ignored. Only `payment.captured` is processed.
-3. Idempotency: `ORDERS_KV` key `payment:<id>` (30-day TTL) — or in-memory `Set` if KV not bound. Marked processed **before** doing any work.
-4. Responds 200 immediately; in `context.waitUntil()` it fetches the Razorpay **order** (`GET /v1/orders/{order_id}`, Basic auth with `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET`) and builds `orderData` from the order's notes. `payment.notes` fills any missing key (and `payment.email`/`payment.contact` fill a missing buyer email/phone) if the order can't be fetched (B-4).
-5. Then sends buyer email, waits 500 ms, sends seller email. Both use Resend `Idempotency-Key` (`order-confirmed/<paymentId>-buyer`, `order-received/<paymentId>-seller`).
-6. Header comment says "Logs order to Google Sheets" — **not implemented** (no Sheets code exists).
+3. Idempotency state in `ORDERS_KV` key `payment:<id>` = JSON `{state, at, …}` (B-5):
+   - `done` → 200 `{duplicate:true}`, nothing sent. (Bare ISO-timestamp values from before B-5 count as `done`.)
+   - `processing` (lock, 120 s TTL) → **409**, so Razorpay retries later.
+   - otherwise: write `processing`, then do the work.
+4. Work: fetch the Razorpay **order** (`GET /v1/orders/{order_id}`, Basic auth with `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET`) and the Products CSV (for item names) in parallel; build `orderData` from the order's notes, with `payment.notes` as a key-by-key fallback and `payment.email`/`payment.contact` as the last fallback (B-4). Items are decoded from `items_1..3` (or legacy `items_detail` JSON) (B-3).
+5. Send buyer email (skipped if there is no valid buyer address), wait 500 ms, send seller email. Both use Resend `Idempotency-Key` (`order-confirmed/<paymentId>-buyer`, `order-received/<paymentId>-seller`), and payloads are deterministic (timestamp = payment `created_at`), so a retry never sends a second copy within Resend's 24 h window. A Resend 409 `invalid_idempotent_request` is treated as "already sent".
+6. Result:
+   - **Success** = seller email sent AND (buyer email sent, or buyer email failed *permanently*: no/invalid address or a non-429 4xx). → KV `done` (30-day TTL, records `buyerEmail` status) → 200.
+   - **Failure** (seller email failed for any reason; buyer email failed with 429/5xx/network; `RESEND_API_KEY` missing) → KV key deleted → **500** → Razorpay retries (it retries non-2xx for up to 24 h).
+   - Work not finished after **4 s** → **503** (Razorpay retries); the work continues via `waitUntil` and records `done` or clears the key, so the retry gets 200 or reprocesses.
+7. Without `ORDERS_KV`: the same states are kept in a per-isolate `Map` (lost on cold start). Duplicate emails are then prevented only by the Resend idempotency keys (24 h). A KV read/write error is logged and treated like "no KV", so a KV outage never blocks emails.
+8. Header comment says "Logs order to Google Sheets" — **not implemented** (no Sheets code exists).
 
 ### 3.4 `POST /api/quote` (multipart/form-data)
 Fields `name, email, phone, material, notes, file`. File must be `.stl/.step/.stp`, ≤ 25 MB. Converts file to base64 (chunked) and emails it to `SELLER_EMAIL` (default `queries@snaprint.in`) as an attachment, then sends a confirmation to the submitter. If `RESEND_API_KEY` is missing → 503. If the **seller** email fails → 502 and no buyer confirmation is sent; if only the buyer confirmation fails → still 200 (the seller has it) (B-9).
@@ -215,9 +223,9 @@ Was: the webhook read every buyer field from `payment.entity.notes`, but the not
 4. `snaprint.in` is verified in Resend (SPF/DKIM). Unverified domain → 403 from Resend.
 5. Run `wrangler pages deployment tail` during a test payment and look for `Resend API error (...)`.
 
-### 🟠 B-5 No durable order record; emails lost on failure
+### 🟠 B-5 No durable order record; emails lost on failure — ✅ "mark processed after emails" fixed 2026-11-17
 The webhook marks the payment processed **before** sending ([webhook.js:107](functions/api/webhook.js#L107)), so a Resend failure means the emails are never retried and Razorpay retries are swallowed as duplicates. Google Sheets logging is advertised ([webhook.js:11](functions/api/webhook.js#L11)) but not implemented. If `ORDERS_KV` isn't bound, idempotency is per-isolate only, so duplicates are possible (Resend idempotency keys partly cover this for 24 h).
-**Fix:** write the order to KV/D1 (or Sheets via service account) first; mark processed only after the emails succeed, or keep a `pending` state and retry.
+**Fixed:** the payment is marked `done` only after the emails succeed; failures answer 5xx so Razorpay retries (details §3.3). Works with `ORDERS_KV` bound (O-4) and degrades to per-isolate memory + Resend idempotency without it. **Still open:** a durable *order record* (planned as B-16, Firestore). **Risk to know:** if emails fail for 24 h straight (e.g. Resend key revoked), Razorpay stops retrying and may disable the webhook; it emails the account owner when webhooks fail, which is the alert.
 
 ### 🟠 B-6 Public endpoints are open email relays (no rate limit / bot check)
 `/api/cancel-order` and `/api/quote` send mail from `orders@snaprint.in` to **any** address supplied in the request, with attacker-controlled name/reason text, unauthenticated and unlimited. This can burn the 3,000/month Resend quota and damage domain reputation. Turnstile keys exist in `.env` but are never verified. The middleware's "rate limiting" comment ([_middleware.js:7](functions/api/_middleware.js#L7)) is not implemented.
