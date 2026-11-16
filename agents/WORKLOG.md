@@ -1,6 +1,6 @@
 # Work Log
 
-**Active agent:** FRONTEND
+**Active agent:** none
 <!-- Set to BACKEND or FRONTEND at session start; reset to none at session end. -->
 
 Append-only. Newest entry at the **bottom**. Never edit or delete past entries.
@@ -79,3 +79,33 @@ Append-only. Newest entry at the **bottom**. Never edit or delete past entries.
 **Needs from other agent / owner:** FE: #3–#7, #10, #11. Owner: O-4, O-5, O-7, O-11 (and Production `RESEND_API_KEY` check before promoting).
 **Next:** Phase 2 (B-14 track-order, B-16/B-17 Firestore) when the owner says go.
 
+## 2026-11-17 · FRONTEND
+**Tasks:** F-2, F-5, F-4, F-3a, F-7+F-6, MESSAGES #4, #10, F-11, F-12, F-15, F-13, F-8, F-10, F-9, F-18, F-16, F-17, F-19, F-20 (all on preview); new F-21 (found + fixed); R-1 proposal delivered, waiting for owner (O-9). Skipped as instructed: F-1 (B-14 planned), F-3b (B-16), F-14 (with R-3).
+**Changed:**
+- F-2: no more fake "dev mode" success; checkout/quote/cancel show the server `message`, keep input; `src/js/helpers.js` (`apiFetch`, `readApiError`).
+- F-5: track-order mobile menu opens (duplicate handler removed).
+- F-4: Firestore helpers throw (also prevents a failed read from wiping saved addresses); account page shows real errors, 15 s timeout on saves, offline order reads no longer look like "No orders yet".
+- F-3a: post-payment writes awaited (max 4 s); order doc stores bulk unit price and the charged total.
+- F-7/F-6: UI uses `shared/products.js` (copies deleted from utils.js); blank stock = Sold Out, price blank/0 = Currently unavailable; quantity capped at stock/100 incl. combined cart quantity.
+- #4 maxlengths; #10 quote limit 10 MB; F-11 one delivery wording (`DELIVERY_*` in utils.js).
+- F-12 shared `escapeHtml`, toast uses textContent; F-15 one product download per page; F-13 shuffle once; F-8 cart refreshes lines and blocks checkout for unavailable items; F-10 PIN prefix table, never overwrites a chosen state; F-9 shipping options from the sheet; F-18 seller token expiry.
+- F-16 dead code removed; `auth-gate.js` + `states.js` shared. F-17 raw image folders dropped from `dist/` by a Vite plugin (not moved; see #13). F-20 Turnstile widget, only when `VITE_TURNSTILE_SITE_KEY` is set.
+- F-21: `vite.config.js` `envDir` so local builds read `.env` (they silently used sample data before).
+- **Shared files (CLAUDE.md §2):** `.env.example`: added `VITE_HERO_IMAGES_CSV_URL`, `VITE_ORDER_TRACKING_CSV_URL`, renamed `TURNSTILE_SITE_KEY` → `VITE_TURNSTILE_SITE_KEY`. `.gitignore`: comment explaining the `policy_pages/` rule (rule kept; it hides two local drafts). `package.json`, `CLAUDE.md` unchanged.
+- R-1: `agents/design/` (README + 3 mockups, not deployed).
+**Contract changes:** none. No requests to BE's contract.
+**Tested locally** (`wrangler pages dev` with the real functions and an **invalid Resend key**, so no emails were sent; headless Edge via puppeteer, scripts kept in my scratchpad): ~90 browser checks, all passing at the end: quote/cancel error paths and network failure; mobile menu; product/catalog/cart caps and states with injected sheet rows (blank stock, blank price, "Engineering"); XSS strings in sheet values; one CSV download per page; shuffle; cart refresh; checkout with a **fake offline sign-in** (no real Firebase account touched): shipping options, PIN fill, maxlength, create-order 400 + network error; account page with Firestore unreachable; seller token expiry; Turnstile with Cloudflare test keys (pass → accepted, fail → 403 shown); sign-in gate on both pages. 52 PIN codes unit-tested. **Not tested:** a real Razorpay payment (the F-3a post-payment save), real Firebase writes, real email delivery, iOS Safari.
+**Pushed to dev:** yes, one commit per task (a55200d … a43cdee) + this entry. Preview checked: new code is live.
+**How to verify on preview** (https://dev.snap-print.pages.dev, phone and desktop):
+1. **Phone:** open /track-order → tap ☰ → the menu opens and stays open (F-5).
+2. Open a wall-art product (e.g. "buds_on_tree") → press + until it stops at **10** with "Max 10 per order"; Add to cart; press Add to cart again → "already has the maximum of 10" (F-6). A HueForge item with stock 1 → + is disabled.
+3. /cart → + is disabled for that line; "Proceed to Checkout" works. In the sheet, set a cart item's `active` to `no` (or blank its stock), reload /cart → the line shows "No longer available"/"Sold Out" and checkout is disabled until you remove it; change it back (F-8).
+4. Home: search for "a", clear it → the grid order doesn't jump (F-13).
+5. /quote → help text says "up to 10 MB"; pick a file > 10 MB → error (#10). No widget is visible yet (F-20 waits for the site key).
+6. Checkout (logged in): the shipping options show "Ship Rocket Surface/Air" from the sheet with "Est. 6–9 / 3–5 business days (including 1–2 days of production)" (F-9, F-11); PIN 403001 fills Goa; choose a state first, then type another PIN → your state stays (F-10). Name/address fields stop at their max length (#4).
+7. Place a **test** payment (card 4111 1111 1111 1111, any future date, any CVV) → you see "Payment received. Saving your order…" briefly, then the thank-you page; /account → the order shows with the bulk-adjusted total actually charged (F-3a).
+8. /account: edit your name → "Profile updated!"; with Wi-Fi off, saving shows an error after ~15 s instead of "updated" (F-4).
+9. Seller: log in, then in DevTools → Application → Session storage, change `seller_token` to `x` and reload the dashboard → back to login with "Your session expired" (F-18).
+10. Product FAQ and About → shipping answer reads "Air: 3–5 business days, Surface: 6–9 business days (including 1–2 days of production)" (F-11).
+**Needs from other agent / owner:** Owner: MESSAGES #12 (made-to-order lead time), #13 (raw images / public prompt guide), #15 (Turnstile key steps, O-5), **#16 (review the redesign)**; TASKS O-15…O-17. BE: #14 (`.env.example` server vars).
+**Next:** after O-9: R-2 tokens → R-3 partials (+F-14) → R-4 → R-5. F-1 once B-14 is live; F-3b once B-16 is live.

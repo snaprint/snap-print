@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mockup A · Home · Snap Print</title>
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="direction-a.css" />
+<style>
+  /* Hero */
+  .hero { padding: var(--s5) 0 0; }
+  .hero__grid { display: grid; gap: var(--s5); align-items: center; }
+  @media (min-width: 900px) { .hero__grid { grid-template-columns: 1.05fr 1fr; gap: var(--s7); } .hero { padding-top: var(--s7); } }
+  .hero h1 { font-size: clamp(38px, 6.4vw, 68px); font-weight: 800; margin: var(--s3) 0 var(--s4); }
+  .hero h1 em { font-style: normal; color: var(--red); }
+  .hero p { color: var(--ink-2); font-size: 18px; max-width: 34ch; margin-bottom: var(--s5); }
+  .hero__ctas { display: flex; flex-wrap: wrap; gap: var(--s3); }
+  .hero__media { position: relative; border-radius: var(--r-lg); overflow: hidden; aspect-ratio: 4/3; background: var(--sunken); order: -1; }
+  @media (min-width: 900px) { .hero__media { order: 0; aspect-ratio: 5/4; } }
+  .hero__media img { width: 100%; height: 100%; object-fit: cover; }
+  .hero__stamp { position: absolute; left: 16px; bottom: 16px; background: var(--paper); border-radius: var(--r-md); padding: 10px 14px; font-size: 13px; box-shadow: var(--shadow); display: flex; gap: 10px; align-items: center; }
+  .hero__stamp b { font-family: var(--font-display); font-size: 20px; }
+  .dots { position: absolute; right: 16px; bottom: 20px; display: flex; gap: 6px; }
+  .dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.6); }
+  .dots i:first-child { width: 22px; border-radius: 4px; background: #fff; }
+
+  /* Trust strip */
+  .trust { display: grid; grid-template-columns: 1fr; gap: var(--s3); margin-top: var(--s6); }
+  @media (min-width: 700px) { .trust { grid-template-columns: repeat(3, 1fr); } }
+  .trust div { display: flex; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px 16px; font-size: 14px; color: var(--ink-2); }
+  .trust b { display: block; color: var(--ink); font-size: 15px; }
+  .trust svg { width: 26px; height: 26px; flex-shrink: 0; color: var(--red); }
+
+  /* Categories */
+  .cats { display: flex; gap: var(--s3); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: var(--s2); margin: 0 calc(var(--s4) * -1); padding-left: var(--s4); padding-right: var(--s4); scrollbar-width: none; }
+  @media (min-width: 1100px) { .cats { display: grid; grid-template-columns: repeat(8, 1fr); overflow: visible; margin: 0; padding: 0; } }
+  .cat { scroll-snap-align: start; flex: 0 0 132px; display: grid; gap: 10px; text-align: center; }
+  .cat__img { aspect-ratio: 1; border-radius: var(--r-md); overflow: hidden; background: var(--sunken); border: 2px solid transparent; }
+  .cat__img img { width: 100%; height: 100%; object-fit: cover; }
+  .cat.active .cat__img { border-color: var(--ink); }
+  .cat span { font-weight: 600; font-size: 14px; }
+  .cat small { color: var(--ink-3); font-weight: 500; }
+
+  /* Toolbar */
+  .toolbar { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: center; margin-bottom: var(--s5); }
+  .search { flex: 1 1 100%; display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 16px; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-pill); color: var(--ink-3); }
+  @media (min-width: 768px) { .search { flex: 1 1 320px; max-width: 420px; } }
+  .chip { height: 40px; padding: 0 16px; border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--surface); font-weight: 500; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
+  .chip.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .toolbar__count { margin-left: auto; font-size: 14px; color: var(--ink-3); }
+
+  /* Custom parts band */
+  .band { margin-top: var(--s8); background: var(--ink); color: var(--paper); border-radius: var(--r-lg); padding: var(--s6); display: grid; gap: var(--s5); align-items: center; overflow: hidden; position: relative; }
+  @media (min-width: 900px) { .band { grid-template-columns: 1.2fr 1fr; padding: var(--s7); } }
+  .band h2 { font-size: clamp(28px, 4vw, 44px); margin: var(--s3) 0; }
+  .band p { color: #CFC8BB; max-width: 46ch; margin-bottom: var(--s5); }
+  .band ul { list-style: none; padding: 0; display: grid; gap: 10px; color: #CFC8BB; font-size: 15px; }
+  .band li::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--red); margin-right: 10px; }
+  .layers { position: absolute; right: -40px; top: -40px; width: 220px; height: 220px; border-radius: 50%; background: repeating-linear-gradient(0deg, rgba(247,243,236,.08) 0 2px, transparent 2px 7px); }
+</style>
+</head>
+<body>
+<div class="mock-note">R-1 mockup, Direction A "Paper &amp; Vermilion" (recommended) · static, not the live site · <a href="a-product.html">Product page →</a> · <a href="b-alternative.html">Alternative B →</a></div>
+
+<!-- ═══ NAVBAR (one shared partial after R-3) ═══ -->
+<header class="nav">
+  <div class="wrap nav__bar">
+    <a class="logo" href="a-home.html"><span class="logo__dot"></span>Snap Print</a>
+    <nav class="nav__links" aria-label="Main">
+      <a class="active" href="a-home.html">Shop ▾</a>
+      <a href="#">Custom parts</a>
+      <a href="#">Track order</a>
+      <a href="#">About</a>
+    </nav>
+    <div class="nav__search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Search bookmarks, wall art…</div>
+    <div class="nav__actions">
+      <button class="icon-btn only-mobile" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+      <button class="icon-btn" aria-label="Account"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></button>
+      <button class="icon-btn" aria-label="Cart, 2 items"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 7h14l-1.2 12.1a2 2 0 0 1-2 1.9H8.2a2 2 0 0 1-2-1.9L5 7Z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg><span class="badge-count">2</span></button>
+      <button class="icon-btn only-mobile" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ═══ HERO (images from the hero sheet) ═══ -->
+  <section class="hero">
+    <div class="wrap hero__grid">
+      <div>
+        <span class="eyebrow">Printed layer by layer in India</span>
+        <h1>Art you can hold. <em>Printed for you.</em></h1>
+        <p>Wall art, HueForge prints, bookmarks and fidget toys, 3D printed in our studio and shipped across India.</p>
+        <div class="hero__ctas">
+          <a class="btn btn--ink" href="#shop">Shop the collection</a>
+          <a class="btn btn--ghost" href="#custom">Print my part</a>
+        </div>
+      </div>
+      <div class="hero__media">
+        <img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/hero_images/Hero_image_7.webp" alt="3D printer in the Snap Print studio with finished prints" />
+        <div class="hero__stamp"><b>38</b> designs<br/>ready to order</div>
+        <div class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+    </div>
+    <div class="wrap">
+      <div class="trust">
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg><span><b>Ships across India</b>Air 3–5 · Surface 6–9 business days</span></div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg><span><b>Secure payment</b>UPI, cards, netbanking via Razorpay</span></div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v6H4zM6 10v10h12V10"/><path d="M10 14h4"/></svg><span><b>Bulk pricing</b>Lower price per piece from 4 units</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CATEGORIES (from the products sheet) ═══ -->
+  <section class="section">
+    <div class="wrap">
+      <div class="section__head"><h2>Shop by category</h2></div>
+      <div class="cats">
+        <a class="cat active" href="#"><div class="cat__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/demon_slayer_set_01.webp" alt="" loading="lazy" /></div><span>Book marks <small>18</small></span></a>
+        <a class="cat" href="#"><div class="cat__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/tanjiro_crimson_aura_01.webp" alt="" loading="lazy" /></div><span>HueForge <small>8</small></span></a>
+        <a class="cat" href="#"><div class="cat__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/buds_on_tree_01.webp" alt="" loading="lazy" /></div><span>Wall art <small>5</small></span></a>
+        <a class="cat" href="#"><div class="cat__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/butterfly_group_02.webp" alt="" loading="lazy" /></div><span>Home decor <small>2</small></span></a>
+        <a class="cat" href="#"><div class="cat__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/capybara_flexi_01.webp" alt="" loading="lazy" /></div><span>Key chains <small>2</small></span></a>
+        <a class="cat" href="#"><div class="cat__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/mechanical_hand_toy_01.webp" alt="" loading="lazy" /></div><span>Toys <small>1</small></span></a>
+        <a class="cat" href="#"><div class="cat__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/dino_kit_card_01.webp" alt="" loading="lazy" /></div><span>Kit cards <small>1</small></span></a>
+        <a class="cat" href="#"><div class="cat__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/rose_stand_01.webp" alt="" loading="lazy" /></div><span>Gifts <small>1</small></span></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CATALOG ═══ -->
+  <section class="section" id="shop">
+    <div class="wrap">
+      <div class="section__head"><h2>Fresh off the printer</h2><a class="link-arrow" href="#">View all 38</a></div>
+      <div class="toolbar">
+        <div class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Search products</div>
+        <button class="chip on">All</button>
+        <button class="chip">In stock</button>
+        <button class="chip">Under ₹200</button>
+        <button class="chip">Filters ⚙</button>
+        <span class="toolbar__count">Sort: Featured ▾</span>
+      </div>
+
+      <div class="grid">
+        <a class="card" href="a-product.html">
+          <div class="card__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/demon_slayer_set_01.webp" alt="Demon Slayer bookmark set" loading="lazy" />
+            <div class="card__tags"><span class="pill pill--sale">−17%</span><span class="pill pill--bulk">Bulk from ₹270</span></div>
+            <button class="card__add" aria-label="Add to cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+          <span class="card__cat">Book marks</span><span class="card__name">Demon Slayer Set</span>
+          <span class="card__price">₹349 <s>₹419</s></span>
+        </a>
+        <a class="card" href="#">
+          <div class="card__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/tanjiro_crimson_aura_01.webp" alt="Tanjiro Crimson Aura HueForge print" loading="lazy" />
+            <div class="card__tags"><span class="pill pill--sale">−60%</span></div>
+            <button class="card__add" aria-label="Add to cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+          <span class="card__cat">HueForge</span><span class="card__name">Tanjiro Crimson Aura</span>
+          <span class="card__price">₹200 <s>₹500</s></span>
+        </a>
+        <a class="card" href="#">
+          <div class="card__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/kanagawa_wave_01.webp" alt="The Great Wave off Kanagawa HueForge print" loading="lazy" />
+            <div class="card__tags"><span class="pill pill--sale">−60%</span><span class="pill pill--low">Only 1 left</span></div>
+            <button class="card__add" aria-label="Add to cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+          <span class="card__cat">HueForge</span><span class="card__name">The Great Wave off Kanagawa</span>
+          <span class="card__price">₹200 <s>₹500</s></span>
+        </a>
+        <a class="card" href="#">
+          <div class="card__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/buds_on_tree_01.webp" alt="Buds on Tree wall art" loading="lazy" />
+            <div class="card__tags"><span class="pill pill--sale">−20%</span></div>
+            <button class="card__add" aria-label="Add to cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+          <span class="card__cat">Wall art</span><span class="card__name">Buds on Tree</span>
+          <span class="card__price">₹200 <s>₹249</s></span>
+        </a>
+        <a class="card" href="#">
+          <div class="card__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/capybara_flexi_01.webp" alt="Capybara flexi keychain" loading="lazy" />
+            <div class="card__tags"><span class="pill pill--sale">−34%</span><span class="pill pill--bulk">Bulk from ₹81</span></div>
+            <button class="card__add" aria-label="Add to cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+          <span class="card__cat">Key chains</span><span class="card__name">Capybara Flexi</span>
+          <span class="card__price">₹99 <s>₹149</s></span>
+        </a>
+        <a class="card" href="#">
+          <div class="card__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/mechanical_hand_toy_01.webp" alt="Mechanical hand toy" loading="lazy" />
+            <div class="card__tags"><span class="pill pill--sale">−40%</span></div>
+            <button class="card__add" aria-label="Add to cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+          <span class="card__cat">Toys</span><span class="card__name">Mechanical Hand Toy</span>
+          <span class="card__price">₹299 <s>₹499</s></span>
+        </a>
+        <a class="card" href="#">
+          <div class="card__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/sunset_tree_01.webp" alt="Japanese Tree Sunset View HueForge print" loading="lazy" />
+            <div class="card__tags"><span class="pill pill--sale">−60%</span><span class="pill pill--low">Only 1 left</span></div>
+            <button class="card__add" aria-label="Add to cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+          <span class="card__cat">HueForge</span><span class="card__name">Japanese Tree Sunset View</span>
+          <span class="card__price">₹200 <s>₹500</s></span>
+        </a>
+        <a class="card" href="#">
+          <div class="card__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/birds_flying_01.webp" alt="Birds Flying wall art" loading="lazy" style="filter:grayscale(.2) opacity(.55)" />
+            <div class="card__tags"><span class="pill pill--out">Sold out</span></div></div>
+          <span class="card__cat">Wall art</span><span class="card__name">Birds Flying</span>
+          <span class="card__meta">Sold-out state shown as an example</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CUSTOM PARTS ═══ -->
+  <section class="wrap" id="custom">
+    <div class="band">
+      <span class="layers" aria-hidden="true"></span>
+      <div>
+        <span class="eyebrow">Custom engineering parts</span>
+        <h2>Have a CAD file? We'll print it.</h2>
+        <p>Upload an STL or STEP file (up to 10 MB), pick a material, and get a quote by email within 24 hours.</p>
+        <a class="btn btn--light" href="#">Get a quote</a>
+      </div>
+      <ul>
+        <li>PLA, PETG, ABS, resin, nylon or TPU</li>
+        <li>STL, STEP or STP, up to 10 MB</li>
+        <li>Quote by email within 24 hours</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<!-- ═══ FOOTER (one shared partial after R-3) ═══ -->
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer__cols">
+      <div><a class="logo" href="#"><span class="logo__dot"></span>Snap Print</a><p style="margin-top:12px;max-width:34ch">3D printed wall art, bookmarks, toys and custom parts. Designed and printed in India.</p></div>
+      <div><h4>Shop</h4><ul><li>Book marks</li><li>HueForge</li><li>Wall art</li><li>Key chains</li><li>Custom parts</li></ul></div>
+      <div><h4>Help</h4><ul><li>Track order</li><li>Cancel order</li><li>FAQ</li><li>Contact</li></ul></div>
+      <div><h4>Policies</h4><ul><li>Shipping</li><li>Refunds</li><li>Terms</li><li>Privacy</li></ul></div>
+    </div>
+    <div class="footer__base"><span>© 2026 Snap Print</span><span>Instagram · LinkedIn · X</span></div>
+  </div>
+</footer>
+</body>
+</html>

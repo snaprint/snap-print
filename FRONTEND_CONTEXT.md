@@ -3,7 +3,7 @@
 > Context file for anyone (human or AI agent) changing client-side code.
 > Covers `src/` (Vite multi-page app), `public/`, client data flow, auth, and known problems.
 > Companion file: [BACKEND_CONTEXT.md](BACKEND_CONTEXT.md).
-> Snapshot of `main` @ `ca8c395` (Nov 2026).
+> Snapshot of `main` @ `ca8c395` (Nov 2026), updated for the FE fixes on `dev` (2026-11-17).
 
 ---
 
@@ -162,7 +162,8 @@ Login → token in `sessionStorage` (`seller_token`, `seller_username`). The das
 - State is stored as a 2-letter code; names come from `states.js`. The `<select>` options are still duplicated in `checkout.html` and `account.html`.
 - Engineering category = quote-only; never purchasable.
 - All prices shown client-side are previews. The server recomputes everything (`create-order`).
-- `npm run dev` has no `/api`. Use `npm run dev:full` (port 8788) to exercise checkout/quote/cancel/seller.
+- `npm run dev` has no `/api`. Use `npm run dev:full` (port 8788) to exercise checkout/quote/cancel/seller. Local builds read `.env` from the project root (F-21).
+- Never put a data value into `innerHTML` without `escapeHtml` (F-12). Get products only via `fetchActiveProducts()` (F-15) and purchasability only via `shared/products.js` (F-7).
 
 ---
 
@@ -271,7 +272,7 @@ Found 2026-11-17. Vite reads `.env` from `envDir`, which defaults to `root` (`sr
 
 ## 8. Planned work (new IDs)
 
-- **R-1…R-5** Full redesign track (see `agents/TASKS.md`). The owner must approve the design direction (R-1) before building.
+- **R-1…R-5** Full redesign track (see `agents/TASKS.md`). The owner must approve the design direction (R-1) before building. **R-1 proposal delivered 2026-11-17:** `agents/design/README.md` + static mockups (Direction A "Paper & Vermilion" recommended, B "Layer Lines"); waiting for O-9.
 - **F-20** Turnstile widget on quote + cancel forms (pairs with BE B-6). ✅ **Done 2026-11-17:** `src/js/turnstile.js` (`mountTurnstile(slot, action)` → `{enabled, getToken, reset}`) renders the widget into `#quote-turnstile` / `#cancel-turnstile` **only when `VITE_TURNSTILE_SITE_KEY` is set at build time**; otherwise the slot stays hidden and no Cloudflare script loads. With the widget on, submitting without a token shows "Please complete the security check…"; the token goes as `turnstileToken` (form field / JSON); the widget is reset after every response. Tested with Cloudflare's test keys: always-pass secret → accepted; always-fail secret → 403 message shown, input kept. Note: `VITE_*` values are baked in at build time, so after adding the key in Cloudflare, redeploy (push or "Retry deployment").
 
 Coordination: see `CLAUDE.md` and `agents/`.

@@ -22,9 +22,11 @@ Update the row when status changes. New tasks: add a row with the next free ID i
 | O-6 | Create Firebase service account; add `FIREBASE_SERVICE_ACCOUNT_JSON` to Pages env | B-16 | todo |
 | O-7 | Add `SELLER_TOKEN_SECRET` (random 32+ chars) to Production + Preview; replace plaintext passwords in `SELLER_ACCOUNTS` with `passwordHash` values (command in `BACKEND_CONTEXT.md` → B-7) | B-7 | todo |
 | O-8 | After B-14 + F-1 are live: **unpublish** the order-tracking sheet from "Publish to web" and give BE a private access method | F-1 | todo |
-| O-9 | Approve design direction (R-1) | R-2+ | todo |
+| O-9 | Approve design direction (R-1): open `agents/design/*.html`, answer MESSAGES #16 | R-2+ | todo |
 | O-10 | Deploy Firestore rules from `firestore.rules` once BE commits it | B-17 | todo |
 | O-15 | Decide the made-to-order lead time: 5–7 days (product page) vs 1–2 days (policy) (MESSAGES #12) | F-11 | todo |
+| O-16 | Raw image folders / public prompt guide: move, keep or delete? (MESSAGES #13) | F-17 | todo |
+| O-17 | Check sheet data: Hue-012…015 bulk tiers (1–2 at ₹100, 3–5 at ₹449), SCULP-001 at ₹11; snake_case product names (MESSAGES #16 q3–4) | R-1 | todo |
 
 ---
 
@@ -99,7 +101,7 @@ Skipped this session: F-1 (needs B-14, still `planned`), F-3 second half (needs 
 
 | ID | Task | Depends on | Status |
 |---|---|---|---|
-| R-1 | Propose design direction to owner (palette, type, layout, key mockups in `agents/design/`) | Part 1 | todo |
+| R-1 | Propose design direction to owner (palette, type, layout, key mockups in `agents/design/`) | Part 1 | blocked (waiting for owner review, MESSAGES #16 / O-9) |
 | R-2 | Publish `agents/DESIGN_TOKENS.md` (colours, fonts, logo URL, button style) for BE emails | O-9 | todo |
 | R-3 | De-duplicate navbar/footer (single source, e.g. Vite HTML partials or JS-injected) | O-9 | todo |
 | R-4 | Rebuild design system (`index.css` tokens, components) | O-9 | todo |

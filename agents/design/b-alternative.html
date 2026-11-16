@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mockup B · Layer Lines · Snap Print</title>
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* Snap Print, R-1 Direction B "Layer Lines" (MOCKUP ONLY) */
+  :root {
+    --bg: #F2F1EC; --surface: #FFFFFF; --line: #D8D6CE; --ink: #0E0E0C; --ink-2: #4A4944; --ink-3: #85837B;
+    --orange: #FF5B14; --lime: #D9F24F; --blue: #2B59FF;
+    --display: 'Space Grotesk', system-ui, sans-serif; --mono: 'JetBrains Mono', ui-monospace, monospace; --body: 'Inter', system-ui, sans-serif;
+    --r: 4px; --max: 1200px;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font: 400 16px/1.55 var(--body); }
+  img { display: block; max-width: 100%; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; cursor: pointer; }
+  .wrap { max-width: var(--max); margin: 0 auto; padding: 0 16px; }
+  @media (min-width: 768px) { .wrap { padding: 0 32px; } }
+  .mock-note { background: var(--ink); color: var(--bg); font: 500 12px/1.4 var(--body); padding: 8px 16px; text-align: center; }
+  .mock-note a { text-decoration: underline; }
+  .mono { font: 500 12px/1.2 var(--mono); letter-spacing: .02em; text-transform: uppercase; }
+  h1, h2, h3 { font-family: var(--display); letter-spacing: -0.03em; line-height: 1.02; }
+
+  .nav { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1.5px solid var(--ink); }
+  .nav__bar { display: flex; align-items: center; height: 60px; gap: 24px; }
+  .logo { font: 700 20px/1 var(--display); display: flex; gap: 8px; align-items: center; }
+  .logo i { width: 20px; height: 14px; background: repeating-linear-gradient(0deg, var(--ink) 0 2px, transparent 2px 4px); }
+  .nav__links { display: none; gap: 24px; }
+  .nav__links a { font: 500 12px/1 var(--mono); text-transform: uppercase; }
+  .nav__right { margin-left: auto; display: flex; gap: 8px; }
+  .sq { width: 40px; height: 40px; border: 1.5px solid var(--ink); border-radius: var(--r); display: grid; place-items: center; background: var(--surface); position: relative; }
+  .sq svg { width: 20px; height: 20px; }
+  .sq b { position: absolute; top: -8px; right: -8px; background: var(--orange); color: var(--ink); font: 700 11px/18px var(--mono); min-width: 18px; text-align: center; border-radius: 9px; border: 1.5px solid var(--ink); }
+  @media (min-width: 900px) { .nav__links { display: flex; } .only-m { display: none; } }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 50px; padding: 0 22px; border: 1.5px solid var(--ink); border-radius: var(--r); font: 700 15px/1 var(--display); background: var(--surface); box-shadow: 3px 3px 0 var(--ink); transition: transform .1s, box-shadow .1s; }
+  .btn:active { transform: translate(3px, 3px); box-shadow: none; }
+  .btn--orange { background: var(--orange); }
+  .btn--ink { background: var(--ink); color: var(--bg); box-shadow: 3px 3px 0 var(--orange); }
+
+  .hero { display: grid; gap: 24px; padding: 32px 0; border-bottom: 1.5px solid var(--ink); }
+  @media (min-width: 900px) { .hero { grid-template-columns: 1fr 1fr; padding: 56px 0; align-items: center; } }
+  .hero h1 { font-size: clamp(42px, 7vw, 84px); margin: 14px 0 18px; }
+  .hero h1 span { background: var(--lime); padding: 0 6px; }
+  .hero p { color: var(--ink-2); max-width: 38ch; margin-bottom: 24px; font-size: 17px; }
+  .hero__ctas { display: flex; flex-wrap: wrap; gap: 14px; }
+  .hero__img { border: 1.5px solid var(--ink); border-radius: var(--r); overflow: hidden; aspect-ratio: 4/3; position: relative; }
+  .hero__img img { width: 100%; height: 100%; object-fit: cover; }
+  .hero__img .mono { position: absolute; left: 12px; bottom: 12px; background: var(--surface); border: 1.5px solid var(--ink); padding: 6px 8px; border-radius: var(--r); }
+
+  .ticker { display: flex; gap: 32px; overflow: hidden; white-space: nowrap; padding: 12px 0; border-bottom: 1.5px solid var(--ink); }
+  .ticker span::before { content: '◆ '; color: var(--orange); }
+
+  .sec { padding: 40px 0 0; }
+  .sec__head { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin-bottom: 20px; }
+  .sec__head h2 { font-size: clamp(28px, 4vw, 44px); }
+  .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 20px; }
+  .chip { flex: 0 0 auto; height: 36px; padding: 0 14px; border: 1.5px solid var(--ink); border-radius: 999px; background: var(--surface); font: 500 13px/1 var(--mono); text-transform: uppercase; display: inline-flex; align-items: center; gap: 6px; }
+  .chip.on { background: var(--ink); color: var(--bg); }
+  .chip small { color: var(--ink-3); }
+
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  @media (min-width: 900px) { .grid { grid-template-columns: repeat(4, 1fr); gap: 20px; } }
+  .card { border: 1.5px solid var(--ink); border-radius: var(--r); background: var(--surface); overflow: hidden; display: flex; flex-direction: column; }
+  .card__img { aspect-ratio: 1; position: relative; border-bottom: 1.5px solid var(--ink); background: var(--bg); }
+  .card__img img { width: 100%; height: 100%; object-fit: cover; }
+  .tag { position: absolute; top: 8px; left: 8px; background: var(--lime); border: 1.5px solid var(--ink); border-radius: var(--r); padding: 4px 6px; }
+  .tag--low { left: auto; right: 8px; background: var(--orange); }
+  .card__body { padding: 12px; display: grid; gap: 6px; }
+  .card__body h3 { font-size: 17px; letter-spacing: -0.01em; }
+  .card__foot { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+  .card__foot b { font: 700 18px/1 var(--display); }
+  .card__foot s { color: var(--ink-3); font-size: 13px; margin-left: 6px; }
+  .add { width: 34px; height: 34px; border: 1.5px solid var(--ink); border-radius: var(--r); background: var(--orange); font-weight: 700; }
+
+  .pdp { display: grid; gap: 24px; border: 1.5px solid var(--ink); border-radius: var(--r); background: var(--surface); padding: 16px; margin-top: 8px; }
+  @media (min-width: 900px) { .pdp { grid-template-columns: 1fr 1fr; padding: 28px; gap: 40px; } }
+  .pdp__img { border: 1.5px solid var(--ink); border-radius: var(--r); overflow: hidden; aspect-ratio: 4/5; }
+  .pdp__img img { width: 100%; height: 100%; object-fit: cover; }
+  .pdp h2 { font-size: clamp(32px, 4vw, 48px); margin: 8px 0 12px; }
+  .price { display: flex; align-items: baseline; gap: 10px; font: 700 34px/1 var(--display); margin-bottom: 18px; }
+  .price s { font: 400 18px var(--body); color: var(--ink-3); }
+  .specs { display: grid; grid-template-columns: repeat(3, 1fr); border: 1.5px solid var(--ink); border-radius: var(--r); margin-bottom: 18px; }
+  .specs div { padding: 10px; border-right: 1.5px solid var(--ink); }
+  .specs div:last-child { border-right: 0; }
+  .specs b { display: block; font: 700 16px/1.2 var(--display); margin-top: 4px; }
+  .tiers { width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 14px; }
+  .tiers td, .tiers th { border: 1.5px solid var(--ink); padding: 8px 10px; text-align: left; }
+  .tiers th { background: var(--bg); }
+  .tiers tr.on td { background: var(--lime); }
+  .buy { display: flex; gap: 12px; flex-wrap: wrap; }
+  .buy .btn { flex: 1 1 160px; }
+  .ship { margin-top: 18px; display: grid; gap: 6px; color: var(--ink-2); font-size: 14px; }
+
+  .foot { margin-top: 56px; border-top: 1.5px solid var(--ink); padding: 24px 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+</style>
+</head>
+<body>
+<div class="mock-note">R-1 mockup, Direction B "Layer Lines" (alternative) · static · <a href="a-home.html">← Recommended A</a></div>
+
+<header class="nav"><div class="wrap nav__bar">
+  <a class="logo" href="#"><i></i>SNAP PRINT</a>
+  <nav class="nav__links"><a href="#">Shop</a><a href="#">Custom parts</a><a href="#">Track order</a><a href="#">About</a></nav>
+  <div class="nav__right">
+    <button class="sq" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+    <button class="sq" aria-label="Cart, 2 items"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 7h14l-1.2 12.1a2 2 0 0 1-2 1.9H8.2a2 2 0 0 1-2-1.9L5 7Z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg><b>2</b></button>
+    <button class="sq only-m" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  </div>
+</div></header>
+
+<main class="wrap">
+  <section class="hero">
+    <div>
+      <span class="mono">// 3D printed in India</span>
+      <h1>Printed <span>layer</span> by layer.</h1>
+      <p>Wall art, HueForge prints, bookmarks and fidget toys, plus custom parts from your own CAD files.</p>
+      <div class="hero__ctas"><a class="btn btn--orange" href="#">Shop now →</a><a class="btn" href="#">Upload a part</a></div>
+    </div>
+    <div class="hero__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/hero_images/Hero_image_7.webp" alt="3D printer in the studio" /><span class="mono">38 designs ready to order</span></div>
+  </section>
+  <div class="ticker mono"><span>Air 3–5 business days</span><span>Surface 6–9 business days</span><span>Razorpay secure checkout</span><span>Bulk pricing from 4 units</span></div>
+
+  <section class="sec">
+    <div class="sec__head"><h2>The catalogue</h2><span class="mono">Sort: featured ▾</span></div>
+    <div class="chips"><span class="chip on">All <small>38</small></span><span class="chip">Book marks <small>18</small></span><span class="chip">HueForge <small>8</small></span><span class="chip">Wall art <small>5</small></span><span class="chip">Key chains <small>2</small></span><span class="chip">Home decor <small>2</small></span><span class="chip">Toys <small>1</small></span></div>
+    <div class="grid">
+      <a class="card" href="#pdp"><div class="card__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/demon_slayer_set_01.webp" alt="" loading="lazy" /><span class="tag mono">−17%</span></div><div class="card__body"><span class="mono" style="color:var(--ink-3)">Book marks</span><h3>Demon Slayer Set</h3><div class="card__foot"><span><b>₹349</b><s>₹419</s></span><button class="add" aria-label="Add">+</button></div></div></a>
+      <a class="card" href="#"><div class="card__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/kanagawa_wave_01.webp" alt="" loading="lazy" /><span class="tag mono">−60%</span><span class="tag tag--low mono">1 left</span></div><div class="card__body"><span class="mono" style="color:var(--ink-3)">HueForge</span><h3>The Great Wave off Kanagawa</h3><div class="card__foot"><span><b>₹200</b><s>₹500</s></span><button class="add" aria-label="Add">+</button></div></div></a>
+      <a class="card" href="#"><div class="card__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/capybara_flexi_01.webp" alt="" loading="lazy" /><span class="tag mono">−34%</span></div><div class="card__body"><span class="mono" style="color:var(--ink-3)">Key chains</span><h3>Capybara Flexi</h3><div class="card__foot"><span><b>₹99</b><s>₹149</s></span><button class="add" aria-label="Add">+</button></div></div></a>
+      <a class="card" href="#"><div class="card__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/buds_on_tree_01.webp" alt="" loading="lazy" /><span class="tag mono">−20%</span></div><div class="card__body"><span class="mono" style="color:var(--ink-3)">Wall art</span><h3>Buds on Tree</h3><div class="card__foot"><span><b>₹200</b><s>₹249</s></span><button class="add" aria-label="Add">+</button></div></div></a>
+    </div>
+  </section>
+
+  <section class="sec" id="pdp">
+    <div class="sec__head"><h2>Product page</h2><span class="mono">same data as mockup A</span></div>
+    <div class="pdp">
+      <div class="pdp__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/demon_slayer_set_02.webp" alt="Demon Slayer bookmark set" /></div>
+      <div>
+        <span class="mono" style="color:var(--ink-3)">Book marks / set of 3 / in stock</span>
+        <h2>Demon Slayer Set</h2>
+        <div class="price">₹349 <s>₹419</s></div>
+        <div class="specs"><div><span class="mono">Material</span><b>PLA</b></div><div><span class="mono">Size</span><b>15×4 cm</b></div><div><span class="mono">Max / order</span><b>10</b></div></div>
+        <table class="tiers"><tr><th class="mono">Qty</th><th class="mono">Per set</th><th class="mono">Save</th></tr><tr class="on"><td>1–3</td><td>₹349</td><td>17%</td></tr><tr><td>4–10</td><td>₹300</td><td>28%</td></tr><tr><td>11+</td><td>₹270</td><td>36%</td></tr></table>
+        <div class="buy"><a class="btn" href="#">Add to cart</a><a class="btn btn--orange" href="#">Buy it now</a></div>
+        <div class="ship"><span class="mono">Air 3–5 · Surface 6–9 business days</span><span>Both include 1–2 days of production.</span></div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer class="wrap foot mono"><span>© 2026 Snap Print</span><span>Shipping · Refunds · Terms · Privacy</span></footer>
+</body>
+</html>
