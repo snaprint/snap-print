@@ -8,7 +8,7 @@ import {
   getCart, getCartSubtotal, getCartCount, clearCart,
   formatCurrency, getSampleShippingRates, getShippingCostPreview,
   isValidPhone, showToast, CONFIG, fetchCSV, lookupPIN,
-  showPageLoader, hidePageLoader,
+  showPageLoader, hidePageLoader, DELIVERY_DAYS, DELIVERY_PRODUCTION_NOTE,
 } from './utils.js';
 import { parseBulkPricing, getBulkPrice } from '../../shared/products.js';
 
@@ -29,8 +29,9 @@ import { apiFetch, readApiError, escapeHtml } from './helpers.js';
 
 let selectedAddressId = null; // tracks which saved address is selected
 
-let selectedMethod = 'surface';
+let selectedMethod = '';      // a `method` from the shipping sheet (lower-case)
 let shippingCost = 0;
+let shippingRates = null;     // F-9: shipping sheet rows, fetched once
 
 // Max time to wait for the post-payment Firestore writes before redirecting.
 const POST_PAYMENT_SAVE_TIMEOUT_MS = 4000;
@@ -47,16 +48,31 @@ const authUserEmail   = document.getElementById('auth-user-email');
 const authLogoutBtn   = document.getElementById('auth-logout-btn');
 const authForgotBtn   = document.getElementById('auth-forgot-btn');
 
-// ── Fetch shipping rates fresh from Sheets (or fall back to sample) ──
+// ── Fetch shipping rates from Sheets once per page (or fall back to sample) ──
 async function fetchShippingRates() {
-  if (!CONFIG.SHIPPING_RATES_CSV_URL) return getSampleShippingRates();
-  try {
-    return await fetchCSV(CONFIG.SHIPPING_RATES_CSV_URL);
-  } catch (err) {
-    console.warn('[Shipping] Failed to fetch live rates, using fallback:', err);
-    showToast('Could not load live shipping rates. Amounts shown may be approximate — the correct cost will be confirmed before payment.', 'info', 6000);
-    return getSampleShippingRates();
+  if (shippingRates) return shippingRates;
+  let rows;
+  if (!CONFIG.SHIPPING_RATES_CSV_URL) {
+    rows = getSampleShippingRates();
+  } else {
+    try {
+      rows = await fetchCSV(CONFIG.SHIPPING_RATES_CSV_URL);
+    } catch (err) {
+      console.warn('[Shipping] Failed to fetch live rates, using fallback:', err);
+      showToast('Could not load live shipping rates. Amounts shown may be approximate. The correct cost is confirmed before payment.', 'info', 6000);
+      rows = getSampleShippingRates();
+    }
   }
+  // F-9: one option per distinct method; same normalisation as the server (B-1)
+  const seen = new Set();
+  shippingRates = rows
+    .map(r => ({ ...r, method: String(r.method ?? '').trim().toLowerCase() }))
+    .filter(r => r.method && !seen.has(r.method) && seen.add(r.method));
+  return shippingRates;
+}
+
+function methodLabel(row) {
+  return row.field_content?.trim() || row.method.charAt(0).toUpperCase() + row.method.slice(1);
 }
 
 // ── Init ──
@@ -477,15 +493,13 @@ async function refreshShippingUI() {
   const rates = await fetchShippingRates();
   const itemTotal = getCartSubtotal();
 
-  const surfacePrice = getShippingCostPreview(rates, 'surface', itemTotal);
-  const airPrice     = getShippingCostPreview(rates, 'air',     itemTotal);
+  // Keep the buyer's choice if it still exists; default to surface, else the first row
+  if (!rates.some(r => r.method === selectedMethod)) {
+    selectedMethod = (rates.find(r => r.method === 'surface') || rates[0])?.method || '';
+  }
+  renderShippingOptions(rates, itemTotal);
 
-  const surfaceEl = document.getElementById('shipping-surface-price');
-  const airEl     = document.getElementById('shipping-air-price');
-  if (surfaceEl) surfaceEl.textContent = surfacePrice === 0 ? 'Free' : formatCurrency(surfacePrice);
-  if (airEl)     airEl.textContent     = airPrice     === 0 ? 'Free' : formatCurrency(airPrice);
-
-  shippingCost = getShippingCostPreview(rates, selectedMethod, itemTotal);
+  shippingCost = selectedMethod ? getShippingCostPreview(rates, selectedMethod, itemTotal) : 0;
 
   const summaryShipping = document.getElementById('summary-shipping');
   const summaryTotal    = document.getElementById('summary-total');
@@ -495,8 +509,31 @@ async function refreshShippingUI() {
   if (summaryTotal)    summaryTotal.textContent    = formatCurrency(itemTotal + shippingCost);
   if (payBtnText)      payBtnText.textContent      = `Pay ${formatCurrency(itemTotal + shippingCost)}`;
 
-  // ── Free Shipping Progress Bars ──
   renderFreeShippingProgress(rates, itemTotal);
+}
+
+// F-9: one radio per row of the shipping sheet
+function renderShippingOptions(rates, itemTotal) {
+  const selector = document.getElementById('shipping-selector');
+  if (!selector) return;
+  if (rates.length === 0) {
+    selector.innerHTML = '<p class="shipping-option__desc">Shipping options could not be loaded. Please refresh the page.</p>';
+    return;
+  }
+  selector.innerHTML = rates.map(row => {
+    const price = getShippingCostPreview(rates, row.method, itemTotal);
+    const days = DELIVERY_DAYS[row.method];
+    const checked = row.method === selectedMethod;
+    return `
+      <label class="shipping-option${checked ? ' selected' : ''}">
+        <input type="radio" name="shipping" value="${escapeHtml(row.method)}"${checked ? ' checked' : ''} />
+        <div class="shipping-option__info">
+          <span class="shipping-option__name">${escapeHtml(methodLabel(row))}</span>
+          ${days ? `<span class="shipping-option__desc">Est. ${days} (${DELIVERY_PRODUCTION_NOTE})</span>` : ''}
+        </div>
+        <span class="shipping-option__price">${price === 0 ? 'Free' : formatCurrency(price)}</span>
+      </label>`;
+  }).join('');
 }
 
 // ── Free Shipping Progress Bars ──
@@ -506,21 +543,14 @@ const SHIPPING_ICONS = {
   check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
 };
 
-const SHIPPING_LABELS = {
-  surface: 'Surface',
-  air: 'Air',
-};
-
 function renderFreeShippingProgress(rates, cartTotal) {
   const container = document.getElementById('free-shipping-progress');
   if (!container) return;
 
-  const methods = ['surface', 'air'];
   const bars = [];
 
-  for (const method of methods) {
-    const row = rates.find(r => r.method?.trim().toLowerCase() === method);
-    if (!row) continue;
+  for (const row of rates) {
+    const method = row.method;
 
     const threshold = Number(row.item_total);
     if (isNaN(threshold) || threshold <= 0) continue;
@@ -528,13 +558,13 @@ function renderFreeShippingProgress(rates, cartTotal) {
     const isFree = cartTotal >= threshold;
     const remaining = Math.max(0, threshold - cartTotal);
     const progress = Math.min(100, (cartTotal / threshold) * 100);
-    const label = SHIPPING_LABELS[method] || method;
+    const label = escapeHtml(method.charAt(0).toUpperCase() + method.slice(1));
 
     bars.push(`
       <div class="free-shipping-bar ${isFree ? 'free-shipping-bar--complete' : ''}">
         <div class="free-shipping-bar__header">
           <span class="free-shipping-bar__label">
-            ${isFree ? SHIPPING_ICONS.check : SHIPPING_ICONS[method] || ''}
+            ${isFree ? SHIPPING_ICONS.check : SHIPPING_ICONS[method] || SHIPPING_ICONS.surface}
             ${isFree ? `Free ${label} shipping!` : `${label}`}
           </span>
           <span class="free-shipping-bar__remaining">
@@ -560,14 +590,12 @@ function initShippingSelector() {
   const selector = document.getElementById('shipping-selector');
   if (!selector) return;
 
-  selector.querySelectorAll('input[type="radio"]').forEach(radio => {
-    radio.addEventListener('change', async () => {
-      if (!radio.checked) return;
-      selectedMethod = radio.value;
-      selector.querySelectorAll('.shipping-option').forEach(o => o.classList.remove('selected'));
-      radio.closest('.shipping-option')?.classList.add('selected');
-      await refreshShippingUI();
-    });
+  // Options are re-rendered from the sheet, so listen on the container
+  selector.addEventListener('change', async (e) => {
+    const radio = e.target.closest('input[name="shipping"]');
+    if (!radio || !radio.checked) return;
+    selectedMethod = radio.value;
+    await refreshShippingUI();
   });
 }
 
@@ -664,6 +692,7 @@ function initPayButton() {
 
     const cart = getCart();
     if (cart.length === 0) { showToast('Your cart is empty', 'error'); return; }
+    if (!selectedMethod) { showToast('Please choose a shipping method', 'error'); return; }
 
     const buyer = {
       uid:       getCurrentUser()?.uid || '',

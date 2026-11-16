@@ -133,7 +133,7 @@ Renders instantly from localStorage, then refreshes every line from the sheet (F
 1. Empty cart → redirect to cart. Render order summary.
 2. `onAuthChange`: logged out → login gate (Google / email signup / login / forgot password); logged in → form. Email comes from the Firebase user (read-only).
 3. Prefill name/phone from profile; if there are saved addresses, show the address picker (selecting one fills **and disables** the fields; "+ Add New Address" clears them).
-4. Shipping selector (hard-coded `surface` / `air` radios), free-shipping progress bars from the sheet `item_total` threshold, PIN → state auto-fill, blur validation.
+4. Shipping selector rendered from the shipping sheet (F-9), free-shipping progress bars from the sheet `item_total` threshold, PIN → state auto-fill (F-10), blur validation.
 5. Pay → `POST /api/create-order` with `{items:[{id,quantity}], shippingMethod, buyer}` → Razorpay modal with server `order_id`/`amount`/`key_id`.
 6. Razorpay `handler`: profile save, new address save (if not a saved one), order doc save, **awaited** (max 4 s) → `clearCart()` → redirect `/thank-you.html?order=<id>`. Payment signature is **not** verified client-side; the webhook is the source of truth (and sends the emails).
 
@@ -210,7 +210,8 @@ The engineering check is also case-sensitive on the product page ([product-detai
 Cart items store `price`, `name` and `image` at add-time. Only `bulk_pricing` is refreshed ([cart.js](src/js/cart.js)), so price changes in the sheet aren't reflected and deactivated products stay in the cart until `create-order` rejects them.
 **Fix:** during the refresh, also update `price`/`actual_price`/`name`/`image`, and flag or remove items missing from the active list.
 
-### 🟡 F-9 Shipping methods hard-coded in the UI
+### 🟡 F-9 Shipping methods hard-coded in the UI — ✅ fixed 2026-11-17
+**Fixed:** `checkout.html` has an empty `#shipping-selector`; `checkout.js` renders one radio per distinct `method` in the shipping sheet (trimmed + lower-cased like the server, B-1). Label = `field_content` (fallback: the method name); known methods (`air`, `surface`) show the approved estimate from `DELIVERY_DAYS`; free-shipping bars come from the same rows. The sheet is fetched once per page (it used to be re-fetched on every radio change). Default = `surface` if present, else the first row; Pay is refused without a method. A new method added to the sheet appears without a code change (add its estimate to `DELIVERY_DAYS` to show days).
 `checkout.html` has fixed `surface`/`air` radios; [checkout.js:31](src/js/checkout.js#L31) and [:476](src/js/checkout.js#L476) assume those names, while the server accepts whatever is in the sheet. Renaming or adding a method in the sheet breaks checkout. Render the options from the shipping CSV instead.
 
 ### 🟡 F-10 PIN → state auto-fill is wrong for several regions — ✅ fixed 2026-11-17
