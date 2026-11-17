@@ -1,6 +1,6 @@
 # Work Log
 
-**Active agent:** FRONTEND
+**Active agent:** none
 <!-- Set to BACKEND or FRONTEND at session start; reset to none at session end. -->
 
 Append-only. Newest entry at the **bottom**. Never edit or delete past entries.
@@ -124,3 +124,27 @@ Append-only. Newest entry at the **bottom**. Never edit or delete past entries.
 **How to verify on preview:** nothing visible changed.
 **Needs from other agent / owner:** Owner: O-18 (promote dev, branch decision, product names, brief + approve a direction), O-19 optional; earlier #12, #13, #15. BE: R-2 tokens will follow the approved direction.
 **Next:** new FE agent: read #18, then gate 0, then R-2.
+
+## 2026-11-17 · FRONTEND (redesign build)
+**Tasks:** R-1 (B0 chosen; variants mockup `agents/design/b-variants.html`), R-2 done, R-3 / R-4 / R-5 on the redesign preview; F-14 fixed; new F-22 found + fixed. Gate 0 answered by the owner (O-18): no early promotion, separate `redesign` branch, owner renames products in the sheet, direction **B0**.
+**Changed:**
+- Branch `redesign` created from `dev` and pushed. **`CLAUDE.md` §4: added the redesign-branch exception** (FE pushes `redesign` freely; it is merged into `dev` only after owner sign-off).
+- R-2: `agents/DESIGN_TOKENS.md` for BE email templates (MESSAGES #19).
+- R-3: `src/partials/{head,navbar,footer}.html` + `htmlPartials` plugin in `vite.config.js` (`<!-- @include name -->`, build and dev). All 18 pages use them (seller pages: head only). `main.js` finds Shop via `data-nav="shop"`; scroll-in animations removed. Navbar: light, outlined icon buttons, Track order on every page, skip link. `robots.txt` also disallows account + cancel-order (F-14).
+- R-4: `index.css` / `components.css` / `pages.css` rewritten in B0 (tokens, 1.5 px ink outlines, 4 px corners, offset shadows, orange/lime, Space Grotesk / Inter / JetBrains Mono, phone-first). Old token names kept as aliases for JS inline styles. Loader: "print layers" (`.print-loader`) replaces the hamster (`utils.js` markup only).
+- R-5: home hero rebuilt (split layout, hero sheet carousel kept, local fallback image), icon trust badges replaced by a text info strip, contact page cards, inline `<style>` blocks of cancel/track/seller pages moved into `pages.css`, product page CTAs and checkout Pay bar sticky at the bottom on phones, checkout summary rows use classes. Copy: "Order placed." (no emoji), "Secure payment by Razorpay".
+- **No behaviour changes:** no request/response, Firestore, cart, price or URL changes. Every element id the scripts use is kept.
+- F-22: `checkout.html` had two missing `</div>`s, so the order summary was hidden while signed out and sat under the Pay button when signed in. Fixed; shipping shows "Calculated in the next step" until a method is chosen.
+**Contract changes:** none
+**Tested locally** (`vite build` + `vite preview`, headless Edge via puppeteer-core in my scratchpad, live sheet data): every page at 390 and 1280 px: no console errors, no horizontal overflow; cart with a test cart (caps, bulk badge, "No longer available" line blocks checkout); checkout signed out (summary visible, sign-in gate); product sticky CTA bar on a 390 px viewport; partials expand in `npm run dev`. **Not tested:** signed-in checkout / account (needs a Firebase test login on the redesign host, O-20), a real Razorpay payment, quote/cancel submissions against the functions, iOS Safari, real phones.
+**Pushed:** `redesign` (not `dev`).
+**How to verify on the redesign preview** (`https://redesign.snap-print.pages.dev`, phone and desktop; first do O-20 so sign-in works there):
+1. Home: hero "Printed layer by layer." with the carousel on the right (below on phones), info strip, category tiles, catalogue search, Filters panel, sort; a URL like `/?category=wall art&sort=price-asc` still filters after reload.
+2. Phone: the menu button opens search, Shop categories as chips, Track order, Account, Cart; it closes when a link is tapped.
+3. Product page: gallery arrows/thumbs/fullscreen, quantity stops at the cap, bulk table highlights the tier; on a phone, "Add to Cart / Buy It Now" stay at the bottom of the screen while you read.
+4. Cart: + / − / remove; set a product inactive in the sheet: the line turns red with "No longer available" and checkout is blocked; restore it.
+5. Checkout: signed out shows order summary + sign-in box; signed in (test account): numbered sections, saved addresses, shipping options, orange "Pay ₹…" bar at the bottom on phones; one test payment (4111 1111 1111 1111) → "Saving your order…" → thank-you page → order in /account. (No emails from this host; emails are tested after the merge to `dev`.)
+6. Quote, Cancel order, Track order, Contact, FAQ (accordion), About, the four policy pages, Seller login: all in the new style, forms behave as before.
+**Needs from other agent / owner:** Owner: O-20 (Firebase authorized domain for the redesign host), review the redesign on your own phone, then say "merge redesign into dev" (or list changes). Earlier: #12, #13, #15, O-17. BE: #19 (tokens for B-18).
+**Next:** owner feedback, fixes on `redesign`; then R-6 (full regression incl. signed-in checkout + Lighthouse), merge into `dev`.
+

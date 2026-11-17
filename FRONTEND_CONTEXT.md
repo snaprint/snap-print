@@ -15,13 +15,13 @@
 | Build | Vite 6, `root: 'src'`, `publicDir: '../public'`, `outDir: '../dist'` |
 | Pages | 18 plain HTML entry points (MPA), listed in `vite.config.js` `rollupOptions.input` |
 | JS | Vanilla ES modules, no framework. One script per page plus shared `main.js` / `utils.js` |
-| CSS | 3 hand-written files, design tokens in CSS custom properties ("Warm Linen" beige theme), Inter from Google Fonts |
+| CSS | 3 hand-written files (`index.css` tokens/base, `components.css`, `pages.css`) in the approved **B0 "Layer Lines"** design (redesign branch, 2026-11-17). Fonts: Space Grotesk, Inter, JetBrains Mono (Google Fonts, linked from `src/partials/head.html`). Old token names (`--bg-body`, `--text-muted`, `--space-4` …) are kept as aliases because JS inline styles use them |
 | Runtime deps | `firebase` (Auth + Firestore, split into its own `firebase` chunk), `papaparse` (CSV) |
 | Third-party scripts | Razorpay Checkout (`checkout.html` only), Instagram `embed.js` (product page, on demand) |
 | Data source | Google Sheets published as CSV, fetched directly from the browser |
 | State | `localStorage` (cart, login flag), `sessionStorage` (seller token), Firestore (buyer profile/addresses/orders) |
 
-**Adding a page:** create `src/<name>.html`, add it to `rollupOptions.input` in [vite.config.js](vite.config.js), copy navbar + footer markup from an existing page (they are duplicated per page, there are no includes), and add it to `STATIC_PAGES` in `functions/sitemap.xml.js` if it should be indexed.
+**Adding a page:** create `src/<name>.html` with `<!-- @include head -->` in `<head>` and `<!-- @include navbar -->` / `<!-- @include footer -->` in the body (R-3: build-time partials from `src/partials/`, expanded by the `htmlPartials` plugin in [vite.config.js](vite.config.js), also in `npm run dev`), give the page's `<main>` `id="main"` (skip link), add it to `rollupOptions.input`, and ask BE to add it to the sitemap if it should be indexed.
 
 ---
 
@@ -38,7 +38,7 @@ src/
 ├── quote.html            Custom-part quote form (STL/STEP upload)
 ├── track-order.html      Email + mobile lookup → tracking link
 ├── cancel-order.html     Cancellation request form (screenshot upload)
-├── seller-login.html     Seller login (noindex; no navbar/footer, no pages.css)
+├── seller-login.html     Seller login (noindex; no navbar/footer)
 ├── seller-dashboard.html Send "shipped" email (noindex)
 ├── about.html, faq.html  (both have an inline FAQ-accordion script)
 ├── contact.html
@@ -70,7 +70,7 @@ public/
 policy_pages/*.md         source text for the policy HTML pages (not built)
 ```
 
-Seller pages, `cancel-order.html`, `track-order.html` and `index.html` each also have an inline `<style>` block.
+`src/partials/` holds `head.html`, `navbar.html`, `footer.html` (R-3). No page has an inline `<style>` block any more; their styles live in `pages.css`.
 
 ---
 
@@ -158,7 +158,8 @@ Login → token in `sessionStorage` (`seller_token`, `seller_username`). The das
 ## 6. Conventions & gotchas
 
 - **Only `checkout.js` and `account.js` may import `firebase.js` (or `auth-gate.js`, which imports it).** It is about 170 KB; other pages read `localStorage.snaprint_logged_in`.
-- Navbar/footer HTML is copy-pasted in every page. Change it in all 16 public pages. `main.js` finds the Shop link by its exact text `"Shop"`.
+- Navbar/footer/head come from `src/partials/` (one place). `main.js` finds the Shop link by `data-nav="shop"` and adds the search button, category dropdown and footer category links. Track order is in the navbar on every page (F-14).
+- Design rules (B0): 1.5 px ink outlines (`--bw`, `--line`), 4 px corners (`--r`), offset "pressed" shadows (`--press`), orange `--orange` only for the single loudest action (text on it is ink), lime `--lime` for highlights; mono uppercase labels via `.mono`; phone-first CSS (min-width queries, hover inside `@media (hover: hover)`, 44 px targets, 16 px inputs). Product page CTAs and the checkout Pay bar (`.checkout-paybar`) are sticky at the bottom on phones.
 - Category names are lower-cased everywhere for comparison; the display label is first-letter-capitalised.
 - State is stored as a 2-letter code; names come from `states.js`. The `<select>` options are still duplicated in `checkout.html` and `account.html`.
 - Engineering category = quote-only; never purchasable.
@@ -240,7 +241,7 @@ Sheet fields (`name`, `description`, `material`, `category`, image URLs), localS
 ### 🟡 F-13 Catalog reshuffles on every interaction — ✅ fixed 2026-11-17 (shuffled once after load; default sort keeps that order; a reload reshuffles)
 With default sort, `sortProducts` runs Fisher-Yates ([catalog.js:217](src/js/catalog.js#L217)) on every filter change and every debounced search keystroke, so the grid order jumps. Shuffle once after load and keep that order.
 
-### 🟡 F-14 Page inconsistencies
+### 🟡 F-14 Page inconsistencies — ✅ fixed on `redesign` 2026-11-17 (R-3: one head/navbar/footer for all pages, favicon from the head partial, Track order in every navbar, robots.txt disallows account + cancel-order)
 - `account.html` links `/favicon.ico` ([account.html:8](src/account.html#L8)); only `favicon.svg` exists, so it 404s.
 - `account.html` footer differs from other pages and lacks `#footer-shop-links`, so no category links appear.
 - Only `index.html` and `account.html` have the Track Order nav link.
@@ -270,6 +271,9 @@ Only checks that a token **exists**. An expired token sends `seller-login` → d
 
 ### 🟠 F-21 Local builds ignored `.env` — ✅ fixed 2026-11-17
 Found 2026-11-17. Vite reads `.env` from `envDir`, which defaults to `root` (`src/`), but `.env` lives in the project root. So `npm run dev`, `npm run dev:full` and a **local** `npm run deploy` built with no `VITE_*` values: sample (Unsplash) products, no shipping sheet, empty Firebase config. Cloudflare Pages builds were fine (dashboard env vars). **Fixed:** `envDir: __dirname` in `vite.config.js`. Verified the local build now contains the sheet URL and Firebase config.
+
+### 🟠 F-22 Checkout order summary hidden / in the wrong column — ✅ fixed on `redesign` 2026-11-17
+Found during R-5. `checkout.html` had two missing `</div>`s (shipping section and form column), so `#order-summary` sat **inside** `#checkout-form`: hidden while signed out and rendered under the Pay button instead of as a sidebar when signed in. Fixed the markup; the summary now shows for signed-out buyers too, and shipping reads "Calculated in the next step" until a method is chosen (was "₹0").
 
 ## 8. Planned work (new IDs)
 

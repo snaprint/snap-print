@@ -12,7 +12,7 @@ Emails can't load the site's CSS or web fonts reliably, so everything below is a
 | `surface` | `#FFFFFF` | cards, panels, inputs |
 | `ink` | `#0E0E0C` | text, borders, primary buttons, footer |
 | `ink-2` | `#4A4944` | secondary text |
-| `ink-3` | `#85837B` | muted text, labels |
+| `ink-3` | `#6F6D66` | muted text, labels (darker than the mockup's `#85837B` so small text passes WCAG AA on `bg`) |
 | `line` | `#0E0E0C` | outlines (1.5 px, same as ink) |
 | `line-soft` | `#D8D6CE` | hairlines inside cards (table rows, dividers) |
 | `orange` | `#FF5B14` | the one accent: main call to action ("Shop now", "Buy it now", "Pay"), cart badge, ticker dots. Text **on** orange is ink `#0E0E0C` (not white: white on this orange fails contrast) |
