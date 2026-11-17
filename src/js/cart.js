@@ -17,6 +17,8 @@ import {
   getItemMaxQuantity,
   cartFieldsFromProduct,
   unavailableLabel,
+  fetchCSV,
+  CONFIG,
 } from './utils.js';
 import { parseBulkPricing, getBulkPrice, getPurchasability } from '../../shared/products.js';
 import { escapeHtml } from './helpers.js';
@@ -24,6 +26,41 @@ import { escapeHtml } from './helpers.js';
 // F-8: cart lines that can't be bought right now, id → reason
 // ('inactive' when the product is gone from the sheet). Filled by the refresh.
 let unavailableItems = {};
+
+// Free-shipping thresholds from the shipping sheet: [{ label, threshold }].
+// Same rule as the server: subtotal >= item_total → that method is free.
+// Empty when the sheet can't be loaded (then nothing is shown, no guessing).
+let freeShippingTiers = [];
+
+async function loadFreeShippingTiers() {
+  if (!CONFIG.SHIPPING_RATES_CSV_URL) return;
+  try {
+    const rows = await fetchCSV(CONFIG.SHIPPING_RATES_CSV_URL);
+    const seen = new Set();
+    freeShippingTiers = rows
+      .map(r => ({ ...r, method: String(r.method ?? '').trim().toLowerCase() }))
+      .filter(r => r.method && !seen.has(r.method) && seen.add(r.method))
+      .map(r => ({
+        label: r.field_content?.trim() || r.method.charAt(0).toUpperCase() + r.method.slice(1),
+        threshold: Number(String(r.item_total ?? '').trim()),
+      }))
+      .filter(t => Number.isFinite(t.threshold) && t.threshold > 0)
+      .sort((a, b) => a.threshold - b.threshold);
+  } catch (err) {
+    console.warn('[Cart] Could not load shipping thresholds:', err);
+  }
+}
+
+function renderFreeShippingHint(subtotal) {
+  if (!freeShippingTiers.length) return '';
+  const lines = freeShippingTiers.map(t => {
+    const remaining = t.threshold - subtotal;
+    return remaining <= 0
+      ? `<li class="cart-free-ship__item cart-free-ship__item--done">Free ${escapeHtml(t.label)} shipping unlocked</li>`
+      : `<li class="cart-free-ship__item">Add ${formatCurrency(remaining)} more for free ${escapeHtml(t.label)} shipping</li>`;
+  }).join('');
+  return `<ul class="cart-free-ship" aria-label="Free shipping">${lines}</ul>`;
+}
 
 /**
  * F-8: brings every cart line up to date with the products sheet (name,
@@ -172,6 +209,7 @@ function renderCart() {
         <span class="summary-card__label">Subtotal</span>
         <span class="summary-card__value price">${formatCurrency(subtotal)}</span>
       </div>
+      ${renderFreeShippingHint(subtotal)}
       ${blocked ? `
         <button class="btn btn-primary btn-lg" style="width: 100%; margin-top: var(--space-5);" disabled>Proceed to Checkout</button>
         <p id="cart-blocked-note" style="margin-top:var(--space-2);font-size:var(--text-sm);color:var(--text-sale);">Some items are no longer available. Remove them to continue.</p>
@@ -236,4 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 2. Refresh every line from the sheet in the background (F-8), then re-render
   refreshCartFromSheet().then(renderCart);
+
+  // 3. Free-shipping hint from the shipping sheet
+  loadFreeShippingTiers().then(() => { if (freeShippingTiers.length) renderCart(); });
 });

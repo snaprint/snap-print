@@ -100,6 +100,10 @@ Skipped this session: F-1 (needs B-14, still `planned`), F-3 second half (needs 
 | — | F-1 | Track order + account statuses via `/api/track-order`; remove `VITE_ORDER_TRACKING_CSV_URL` | B-14 | blocked (B-14 planned) |
 | — | F-14 | Favicon, footer, nav, robots.txt consistency | R-3 | on redesign preview |
 | — | F-22 | Checkout order summary hidden / in wrong column (unbalanced `div`s); found 2026-11-17 | — | on redesign preview |
+| — | F-23 | Serve repo images from snaprint.in instead of raw GitHub (fallback to GitHub) | — | on redesign preview |
+| — | F-24 | Free-shipping hint in the cart summary | — | on redesign preview |
+| — | F-25 | Product page SEO: meta description, canonical, Product JSON-LD | — | on redesign preview |
+| — | F-26 | Styled 404 page (real 404 status) | — | on redesign preview |
 
 **Redesign track**
 

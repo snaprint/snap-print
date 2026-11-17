@@ -290,27 +290,55 @@ export function extractCategories(products) {
 
 // ── Resolve Image URL ──
 // Converts GitHub blob URLs to raw URLs so they work in <img> tags.
-// Also handles raw.githubusercontent.com, local paths, and external URLs.
+// Images that live in this repo's public/ folder (snaprint/snap-print) are
+// served from our own domain instead of raw.githubusercontent.com: same file,
+// but cached by Cloudflare's CDN and much faster. If the local copy is missing
+// (e.g. a photo pushed to another branch than the one deployed), the global
+// error handler below falls back to the original GitHub URL once.
+const REPO_PUBLIC_IMAGE = /^https:\/\/raw\.githubusercontent\.com\/snaprint\/snap-print\/(?:refs\/heads\/)?[^/]+\/public\/(images\/[^?#]+)$/i;
+const localImageFallbacks = new Map(); // same-origin path → original URL
+
 export function resolveImageUrl(url) {
   if (!url) return '';
   url = url.trim();
 
-  // Already a raw GitHub URL — good
-  if (url.startsWith('https://raw.githubusercontent.com/')) return url;
-
-  // GitHub blob URL → convert to raw
+  // GitHub blob URL → raw URL
   // e.g. https://github.com/user/repo/blob/main/path/img.png
   //   → https://raw.githubusercontent.com/user/repo/main/path/img.png
   const blobMatch = url.match(/^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/);
   if (blobMatch) {
-    return `https://raw.githubusercontent.com/${blobMatch[1]}/${blobMatch[2]}/${blobMatch[3]}`;
+    url = `https://raw.githubusercontent.com/${blobMatch[1]}/${blobMatch[2]}/${blobMatch[3]}`;
   }
 
-  // Local path (starts with /) — works as-is from same domain
-  if (url.startsWith('/')) return url;
+  const local = url.match(REPO_PUBLIC_IMAGE);
+  if (local) {
+    const path = `/${local[1]}`;
+    localImageFallbacks.set(path, url);
+    return path;
+  }
 
-  // Any other external URL — use as-is
+  // Local paths and any other external URL — use as-is
   return url;
+}
+
+// Runs before the inline onerror placeholders (capture phase on window), so a
+// missing local copy first retries the GitHub original.
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', (e) => {
+    const img = e.target;
+    if (!(img instanceof HTMLImageElement) || img.dataset.rawRetried) return;
+    let path;
+    try {
+      const u = new URL(img.currentSrc || img.src, location.href);
+      if (u.origin !== location.origin) return;
+      path = decodeURI(u.pathname);
+    } catch { return; }
+    const original = localImageFallbacks.get(path) || localImageFallbacks.get(encodeURI(path));
+    if (!original) return;
+    img.dataset.rawRetried = '1';
+    e.stopImmediatePropagation();
+    img.src = original;
+  }, true);
 }
 
 // ── Sample Products (with actual_price for discount display) ──

@@ -79,6 +79,7 @@ export default defineConfig({
         faq: resolve(__dirname, 'src/faq.html'),
         contact: resolve(__dirname, 'src/contact.html'),
         account: resolve(__dirname, 'src/account.html'),
+        notfound: resolve(__dirname, 'src/404.html'),
       },
       output: {
         manualChunks: {

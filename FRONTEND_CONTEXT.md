@@ -275,6 +275,12 @@ Found 2026-11-17. Vite reads `.env` from `envDir`, which defaults to `root` (`sr
 ### 🟠 F-22 Checkout order summary hidden / in the wrong column — ✅ fixed on `redesign` 2026-11-17
 Found during R-5. `checkout.html` had two missing `</div>`s (shipping section and form column), so `#order-summary` sat **inside** `#checkout-form`: hidden while signed out and rendered under the Pay button instead of as a sidebar when signed in. Fixed the markup; the summary now shows for signed-out buyers too, and shipping reads "Calculated in the next step" until a method is chosen (was "₹0").
 
+### Improvements after the redesign (redesign branch, 2026-11-17)
+- **F-23 Images from our own domain.** `resolveImageUrl` (utils.js) maps sheet URLs that point into this repo (`raw.githubusercontent.com/snaprint/snap-print/<branch>/public/images/…` and the `github.com/…/blob/…` form) to `/images/…` on the site itself (Cloudflare CDN cache instead of GitHub). A capture-phase `error` listener retries the original GitHub URL once if the local file is missing (e.g. a photo pushed to another branch than the one deployed), before the page's own placeholder `onerror` runs. Other external URLs are untouched. **Rule for photos:** a new product photo must be in `public/images/products/` on the branch that is deployed, or it loads from GitHub (slower) via the fallback.
+- **F-24 Free-shipping hint in the cart.** The cart summary lists "Add ₹X more for free <method> shipping" / "unlocked" per shipping-sheet row with a numeric `item_total` (same rule as the server: bulk-adjusted subtotal ≥ `item_total`). Nothing is shown if the shipping sheet can't be loaded.
+- **F-25 Product SEO.** After a product loads, `product-detail.js` sets the meta description, a canonical URL and schema.org `Product` JSON-LD (price in INR, In stock / Out of stock, images, brand). Unpriced products get no offer data.
+- **F-26 404 page.** `src/404.html` (in `rollupOptions.input`). Cloudflare Pages serves it with status **404** for unknown paths; before, unknown paths returned the home page with 200. Has a search box (`/?q=`) and links to shop / track / contact.
+
 ## 8. Planned work (new IDs)
 
 - **R-1…R-5** Full redesign track (see `agents/TASKS.md`). The owner must approve the design direction (R-1) before building. **R-1 proposal delivered 2026-11-17:** `agents/design/README.md` + static mockups (Direction A "Paper & Vermilion" recommended, B "Layer Lines"); waiting for O-9.

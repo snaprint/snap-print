@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Page not found — Snap Print</title>
+  <meta name="description" content="This page doesn't exist. Browse the Snap Print catalogue instead." />
+  <meta name="robots" content="noindex" />
+  <!-- @include head -->
+</head>
+<body>
+  <div class="page">
+    <!-- @include navbar -->
+
+    <main id="main" class="notfound-page">
+      <div class="container">
+        <div class="notfound">
+          <span class="notfound__code mono">Error 404</span>
+          <h1 class="notfound__title">This layer <mark>didn't print.</mark></h1>
+          <p class="notfound__desc">The page you're looking for doesn't exist or has moved. Try searching the catalogue, or start from one of these.</p>
+
+          <form class="notfound__search catalog-search" action="/" method="get" role="search">
+            <svg class="catalog-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" class="catalog-search__input" name="q" placeholder="Search products" aria-label="Search products" enterkeyhint="search" />
+          </form>
+
+          <div class="notfound__links">
+            <a href="/" class="btn btn-accent btn-lg">Go to the shop</a>
+            <a href="/track-order.html" class="btn btn-secondary btn-lg">Track an order</a>
+            <a href="/contact.html" class="btn btn-ghost">Contact us</a>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- @include footer -->
+  </div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

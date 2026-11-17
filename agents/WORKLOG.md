@@ -163,3 +163,21 @@ SEO on `*.pages.dev` scores 63–66 only because Cloudflare sends `x-robots-tag:
 **How to verify:** nothing visible should change; on the product page the footer no longer jumps while the product loads.
 **Next:** owner says "merge redesign into dev" → merge, verify on `dev` (incl. order emails) → owner promotes. Optional perf follow-up: show the local hero image first and add the sheet images after it (small change in `catalog.js`), and/or point the hero sheet at `snaprint.in/images/...` instead of raw GitHub.
 
+## 2026-11-17 · FRONTEND (improvements F-23…F-26)
+**Tasks:** F-23, F-24, F-25, F-26 (owner asked for the recommended frontend additions; all on `redesign`). Owner had verified R-5 (signed-in checkout, test payment, quotes, Android).
+**Changed:**
+- F-23 `utils.js` `resolveImageUrl`: repo images (`raw.githubusercontent.com/snaprint/snap-print/<branch>/public/images/…`) are loaded from `/images/…` on our own domain; a missing local file falls back to the GitHub URL once. Removed the GitHub preconnect from the head partial (no longer needed).
+- F-24 `cart.js`: "Add ₹X more for free <method> shipping" lines under the subtotal, from the shipping sheet.
+- F-25 `product-detail.js`: meta description, canonical, schema.org Product JSON-LD.
+- F-26 `src/404.html` + `vite.config.js` input `notfound`: unknown URLs now get a real 404 page (previously Cloudflare served the home page with status 200).
+**Contract changes:** none
+**Tested locally** (`wrangler pages dev dist` on port 8795 + headless Edge): home loads 12/12 grid images from our domain, 0 from GitHub, none broken; a missing local image retries GitHub, then shows the placeholder; JSON-LD, canonical and meta description present on a product page; cart shows both free-shipping lines from the live sheet; `/this-page-does-not-exist` and `/no/such/nested/path` → status 404 with the styled page; real pages still 200. Note: another (not mine) server was already listening on 8788 with an older build; I left it alone.
+**Pushed:** `redesign`.
+**How to verify on the redesign preview:**
+1. Home on your phone: product photos appear (they now come from snaprint.in / the preview domain, not GitHub). In DevTools → Network, image URLs start with `/images/`.
+2. Add one cheap item to the cart → the summary says "Add ₹… more for free … shipping"; add more until it says "unlocked".
+3. Open `https://redesign.snap-print.pages.dev/abc` → "This layer didn't print." page.
+4. Product page → paste its URL into https://search.google.com/test/rich-results → "Product snippets" detected with price and availability.
+**Needs from other agent / owner:** Owner: decide when to merge `redesign` into `dev` ("merge redesign into dev"). When adding new product photos, push them to the deployed branch (see F-23 rule in FRONTEND_CONTEXT). BE: none (link previews for shared products would need a Pages Function; not requested yet).
+**Next:** merge into `dev` when the owner says so; then verify order emails there; then promotion.
+

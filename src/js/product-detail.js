@@ -33,10 +33,68 @@ async function loadProduct() {
     renderRelatedProducts(currentProduct);
     renderInstagramEmbed(currentProduct);
     document.title = `${currentProduct.name} — Snap Print`;
+    addProductSeo(currentProduct);
   } catch (err) {
     console.error('Failed to load product:', err);
     showToast('Failed to load product details', 'error');
   }
+}
+
+/**
+ * SEO: per-product meta description, canonical URL and schema.org Product
+ * data (JSON-LD), so search results can show the price and stock. Google runs
+ * the page's JavaScript, so adding these after the product loads is enough.
+ * Values are set with textContent / attributes, never parsed as HTML.
+ */
+function addProductSeo(product) {
+  const url = `${location.origin}/product.html?id=${encodeURIComponent(product.id)}`;
+  const description = String(product.description || '').replace(/\s+/g, ' ').trim().slice(0, 300)
+    || `${product.name}, 3D printed by Snap Print in India.`;
+
+  const meta = document.querySelector('meta[name="description"]');
+  if (meta) meta.setAttribute('content', description.slice(0, 160));
+
+  let canonical = document.querySelector('link[rel="canonical"]');
+  if (!canonical) {
+    canonical = document.createElement('link');
+    canonical.rel = 'canonical';
+    document.head.appendChild(canonical);
+  }
+  canonical.href = url;
+
+  const { purchasable, reason } = getPurchasability(product);
+  if (reason === 'no_price') return; // no offer to describe
+
+  const images = String(product.image_urls || '')
+    .split(',').map(u => u.trim()).filter(Boolean)
+    .map(u => new URL(resolveImageUrl(u), location.origin).href);
+
+  const data = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    sku: product.id,
+    description,
+    image: images,
+    category: product.category || undefined,
+    material: product.material || undefined,
+    brand: { '@type': 'Brand', name: 'Snap Print' },
+    offers: {
+      '@type': 'Offer',
+      url,
+      priceCurrency: 'INR',
+      price: Number(product.price).toFixed(2),
+      availability: purchasable ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      itemCondition: 'https://schema.org/NewCondition',
+      seller: { '@type': 'Organization', name: 'Snap Print' },
+    },
+  };
+
+  const script = document.createElement('script');
+  script.type = 'application/ld+json';
+  // set via textContent on a DOM node: sheet values are never parsed as HTML
+  script.textContent = JSON.stringify(data);
+  document.head.appendChild(script);
 }
 
 /**

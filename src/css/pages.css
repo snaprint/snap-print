@@ -1690,3 +1690,29 @@
 
 /* pages whose content is built by JS: keep the footer below the fold while loading (avoids layout shift) */
 .product-detail, .cart-page, .checkout-page, .account-page { min-height: calc(100vh - var(--navbar-height)); min-height: calc(100dvh - var(--navbar-height)); }
+
+/* cart: free-shipping hint (thresholds from the shipping sheet) */
+.cart-free-ship { display: grid; gap: 6px; margin-top: var(--space-3); }
+.cart-free-ship__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 10px;
+  font-size: var(--text-sm);
+  background: var(--bg);
+  border: 1px dashed var(--line);
+  border-radius: var(--r);
+}
+.cart-free-ship__item::before { content: ''; width: 8px; height: 8px; flex-shrink: 0; background: var(--orange); border: var(--bw) solid var(--ink); }
+.cart-free-ship__item--done { background: var(--success-bg); border-style: solid; font-weight: 600; }
+.cart-free-ship__item--done::before { background: var(--lime); }
+
+/* 404 */
+.notfound-page { padding: var(--space-10) 0 var(--space-12); }
+.notfound { max-width: 640px; }
+.notfound__code { display: inline-block; padding: 4px 8px; background: var(--ink); color: var(--bg); border-radius: var(--r); }
+.notfound__title { margin: var(--space-4) 0 var(--space-3); font-size: clamp(2.5rem, 10vw, 4.5rem); line-height: 0.98; letter-spacing: -0.035em; }
+.notfound__title mark { background: var(--lime); color: inherit; padding: 0 0.08em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.notfound__desc { font-size: var(--text-md); margin-bottom: var(--space-6); }
+.notfound__search { margin-bottom: var(--space-5); }
+.notfound__links { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
