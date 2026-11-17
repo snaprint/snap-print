@@ -1,6 +1,6 @@
 # Work Log
 
-**Active agent:** FRONTEND
+**Active agent:** none
 <!-- Set to BACKEND or FRONTEND at session start; reset to none at session end. -->
 
 Append-only. Newest entry at the **bottom**. Never edit or delete past entries.
@@ -147,4 +147,19 @@ Append-only. Newest entry at the **bottom**. Never edit or delete past entries.
 6. Quote, Cancel order, Track order, Contact, FAQ (accordion), About, the four policy pages, Seller login: all in the new style, forms behave as before.
 **Needs from other agent / owner:** Owner: O-20 (Firebase authorized domain for the redesign host), review the redesign on your own phone, then say "merge redesign into dev" (or list changes). Earlier: #12, #13, #15, O-17. BE: #19 (tokens for B-18).
 **Next:** owner feedback, fixes on `redesign`; then R-6 (full regression incl. signed-in checkout + Lighthouse), merge into `dev`.
+
+## 2026-11-17 · FRONTEND (R-6 part 1)
+**Tasks:** R-5 owner-verified; R-6 in progress.
+**Owner verified on the redesign preview:** signed-in checkout, a test payment, quote form, Android phone. No iPhone available.
+**Changed:** fonts CSS no longer blocks the first paint (preload + `media="print"` swap, `<noscript>` fallback); preconnect to raw.githubusercontent.com (product/hero images); JS-built pages (product, cart, checkout, account) reserve one screen of height so the footer doesn't jump when content arrives.
+**Lighthouse, mobile** (performance / accessibility / best practices, LCP, CLS):
+| Page | Live site (snaprint.in) | Redesign before fixes | Redesign after fixes |
+|---|---|---|---|
+| Home | 75 / 88 / 82, 4.4 s, 0.031 | 71 / 99 / 96, 8.9 s, 0.026 | 70 / 99 / 96, 9.3 s, **0** |
+| Product | 58 / 94 / 82, 5.4 s, 0.292 | 60 / 94 / 96, 4.9 s, 0.48 | **74–79** / 94 / 96, 5.2–6.9 s, **0** |
+| Checkout | 61 / 95 / 61, 7.1 s, 0 | 64 / 100 / 75, 6.7 s, 0 | not re-run |
+SEO on `*.pages.dev` scores 63–66 only because Cloudflare sends `x-robots-tag: noindex` on preview URLs; on snaprint.in that header isn't sent (live site: 91–92). Home LCP is the first **hero-sheet image** (a raw GitHub URL), which loads only after the hero CSV arrives; same mechanism as the live site. Lighthouse numbers vary a lot between runs on these pages (one home run: 25.8 s).
+**Pushed:** `redesign` (8252707, b14cd86).
+**How to verify:** nothing visible should change; on the product page the footer no longer jumps while the product loads.
+**Next:** owner says "merge redesign into dev" → merge, verify on `dev` (incl. order emails) → owner promotes. Optional perf follow-up: show the local hero image first and add the sheet images after it (small change in `catalog.js`), and/or point the hero sheet at `snaprint.in/images/...` instead of raw GitHub.
 

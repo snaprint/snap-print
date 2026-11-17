@@ -109,5 +109,5 @@ Skipped this session: F-1 (needs B-14, still `planned`), F-3 second half (needs 
 | R-2 | Publish `agents/DESIGN_TOKENS.md` (colours, fonts, logo URL, button style) for BE emails | O-9 | done (MESSAGES #19) |
 | R-3 | De-duplicate navbar/footer (single source, e.g. Vite HTML partials or JS-injected) | O-9 | on redesign preview (build-time partials) |
 | R-4 | Rebuild design system (`index.css` tokens, components) | O-9 | on redesign preview (no separate gallery: owner asked for the whole site; the pages are the review) |
-| R-5 | Redesign pages in the order in `agents/REDESIGN_PLAN.md` §3 (static pages → home → product → cart → forms → checkout → account → thank-you → track-order → seller) | R-4 | on redesign preview (all 18 pages; owner review + real-device test pending) |
-| R-6 | Full regression (`REDESIGN_PLAN.md` §6), remove old CSS, Lighthouse, launch + rollback checklist for the owner | R-5 | todo |
+| R-5 | Redesign pages in the order in `agents/REDESIGN_PLAN.md` §3 (static pages → home → product → cart → forms → checkout → account → thank-you → track-order → seller) | R-4 | on redesign preview; owner verified 2026-11-17 (signed-in checkout, test payment, quote, Android) |
+| R-6 | Full regression (`REDESIGN_PLAN.md` §6), remove old CSS, Lighthouse, launch + rollback checklist for the owner | R-5 | in progress: old CSS gone, Lighthouse done (WORKLOG), CLS fixed; left: owner says merge → verify on `dev` incl. emails → launch |
