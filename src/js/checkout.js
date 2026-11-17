@@ -260,25 +260,23 @@ function renderOrderSummary() {
   const subtotal = getCartSubtotal();
 
   container.innerHTML = `
-    <div class="summary-card" style="position:sticky;top:calc(var(--navbar-height) + var(--space-4));">
+    <div class="summary-card summary-card--sticky">
       <h2 class="summary-card__title">Order Summary</h2>
 
-      <div class="flex flex-col gap-3" style="margin-bottom:var(--space-4);">
+      <div class="flex flex-col gap-4" style="margin-bottom:var(--space-4);">
         ${cart.map(item => {
           const tiers = parseBulkPricing(item.bulk_pricing);
           const effectivePrice = getBulkPrice(tiers, item.quantity, item.price);
           const lineTotal = effectivePrice * item.quantity;
           return `
-          <div class="flex items-center gap-3">
-            <div style="width:48px;height:48px;border-radius:var(--radius-md);overflow:hidden;background:var(--bg-muted);flex-shrink:0;position:relative;">
-              <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" style="width:100%;height:100%;object-fit:cover;"
-                onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22%3E%3Crect fill=%22%23f3f4f6%22 width=%2248%22 height=%2248%22/%3E%3C/svg%3E'" />
-              <span style="position:absolute;top:-4px;right:-4px;background:var(--text-secondary);color:white;font-size:10px;font-weight:700;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;">${item.quantity}</span>
+          <div class="summary-line">
+            <div class="summary-line__thumb">
+              <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}"
+                onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22%3E%3Crect fill=%22%23E9E7E0%22 width=%2248%22 height=%2248%22/%3E%3C/svg%3E'" />
+              <span class="summary-line__qty" aria-label="Quantity ${item.quantity}">${item.quantity}</span>
             </div>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:var(--text-sm);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.name)}</div>
-            </div>
-            <span style="font-size:var(--text-sm);font-weight:600;white-space:nowrap;">${formatCurrency(lineTotal)}</span>
+            <div class="summary-line__name">${escapeHtml(item.name)}</div>
+            <span class="summary-line__price">${formatCurrency(lineTotal)}</span>
           </div>`;
         }).join('')}
       </div>
@@ -291,7 +289,7 @@ function renderOrderSummary() {
       </div>
       <div class="summary-card__row">
         <span class="summary-card__label">Shipping</span>
-        <span class="summary-card__value" id="summary-shipping">${formatCurrency(shippingCost)}</span>
+        <span class="summary-card__value" id="summary-shipping">${selectedMethod ? formatCurrency(shippingCost) : 'Calculated in the next step'}</span>
       </div>
       <div class="summary-card__row summary-card__row--total">
         <span class="summary-card__label">Total</span>
