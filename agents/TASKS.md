@@ -98,12 +98,12 @@ Skipped this session: F-1 (needs B-14, still `planned`), F-3 second half (needs 
 | — | F-21 | Local builds ignored `.env` (Vite `envDir`); found 2026-11-17 | — | on preview |
 | — | F-3b | Remove the client order write | B-16 | blocked (B-16) |
 | — | F-1 | Track order + account statuses via `/api/track-order`; remove `VITE_ORDER_TRACKING_CSV_URL` | B-14 | blocked (B-14 planned) |
-| — | F-14 | Favicon, footer, nav, robots.txt consistency | R-3 | on redesign preview |
-| — | F-22 | Checkout order summary hidden / in wrong column (unbalanced `div`s); found 2026-11-17 | — | on redesign preview |
-| — | F-23 | Serve repo images from snaprint.in instead of raw GitHub (fallback to GitHub) | — | on redesign preview |
-| — | F-24 | Free-shipping hint in the cart summary | — | on redesign preview |
-| — | F-25 | Product page SEO: meta description, canonical, Product JSON-LD | — | on redesign preview |
-| — | F-26 | Styled 404 page (real 404 status) | — | on redesign preview |
+| — | F-14 | Favicon, footer, nav, robots.txt consistency | R-3 | on preview (merged into dev 2026-11-17) |
+| — | F-22 | Checkout order summary hidden / in wrong column (unbalanced `div`s); found 2026-11-17 | — | on preview (merged into dev 2026-11-17) |
+| — | F-23 | Serve repo images from snaprint.in instead of raw GitHub (fallback to GitHub) | — | on preview (merged into dev 2026-11-17) |
+| — | F-24 | Free-shipping hint in the cart summary | — | on preview (merged into dev 2026-11-17) |
+| — | F-25 | Product page SEO: meta description, canonical, Product JSON-LD | — | on preview (merged into dev 2026-11-17) |
+| — | F-26 | Styled 404 page (real 404 status) | — | on preview (merged into dev 2026-11-17) |
 
 **Redesign track**
 
@@ -111,7 +111,7 @@ Skipped this session: F-1 (needs B-14, still `planned`), F-3 second half (needs 
 |---|---|---|---|
 | R-1 | Propose design direction to owner (palette, type, layout, key mockups in `agents/design/`) | Part 1 | done (B0 approved) |
 | R-2 | Publish `agents/DESIGN_TOKENS.md` (colours, fonts, logo URL, button style) for BE emails | O-9 | done (MESSAGES #19) |
-| R-3 | De-duplicate navbar/footer (single source, e.g. Vite HTML partials or JS-injected) | O-9 | on redesign preview (build-time partials) |
-| R-4 | Rebuild design system (`index.css` tokens, components) | O-9 | on redesign preview (no separate gallery: owner asked for the whole site; the pages are the review) |
-| R-5 | Redesign pages in the order in `agents/REDESIGN_PLAN.md` §3 (static pages → home → product → cart → forms → checkout → account → thank-you → track-order → seller) | R-4 | on redesign preview; owner verified 2026-11-17 (signed-in checkout, test payment, quote, Android) |
-| R-6 | Full regression (`REDESIGN_PLAN.md` §6), remove old CSS, Lighthouse, launch + rollback checklist for the owner | R-5 | in progress: old CSS gone, Lighthouse done (WORKLOG), CLS fixed; left: owner says merge → verify on `dev` incl. emails → launch |
+| R-3 | De-duplicate navbar/footer (single source, e.g. Vite HTML partials or JS-injected) | O-9 | on preview (merged into dev 2026-11-17) (build-time partials) |
+| R-4 | Rebuild design system (`index.css` tokens, components) | O-9 | on preview (merged into dev 2026-11-17) (no separate gallery: owner asked for the whole site; the pages are the review) |
+| R-5 | Redesign pages in the order in `agents/REDESIGN_PLAN.md` §3 (static pages → home → product → cart → forms → checkout → account → thank-you → track-order → seller) | R-4 | on preview (merged into dev 2026-11-17); owner verified 2026-11-17 (signed-in checkout, test payment, quote, Android) |
+| R-6 | Full regression (`REDESIGN_PLAN.md` §6), remove old CSS, Lighthouse, launch + rollback checklist for the owner | R-5 | in progress: merged into `dev`; left: owner test payment on dev (emails) → "promote to main" |

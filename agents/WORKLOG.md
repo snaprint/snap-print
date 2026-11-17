@@ -188,3 +188,14 @@ SEO on `*.pages.dev` scores 63–66 only because Cloudflare sends `x-robots-tag:
 **Pushed:** `redesign`.
 **How to verify:** on your phone, add a product with a high quantity → the total and the × button sit inside the card on the row below the photo.
 
+## 2026-11-17 · FRONTEND (merge)
+**Tasks:** R-6: owner said "merge redesign into dev".
+**Changed:** `redesign` merged into `dev` (fast-forward, `dev` had no other commits; tip 5f49cb5 before this entry). `npm run build` passes on `dev`. **`CLAUDE.md` §4:** the redesign-branch exception is marked closed; FE works on `dev` again.
+**Pushed:** `dev` (and nothing to `main`).
+**How to verify on preview** (`https://dev.snap-print.pages.dev`, after Cloudflare finishes building):
+1. The new design is on the dev preview (home hero "Printed layer by layer.").
+2. One test payment (card 4111 1111 1111 1111) → thank-you page → order in /account → **buyer + seller emails arrive** (only the dev host has the test webhook).
+3. Quick look on your phone: home, a product, cart, checkout.
+Then say **"promote to main"** to put it on snaprint.in. Rollback if needed: Cloudflare Pages → Deployments → previous production deployment → Rollback.
+**Before promoting (owner):** Production env vars are unchanged by the redesign (no new variables). If you set up Turnstile (O-5), add `VITE_TURNSTILE_SITE_KEY` to Production too.
+
