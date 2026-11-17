@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Mockup B variants · Snap Print</title>
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&family=Inter:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=DM+Sans:opsz,wght@9..40,500;9..40,700&display=swap" rel="stylesheet" />
+<style>
+/* R-1 follow-up: variants of Direction B "Layer Lines" (MOCKUP ONLY, never deployed).
+   Same markup for every variant; each variant only swaps the tokens + a few overrides.
+   Layout uses container queries on .frame so the "Phone width" toggle shows the real phone layout. */
+
+/* ---------- B0 · original (reference) ---------- */
+:root, [data-v="b0"] {
+  --bg:#F2F1EC; --surface:#FFFFFF; --sunken:#F2F1EC; --line:#0E0E0C; --bw:1.5px;
+  --ink:#0E0E0C; --ink-2:#4A4944; --ink-3:#85837B;
+  --accent:#FF5B14; --on-accent:#0E0E0C; --hi:#D9F24F; --sale:#D9F24F; --sale-ink:#0E0E0C;
+  --r:4px; --r-img:4px; --shadow:3px 3px 0 var(--ink); --shadow-ink:3px 3px 0 var(--accent);
+  --display:'Space Grotesk',system-ui,sans-serif; --body:'Inter',system-ui,sans-serif;
+  --label:500 12px/1.2 'JetBrains Mono',ui-monospace,monospace; --label-case:uppercase; --label-track:.02em;
+  --h-track:-0.03em; --h-weight:700; --chip-r:999px;
+}
+/* ---------- B1 · Soft Lines ---------- */
+[data-v="b1"] {
+  --bg:#F5F2EB; --surface:#FFFFFF; --sunken:#ECE7DD; --line:#DDD5C7; --bw:1px;
+  --ink:#24211D; --ink-2:#5A544B; --ink-3:#8C8579;
+  --accent:#B4553C; --on-accent:#FFFFFF; --hi:#EEDFCB; --sale:#F3E2DB; --sale-ink:#8E3B26;
+  --r:12px; --r-img:12px; --shadow:none; --shadow-ink:none;
+  --display:'Space Grotesk',system-ui,sans-serif; --body:'Inter',system-ui,sans-serif;
+  --label:500 13px/1.3 'Inter',system-ui,sans-serif; --label-case:none; --label-track:0;
+  --h-track:-0.02em; --h-weight:600; --chip-r:10px;
+}
+/* ---------- B2 · Studio Sage ---------- */
+[data-v="b2"] {
+  --bg:#F2F1EB; --surface:#FBFAF6; --sunken:#E8E8DF; --line:#D6D6CA; --bw:1px;
+  --ink:#1E231F; --ink-2:#525A53; --ink-3:#858C84;
+  --accent:#4F6E55; --on-accent:#FFFFFF; --hi:#DFE8DA; --sale:#E3EBDF; --sale-ink:#3C5841;
+  --r:10px; --r-img:8px; --shadow:none; --shadow-ink:none;
+  --display:'Fraunces',Georgia,serif; --body:'Inter',system-ui,sans-serif;
+  --label:500 13px/1.3 'Inter',system-ui,sans-serif; --label-case:none; --label-track:0;
+  --h-track:-0.015em; --h-weight:500; --chip-r:8px;
+}
+/* ---------- B3 · Layer Lines, toned down ---------- */
+[data-v="b3"] {
+  --bg:#F3F1EA; --surface:#FFFFFF; --sunken:#ECE9E0; --line:#1C1B18; --bw:1.25px;
+  --ink:#1C1B18; --ink-2:#4F4D47; --ink-3:#86837A;
+  --accent:#E0612B; --on-accent:#FFFFFF; --hi:#F4EAC2; --sale:#F4EAC2; --sale-ink:#1C1B18;
+  --r:8px; --r-img:6px; --shadow:2px 2px 0 rgba(28,27,24,.85); --shadow-ink:2px 2px 0 var(--accent);
+  --display:'Space Grotesk',system-ui,sans-serif; --body:'Inter',system-ui,sans-serif;
+  --label:500 11.5px/1.2 'JetBrains Mono',ui-monospace,monospace; --label-case:none; --label-track:0;
+  --h-track:-0.025em; --h-weight:700; --chip-r:8px;
+}
+/* ---------- B4 · Monochrome ---------- */
+[data-v="b4"] {
+  --bg:#F6F5F2; --surface:#FFFFFF; --sunken:#EEEDE9; --line:#E2E0DA; --bw:1px;
+  --ink:#191918; --ink-2:#55544F; --ink-3:#8D8B85;
+  --accent:#191918; --on-accent:#FFFFFF; --hi:#EEEDE9; --sale:#191918; --sale-ink:#FFFFFF;
+  --r:6px; --r-img:4px; --shadow:none; --shadow-ink:none;
+  --display:'DM Sans',system-ui,sans-serif; --body:'DM Sans',system-ui,sans-serif;
+  --label:500 13px/1.3 'DM Sans',system-ui,sans-serif; --label-case:none; --label-track:0;
+  --h-track:-0.035em; --h-weight:700; --chip-r:999px;
+}
+
+* { box-sizing:border-box; margin:0; }
+html { -webkit-text-size-adjust:100%; }
+body { background:#E9E7E1; color:var(--ink); font:400 16px/1.55 var(--body); }
+img { display:block; max-width:100%; }
+a { color:inherit; text-decoration:none; }
+button { font:inherit; cursor:pointer; color:inherit; }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+/* ---------- mockup chrome (not part of the design) ---------- */
+.switch { position:sticky; top:0; z-index:20; background:#191918; color:#F2F1EC; font:500 13px/1.3 'Inter',sans-serif; padding:10px 16px; display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; }
+.switch__tabs { display:flex; gap:6px; overflow-x:auto; max-width:100%; }
+.switch button { flex:0 0 auto; height:34px; padding:0 12px; border:1px solid #55544F; border-radius:6px; background:transparent; color:#F2F1EC; }
+.switch button[aria-pressed="true"] { background:#F2F1EC; color:#191918; border-color:#F2F1EC; }
+.switch__desc { flex:1 1 320px; color:#C9C6BE; }
+.switch__desc b { color:#fff; }
+.switch label { display:flex; gap:6px; align-items:center; white-space:nowrap; }
+
+/* ---------- the design ---------- */
+.frame { container-type:inline-size; background:var(--bg); margin:0 auto; min-height:100dvh; transition:background-color .2s; }
+body.phone .frame { max-width:390px; margin:24px auto; border:1px solid #CFCCC4; border-radius:28px; overflow:hidden; min-height:0; }
+.wrap { max-width:1200px; margin:0 auto; padding:0 16px; }
+@container (min-width:768px) { .wrap { padding:0 32px; } }
+
+.lbl { font:var(--label); text-transform:var(--label-case); letter-spacing:var(--label-track); color:var(--ink-3); }
+h1,h2,h3 { font-family:var(--display); font-weight:var(--h-weight); letter-spacing:var(--h-track); line-height:1.05; }
+
+.nav { position:sticky; top:0; z-index:5; background:var(--bg); border-bottom:var(--bw) solid var(--line); }
+.nav__bar { display:flex; align-items:center; height:60px; gap:24px; }
+.logo { font:700 19px/1 var(--display); letter-spacing:-0.02em; display:flex; gap:8px; align-items:center; }
+.logo i { width:18px; height:13px; background:repeating-linear-gradient(0deg,var(--ink) 0 2px,transparent 2px 4px); border-radius:2px; }
+.nav__links { display:none; gap:24px; font-size:15px; color:var(--ink-2); }
+.nav__links a:first-child { color:var(--ink); }
+.nav__right { margin-left:auto; display:flex; gap:6px; }
+.sq { width:44px; height:44px; border:var(--bw) solid var(--line); border-radius:var(--r); display:grid; place-items:center; background:var(--surface); position:relative; }
+.sq svg { width:20px; height:20px; }
+.sq b { position:absolute; top:-6px; right:-6px; background:var(--accent); color:var(--on-accent); font:700 11px/18px var(--body); min-width:18px; text-align:center; border-radius:9px; }
+@container (min-width:900px) { .nav__links { display:flex; } .only-m { display:none; } }
+
+.btn { white-space:nowrap; display:inline-flex; align-items:center; justify-content:center; gap:8px; height:50px; padding:0 22px; border:var(--bw) solid var(--ink); border-radius:var(--r); font:600 15px/1 var(--body); background:var(--surface); box-shadow:var(--shadow); transition:transform .1s, box-shadow .1s, background-color .15s; }
+.btn:active { transform:translate(2px,2px); box-shadow:none; }
+.btn--accent { background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
+.btn--ink { background:var(--ink); color:var(--bg); box-shadow:var(--shadow-ink); }
+
+.hero { display:grid; gap:24px; padding:28px 0 32px; border-bottom:var(--bw) solid var(--line); }
+@container (min-width:900px) { .hero { grid-template-columns:1fr 1fr; padding:56px 0; align-items:center; gap:48px; } }
+.hero h1 { font-size:clamp(40px, 9cqi, 80px); margin:12px 0 16px; }
+.hero h1 span { background:var(--hi); padding:0 .12em; border-radius:calc(var(--r) / 2); }
+.hero p { color:var(--ink-2); max-width:38ch; margin-bottom:24px; font-size:17px; }
+.hero__ctas { display:flex; flex-wrap:wrap; gap:12px; }
+.hero__ctas .btn { flex:1 1 150px; }
+@container (min-width:900px) { .hero__ctas .btn { flex:0 0 auto; } }
+.hero__img { border:var(--bw) solid var(--line); border-radius:var(--r-img); overflow:hidden; aspect-ratio:4/3; position:relative; background:var(--sunken); }
+.hero__img img { width:100%; height:100%; object-fit:cover; }
+.hero__img .lbl { position:absolute; left:12px; bottom:12px; background:var(--surface); color:var(--ink); border:var(--bw) solid var(--line); padding:6px 10px; border-radius:var(--r); }
+
+.facts { display:flex; gap:28px; overflow-x:auto; white-space:nowrap; padding:14px 0; border-bottom:var(--bw) solid var(--line); scrollbar-width:none; }
+.facts span { color:var(--ink-2); }
+
+.sec { padding:40px 0 0; }
+.sec__head { display:flex; justify-content:space-between; align-items:end; gap:16px; margin-bottom:18px; }
+.sec__head h2 { font-size:clamp(28px, 5cqi, 44px); }
+.chips { display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; margin-bottom:20px; scrollbar-width:none; }
+.chip { flex:0 0 auto; height:40px; padding:0 14px; border:var(--bw) solid var(--line); border-radius:var(--chip-r); background:var(--surface); font-size:14px; display:inline-flex; align-items:center; gap:6px; }
+.chip.on { background:var(--ink); color:var(--bg); border-color:var(--ink); }
+.chip small { color:var(--ink-3); font-size:12px; }
+.chip.on small { color:inherit; opacity:.7; }
+
+.grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+@container (min-width:900px) { .grid { grid-template-columns:repeat(4,1fr); gap:20px; } }
+.card { border:var(--bw) solid var(--line); border-radius:var(--r); background:var(--surface); overflow:hidden; display:flex; flex-direction:column; }
+.card__img { flex:0 0 auto; aspect-ratio:1; position:relative; overflow:hidden; border-bottom:var(--bw) solid var(--line); background:var(--sunken); }
+.card__img img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.card.sold img { opacity:.45; }
+.tag { position:absolute; top:8px; left:8px; background:var(--sale); color:var(--sale-ink); border-radius:calc(var(--r) / 1.5); padding:3px 7px; font:600 12px/1.3 var(--body); }
+.tag--low { left:auto; right:8px; background:var(--surface); color:var(--ink); border:var(--bw) solid var(--line); }
+.card__body { padding:12px; display:grid; gap:4px; flex:1; }
+.card__body h3 { font-size:16px; letter-spacing:-0.01em; line-height:1.25; }
+.card__foot { display:flex; justify-content:space-between; align-items:center; margin-top:auto; padding-top:6px; }
+.card__foot b { font:700 17px/1 var(--body); }
+.card__foot s { color:var(--ink-3); font-size:13px; margin-left:6px; }
+.add { width:40px; height:40px; border:var(--bw) solid var(--line); border-radius:var(--r); background:var(--surface); font-size:20px; line-height:1; }
+
+.pdp { display:grid; gap:24px; margin-top:8px; }
+@container (min-width:900px) { .pdp { grid-template-columns:1.05fr 1fr; gap:48px; } }
+.gal { display:grid; gap:10px; }
+.gal__main { border:var(--bw) solid var(--line); border-radius:var(--r-img); overflow:hidden; aspect-ratio:4/5; background:var(--sunken); }
+.gal__main img { width:100%; height:100%; object-fit:cover; }
+.thumbs { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; }
+.thumbs button { flex:0 0 64px; height:64px; padding:0; border:var(--bw) solid var(--line); border-radius:calc(var(--r-img) * .75); overflow:hidden; background:var(--sunken); }
+.thumbs button[aria-current="true"] { outline:2px solid var(--ink); outline-offset:1px; }
+.thumbs img { width:100%; height:100%; object-fit:cover; }
+.pdp h2 { font-size:clamp(32px, 6cqi, 46px); margin:6px 0 12px; }
+.price { display:flex; align-items:baseline; flex-wrap:wrap; gap:10px; font:700 30px/1 var(--body); margin-bottom:6px; }
+.price s { font:400 17px var(--body); color:var(--ink-3); }
+.price em { font:600 13px/1 var(--body); font-style:normal; background:var(--sale); color:var(--sale-ink); padding:5px 8px; border-radius:calc(var(--r) / 1.5); }
+.stock { color:var(--ink-2); font-size:14px; margin-bottom:18px; display:flex; align-items:center; gap:8px; }
+.stock::before { content:''; width:8px; height:8px; border-radius:50%; background:#3E7B57; }
+.specs { display:grid; grid-template-columns:repeat(3,1fr); border:var(--bw) solid var(--line); border-radius:var(--r); margin-bottom:18px; background:var(--surface); }
+.specs div { padding:10px 12px; border-right:var(--bw) solid var(--line); }
+.specs div:last-child { border-right:0; }
+.specs b { display:block; font:600 15px/1.2 var(--body); margin-top:4px; }
+.tiers { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:18px; }
+.tier { border:var(--bw) solid var(--line); border-radius:var(--r); background:var(--surface); padding:10px 12px; text-align:left; }
+.tier b { display:block; font:700 17px/1.2 var(--body); margin:2px 0; }
+.tier small { color:var(--ink-3); font-size:12px; }
+.tier.on { background:var(--hi); border-color:var(--ink); }
+.qty { display:flex; align-items:center; border:var(--bw) solid var(--line); border-radius:var(--r); background:var(--surface); height:50px; }
+.qty button { width:46px; height:100%; background:none; border:0; font-size:20px; }
+.qty button:disabled { color:var(--ink-3); cursor:not-allowed; }
+.qty output { min-width:32px; text-align:center; font-weight:600; }
+.buy { display:flex; gap:10px; flex-wrap:wrap; }
+.buy .btn { flex:1 1 140px; }
+.cap { color:var(--ink-3); font-size:13px; margin-top:8px; min-height:1.3em; }
+.ship { margin-top:18px; border:var(--bw) solid var(--line); border-radius:var(--r); padding:14px; display:grid; gap:6px; color:var(--ink-2); font-size:14px; background:var(--surface); }
+.ship b { color:var(--ink); font-weight:600; }
+
+.stickybar { position:sticky; bottom:0; z-index:4; background:var(--surface); border-top:var(--bw) solid var(--line); padding:10px 16px calc(10px + env(safe-area-inset-bottom)); display:flex; gap:12px; align-items:center; margin-top:32px; }
+.stickybar div { flex:1; line-height:1.2; }
+.stickybar b { font-size:18px; display:block; }
+.stickybar .btn { height:46px; }
+@container (min-width:900px) { .stickybar { display:none; } }
+
+.foot { margin-top:56px; border-top:var(--bw) solid var(--line); padding:24px 0 32px; display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; color:var(--ink-2); font-size:14px; }
+
+/* ---------- per-variant character ---------- */
+/* B0 keeps the original techy details */
+[data-v="b0"] .nav__links { font:var(--label); text-transform:uppercase; color:var(--ink); }
+[data-v="b0"] .hero .lbl::before, [data-v="b3"] .hero .lbl::before { content:'// '; }
+[data-v="b0"] .facts span::before { content:'◆ '; color:var(--accent); }
+[data-v="b0"] .facts { font:var(--label); text-transform:uppercase; }
+[data-v="b0"] .btn { font:700 15px/1 var(--display); }
+[data-v="b0"] .add, [data-v="b3"] .add { background:var(--accent); color:var(--on-accent); border-color:var(--ink); }
+[data-v="b0"] .tag { border:var(--bw) solid var(--ink); font:var(--label); }
+[data-v="b0"] .chip, [data-v="b0"] .sq, [data-v="b0"] .card, [data-v="b0"] .card__img { border-color:var(--ink); }
+[data-v="b0"] .price, [data-v="b0"] .card__foot b, [data-v="b0"] .tier b { font-family:var(--display); }
+/* B3: outlines + small offset shadow, but sentence case and calmer colours */
+[data-v="b3"] .facts span::before { content:'■ '; color:var(--accent); font-size:10px; vertical-align:2px; }
+[data-v="b3"] .tag { border:var(--bw) solid var(--ink); }
+[data-v="b3"] .tier.on { box-shadow:var(--shadow); }
+/* B1 & B2: borderless product cards; the photo carries the card */
+[data-v="b1"] .card, [data-v="b2"] .card { border:0; background:transparent; }
+[data-v="b1"] .card__img, [data-v="b2"] .card__img { border:0; border-radius:var(--r-img); overflow:hidden; }
+[data-v="b1"] .card__body, [data-v="b2"] .card__body { padding:10px 2px 4px; }
+[data-v="b1"] .hero__img, [data-v="b2"] .hero__img, [data-v="b1"] .gal__main, [data-v="b2"] .gal__main { border:0; }
+[data-v="b1"] .btn, [data-v="b2"] .btn { border-color:var(--line); }
+[data-v="b1"] .btn--accent, [data-v="b2"] .btn--accent { border-color:var(--accent); }
+[data-v="b1"] .btn--ink, [data-v="b2"] .btn--ink { border-color:var(--ink); }
+[data-v="b1"] .hero h1 span { background:none; color:var(--accent); padding:0; }
+[data-v="b2"] .hero h1 span { background:none; font-style:italic; color:var(--accent); padding:0; }
+[data-v="b2"] .hero h1 { font-size:clamp(40px, 8.5cqi, 76px); }
+/* B4: almost no colour, lots of air */
+[data-v="b4"] .card { border:0; background:transparent; }
+[data-v="b4"] .card__img { border:0; border-radius:var(--r-img); overflow:hidden; }
+[data-v="b4"] .card__body { padding:10px 0 4px; }
+[data-v="b4"] .hero h1 span { background:none; padding:0; text-decoration:underline; text-decoration-thickness:.06em; text-underline-offset:.12em; }
+[data-v="b4"] .hero__img, [data-v="b4"] .gal__main { border:0; }
+[data-v="b4"] .btn { border-color:var(--line); }
+[data-v="b4"] .btn--accent { border-color:var(--ink); }
+[data-v="b4"] .buy .btn--ink { background:var(--surface); color:var(--ink); border-color:var(--ink); }
+[data-v="b4"] .tag--low { background:var(--surface); }
+[data-v="b4"] .sq { border-color:transparent; background:transparent; }
+
+@media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
+</style>
+</head>
+<body>
+
+<div class="switch" role="region" aria-label="Mockup controls">
+  <div class="switch__tabs" role="group" aria-label="Variant">
+    <button type="button" data-set="b0">B0 Original</button>
+    <button type="button" data-set="b1">B1 Soft Lines</button>
+    <button type="button" data-set="b2">B2 Studio Sage</button>
+    <button type="button" data-set="b3">B3 Toned Lines</button>
+    <button type="button" data-set="b4">B4 Monochrome</button>
+  </div>
+  <label><input type="checkbox" id="phone" /> Phone width</label>
+  <p class="switch__desc" id="desc"></p>
+</div>
+
+<div class="frame" id="frame" data-v="b1">
+<header class="nav"><div class="wrap nav__bar">
+  <a class="logo" href="#"><i aria-hidden="true"></i>Snap Print</a>
+  <nav class="nav__links" aria-label="Main"><a href="#">Shop</a><a href="#">Custom parts</a><a href="#">Track order</a><a href="#">About</a></nav>
+  <div class="nav__right">
+    <button class="sq" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+    <button class="sq" aria-label="Cart, 2 items"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14l-1.2 12.1a2 2 0 0 1-2 1.9H8.2a2 2 0 0 1-2-1.9L5 7Z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg><b>2</b></button>
+    <button class="sq only-m" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  </div>
+</div></header>
+
+<main class="wrap">
+  <section class="hero">
+    <div>
+      <span class="lbl">3D printed in India</span>
+      <h1>Printed <span>layer</span> by layer.</h1>
+      <p>Wall art, HueForge prints, bookmarks and fidget toys, plus custom parts from your own CAD files.</p>
+      <div class="hero__ctas"><a class="btn btn--accent" href="#">Shop now</a><a class="btn" href="#">Upload a part</a></div>
+    </div>
+    <div class="hero__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/hero_images/Hero_image_7.webp" alt="3D printer in the studio" /><span class="lbl">38 designs ready to order</span></div>
+  </section>
+  <div class="facts"><span>Air 3–5 business days</span><span>Surface 6–9 business days</span><span>Secure checkout with Razorpay</span><span>Bulk pricing from 4 units</span></div>
+
+  <section class="sec">
+    <div class="sec__head"><h2>The catalogue</h2><span class="lbl">Sort: Featured ▾</span></div>
+    <div class="chips"><span class="chip on">All <small>38</small></span><span class="chip">Bookmarks <small>18</small></span><span class="chip">HueForge <small>8</small></span><span class="chip">Wall art <small>5</small></span><span class="chip">Key chains <small>2</small></span><span class="chip">Home decor <small>2</small></span><span class="chip">Toys <small>1</small></span></div>
+    <div class="grid">
+      <a class="card" href="#pdp"><div class="card__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/demon_slayer_set_01.webp" alt="" loading="lazy" /><span class="tag">−17%</span></div><div class="card__body"><span class="lbl">Bookmarks</span><h3>Demon Slayer Set</h3><div class="card__foot"><span><b>₹349</b><s>₹419</s></span><button class="add" aria-label="Add Demon Slayer Set to cart">+</button></div></div></a>
+      <a class="card" href="#"><div class="card__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/kanagawa_wave_01.webp" alt="" loading="lazy" /><span class="tag">−60%</span><span class="tag tag--low">1 left</span></div><div class="card__body"><span class="lbl">HueForge</span><h3>The Great Wave off Kanagawa</h3><div class="card__foot"><span><b>₹200</b><s>₹500</s></span><button class="add" aria-label="Add to cart">+</button></div></div></a>
+      <a class="card" href="#"><div class="card__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/capybara_flexi_01.webp" alt="" loading="lazy" /><span class="tag">−34%</span></div><div class="card__body"><span class="lbl">Key chains</span><h3>Capybara Flexi</h3><div class="card__foot"><span><b>₹99</b><s>₹149</s></span><button class="add" aria-label="Add to cart">+</button></div></div></a>
+      <a class="card" href="#"><div class="card__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/buds_on_tree_01.webp" alt="" loading="lazy" /><span class="tag">−20%</span></div><div class="card__body"><span class="lbl">Wall art</span><h3>Buds on Tree</h3><div class="card__foot"><span><b>₹200</b><s>₹249</s></span><button class="add" aria-label="Add to cart">+</button></div></div></a>
+      <a class="card" href="#"><div class="card__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/sunset_tree_01.webp" alt="" loading="lazy" /></div><div class="card__body"><span class="lbl">Wall art</span><h3>Sunset Tree</h3><div class="card__foot"><span><b>₹299</b></span><button class="add" aria-label="Add to cart">+</button></div></div></a>
+      <a class="card" href="#"><div class="card__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/nezuko_3_color_01.webp" alt="" loading="lazy" /><span class="tag">−60%</span></div><div class="card__body"><span class="lbl">HueForge</span><h3>Nezuko, 3 Colour</h3><div class="card__foot"><span><b>₹200</b><s>₹500</s></span><button class="add" aria-label="Add to cart">+</button></div></div></a>
+      <a class="card sold" href="#"><div class="card__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/hanging_cat_01.webp" alt="" loading="lazy" /><span class="tag tag--low">Sold out</span></div><div class="card__body"><span class="lbl">Home decor</span><h3>Hanging Cat</h3><div class="card__foot"><span><b>₹149</b></span></div></div></a>
+      <a class="card" href="#"><div class="card__img"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/mechanical_hand_toy_01.webp" alt="" loading="lazy" /></div><div class="card__body"><span class="lbl">Toys</span><h3>Mechanical Hand</h3><div class="card__foot"><span><b>₹499</b></span><button class="add" aria-label="Add to cart">+</button></div></div></a>
+    </div>
+  </section>
+
+  <section class="sec" id="pdp">
+    <div class="sec__head"><h2>Product page</h2><span class="lbl">Same data as mockup A</span></div>
+    <div class="pdp">
+      <div class="gal">
+        <div class="gal__main"><img id="mainimg" src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/demon_slayer_set_02.webp" alt="Demon Slayer bookmark set" /></div>
+        <div class="thumbs">
+          <button aria-current="false" data-img="demon_slayer_set_01"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/demon_slayer_set_01.webp" alt="Photo 1" /></button>
+          <button aria-current="true" data-img="demon_slayer_set_02"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/demon_slayer_set_02.webp" alt="Photo 2" /></button>
+          <button aria-current="false" data-img="demon_slayer_set_03"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/demon_slayer_set_03.webp" alt="Photo 3" /></button>
+          <button aria-current="false" data-img="demon_slayer_set_04"><img src="https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/demon_slayer_set_04.webp" alt="Photo 4" /></button>
+        </div>
+      </div>
+      <div>
+        <span class="lbl">Bookmarks · set of 3</span>
+        <h2>Demon Slayer Set</h2>
+        <div class="price"><span id="unit">₹349</span> <s>₹419</s> <em>Save 17%</em></div>
+        <div class="stock">In stock · ships in 1–2 days</div>
+        <div class="specs"><div><span class="lbl">Material</span><b>PLA</b></div><div><span class="lbl">Size</span><b>15 × 4 cm</b></div><div><span class="lbl">Max per order</span><b>10</b></div></div>
+        <span class="lbl" style="display:block;margin-bottom:8px">Buy more, pay less (per set)</span>
+        <div class="tiers" id="tiers">
+          <div class="tier on" data-min="1" data-max="3" data-p="349"><small>1–3</small><b>₹349</b><small>−17%</small></div>
+          <div class="tier" data-min="4" data-max="10" data-p="300"><small>4–10</small><b>₹300</b><small>−28%</small></div>
+          <div class="tier" data-min="11" data-max="999" data-p="270"><small>11+</small><b>₹270</b><small>−36%</small></div>
+        </div>
+        <div class="buy">
+          <div class="qty"><button type="button" id="minus" aria-label="Decrease quantity">−</button><output id="q" aria-live="polite">1</output><button type="button" id="plus" aria-label="Increase quantity">+</button></div>
+          <a class="btn btn--ink" href="#">Add to cart</a>
+          <a class="btn btn--accent" href="#">Buy it now</a>
+        </div>
+        <p class="cap" id="cap"></p>
+        <div class="ship"><span><b>Air</b> 3–5 business days · <b>Surface</b> 6–9 business days</span><span>Both include 1–2 days of production. Free surface shipping over ₹499.</span></div>
+      </div>
+    </div>
+  </section>
+</main>
+<div class="stickybar"><div><span class="lbl">Demon Slayer Set</span><b id="sticky">₹349</b></div><a class="btn btn--ink" href="#">Add to cart</a></div>
+<footer class="wrap foot"><span>© 2026 Snap Print</span><span>Shipping · Refunds · Terms · Privacy</span></footer>
+</div>
+
+<script>
+const DESC = {
+  b0: '<b>B0 Original.</b> The first Direction B, unchanged, for comparison: thick ink outlines, offset shadows, neon orange + lime, mono uppercase labels.',
+  b1: '<b>B1 Soft Lines.</b> B\'s layout with the edges sanded off: warm paper, hairline borders, 12px corners, no shadows, borderless photo cards, muted terracotta accent. Space Grotesk headings, Inter body.',
+  b2: '<b>B2 Studio Sage.</b> Calmer and more crafted: a soft serif for headings (Fraunces), Inter body, sage-green accent, hairlines, small corners. Feels like a maker\'s studio rather than a tech shop.',
+  b3: '<b>B3 Toned Lines.</b> Closest to B: keeps the ink outlines and a light offset shadow, but thinner lines, 8px corners, a less neon orange, butter instead of lime, and no uppercase labels.',
+  b4: '<b>B4 Monochrome.</b> Almost no colour: black, white and warm grey, one font (DM Sans), hairlines, lots of space. The product photos supply all the colour.'
+};
+const frame = document.getElementById('frame');
+const tabs = document.querySelectorAll('[data-set]');
+function setV(v) {
+  if (!DESC[v]) v = 'b1';
+  frame.dataset.v = v;
+  tabs.forEach(t => t.setAttribute('aria-pressed', String(t.dataset.set === v)));
+  document.getElementById('desc').innerHTML = DESC[v];
+  history.replaceState(null, '', '#' + v + (document.body.classList.contains('phone') ? '-phone' : ''));
+}
+tabs.forEach(t => t.addEventListener('click', () => setV(t.dataset.set)));
+const phone = document.getElementById('phone');
+phone.addEventListener('change', () => { document.body.classList.toggle('phone', phone.checked); setV(frame.dataset.v); });
+const h = location.hash.slice(1);
+if (h.endsWith('-phone')) { phone.checked = true; document.body.classList.add('phone'); }
+setV(h.replace('-phone', ''));
+
+// gallery
+const main = document.getElementById('mainimg');
+document.querySelectorAll('.thumbs button').forEach(b => b.addEventListener('click', () => {
+  main.src = `https://raw.githubusercontent.com/snaprint/snap-print/refs/heads/main/public/images/products/${b.dataset.img}.webp`;
+  document.querySelectorAll('.thumbs button').forEach(x => x.setAttribute('aria-current', String(x === b)));
+}));
+
+// quantity + bulk tiers (cap 10, like the real product)
+let q = 1; const MAX = 10;
+const tiers = [...document.querySelectorAll('.tier')];
+function render() {
+  document.getElementById('q').textContent = q;
+  const t = tiers.find(t => q >= +t.dataset.min && q <= +t.dataset.max);
+  tiers.forEach(x => x.classList.toggle('on', x === t));
+  const p = '₹' + t.dataset.p;
+  document.getElementById('unit').textContent = p;
+  document.getElementById('sticky').textContent = '₹' + (t.dataset.p * q).toLocaleString('en-IN') + (q > 1 ? ` · ${q} sets` : '');
+  document.getElementById('minus').disabled = q <= 1;
+  document.getElementById('plus').disabled = q >= MAX;
+  document.getElementById('cap').textContent = q >= MAX ? `Max ${MAX} per order` : '';
+}
+document.getElementById('minus').onclick = () => { if (q > 1) { q--; render(); } };
+document.getElementById('plus').onclick = () => { if (q < MAX) { q++; render(); } };
+render();
+</script>
+</body>
+</html>

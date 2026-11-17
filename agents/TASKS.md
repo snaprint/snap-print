@@ -26,7 +26,7 @@ Update the row when status changes. New tasks: add a row with the next free ID i
 | O-10 | Deploy Firestore rules from `firestore.rules` once BE commits it | B-17 | todo |
 | O-15 | Decide the made-to-order lead time: 5–7 days (product page) vs 1–2 days (policy) (MESSAGES #12) | F-11 | todo |
 | O-16 | Raw image folders / public prompt guide: move, keep or delete? (MESSAGES #13) | F-17 | todo |
-| O-18 | Redesign gate 0 (`REDESIGN_PLAN.md` §2): (a) check the current preview and **promote `dev` to `main`** (G-3); (b) separate `redesign` branch, yes/no (G-2); (c) product names: rename in sheet or prettify on site (G-4); (d) brief the new FE agent and approve a direction (G-1) | R-2…R-6 | todo |
+| O-18 | Redesign gate 0 (`REDESIGN_PLAN.md` §2): (a) check the current preview and **promote `dev` to `main`** (G-3); (b) separate `redesign` branch, yes/no (G-2); (c) product names: rename in sheet or prettify on site (G-4); (d) brief the new FE agent and approve a direction (G-1) | R-2…R-6 | in progress: (a) owner 2026-11-17: **don't promote now**, everything goes live together once complete and verified; (b) no `redesign` branch exists on GitHub yet (only `dev`, `main`), decision pending; (c) owner renames product names in the sheet; (d) owner choosing between B variants (`agents/design/b-variants.html`) |
 | O-19 | (Proposed) Real photos of products in use, the printer and packing, to replace the AI-looking hero images (`REDESIGN_PLAN.md` §8.6) | R-5 (optional) | todo |
 | O-17 | Check sheet data: Hue-012…015 bulk tiers (1–2 at ₹100, 3–5 at ₹449), SCULP-001 at ₹11; snake_case product names (MESSAGES #16 q3–4) | R-1 | todo |
 

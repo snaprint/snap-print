@@ -26,6 +26,7 @@ Static mockups live in this folder, outside `src/`, so they never deploy. Open t
 | `a-home.html` | **Direction A (recommended)**: home / catalog |
 | `a-product.html` | **Direction A**: product page (Demon Slayer Set, real bulk tiers; +/− and thumbnails work) |
 | `b-alternative.html` | **Direction B (alternative)**: home + product on one page |
+| `b-variants.html` | **Direction B variants** (2026-11-17): one page, switcher at the top: B0 original, B1 Soft Lines, B2 Studio Sage, B3 Toned Lines, B4 Monochrome; "Phone width" toggle shows the phone layout. Link to one variant with `#b2` or `#b2-phone` |
 | `direction-a.css` | Direction A tokens and components (becomes `src/css/index.css` tokens in R-4) |
 
 All names, prices, categories, counts and images come from the live products sheet (17 Nov 2026). Names are shown in Title Case ("Buds on Tree"); see question 3.
