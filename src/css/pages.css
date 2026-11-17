@@ -1687,3 +1687,6 @@
 .contact-method__value { display: block; font-family: var(--font-display); font-size: var(--text-lg); font-weight: 700; color: var(--ink); text-decoration: none !important; overflow-wrap: anywhere; }
 .legal-page__body .contact-method p { margin: var(--space-2) 0 0; font-size: var(--text-sm); }
 .legal-page__body p > .btn { margin-top: var(--space-2); text-decoration: none; }
+
+/* pages whose content is built by JS: keep the footer below the fold while loading (avoids layout shift) */
+.product-detail, .cart-page, .checkout-page, .account-page { min-height: calc(100vh - var(--navbar-height)); min-height: calc(100dvh - var(--navbar-height)); }
