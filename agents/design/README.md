@@ -1,5 +1,24 @@
 # R-1 · Design proposal (awaiting owner approval, O-9)
 
+## Owner's brief so far (2026-11-17, from the owner in chat)
+
+> "A modern look, but it should not look robotic at all. A minimalist, soft look. No fancy glassmorphism and all which is made by AI." … "A design which fits perfectly on phones as well."
+
+Directions A and B below were made **before** this brief; neither is approved. Treat them as material, not as the target. Principles the previous FE agent proposed from the brief (the owner didn't object; confirm with them):
+1. Photos do the work; the interface stays quiet.
+2. Warm neutrals (paper, soft charcoal), not pure white/black; one muted accent used rarely (suggested: muted terracotta; alternatives: soft sage, or none). **Accent not chosen yet.**
+3. Flat, solid surfaces: no glass/blur, gradients, glows or blobs; hairlines instead of shadows.
+4. Generous whitespace, composed rather than a uniform grid of identical boxes.
+5. One heading face with some warmth + one readable body face; 3–4 sizes; no all-caps tech labels or monospace.
+6. One soft radius family (about 10–14 px), not pills everywhere.
+7. Plain human copy: no "elevate your space", emoji bullets, exclamation marks or icon-tile feature rows.
+8. Motion you barely notice (quick fades); no scroll-in animations, parallax or bounce.
+9. Real photos over stock/illustration; no decorative icons.
+10. Phone-first (details in `../REDESIGN_PLAN.md` §8.2).
+Compared with Direction A this means: solid navbar (no blur), softer accent, smaller radii, no pill buttons, no shadows on cards.
+
+The owner will brief the next FE agent directly; that brief wins over this list.
+
 Static mockups live in this folder, outside `src/`, so they never deploy. Open them in a browser (double-click the file); they load fonts and the real product photos from the internet. Resize the window or use your phone's width to see the mobile layout.
 
 | File | What it shows |

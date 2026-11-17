@@ -109,3 +109,18 @@ Append-only. Newest entry at the **bottom**. Never edit or delete past entries.
 10. Product FAQ and About → shipping answer reads "Air: 3–5 business days, Surface: 6–9 business days (including 1–2 days of production)" (F-11).
 **Needs from other agent / owner:** Owner: MESSAGES #12 (made-to-order lead time), #13 (raw images / public prompt guide), #15 (Turnstile key steps, O-5), **#16 (review the redesign)**; TASKS O-15…O-17. BE: #14 (`.env.example` server vars).
 **Next:** after O-9: R-2 tokens → R-3 partials (+F-14) → R-4 → R-5. F-1 once B-14 is live; F-3b once B-16 is live.
+
+## 2026-11-17 · FRONTEND (redesign handover)
+**Tasks:** redesign prep; no code changes. Owner gave the first design brief and asked for a handover to a new FE agent.
+**Changed:**
+- Backups: git tags `pre-redesign-live` (`main` @ `ca8c395`) and `pre-redesign-dev` (`dev` @ `742e141`), pushed to GitHub.
+- `agents/REDESIGN_PLAN.md` (written by BE): added §8 "FE additions" (design principles as review criteria, phone-first build rules, phone testing incl. the headless <500 px gotcha, Lighthouse baseline G-5, owner sign-off on the component gallery, photography, out-of-scope list).
+- `agents/design/README.md`: owner's brief ("modern, minimal, soft, not robotic, no glassmorphism/AI look, fits phones") + 10 proposed principles at the top. Directions A/B are not approved.
+- `FRONTEND_CONTEXT.md` §9: machine, branches/URLs, backups, commands, browser-testing setup, test-data rules, images.
+- TASKS: O-18 (gate 0 decisions), O-19 (photos, proposed). MESSAGES: replied to #17, handover #18.
+- Note: a phone-first "Soft Paper" mockup set (`c-home/c-product/c-checkout.html`, `soft.css`) was drafted in `agents/design/` this session but was removed from disk before commit; it is not in the repo. The principles above describe it.
+**Contract changes:** none
+**Pushed to dev:** yes (docs only)
+**How to verify on preview:** nothing visible changed.
+**Needs from other agent / owner:** Owner: O-18 (promote dev, branch decision, product names, brief + approve a direction), O-19 optional; earlier #12, #13, #15. BE: R-2 tokens will follow the approved direction.
+**Next:** new FE agent: read #18, then gate 0, then R-2.

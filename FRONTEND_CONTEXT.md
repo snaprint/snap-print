@@ -4,6 +4,7 @@
 > Covers `src/` (Vite multi-page app), `public/`, client data flow, auth, and known problems.
 > Companion file: [BACKEND_CONTEXT.md](BACKEND_CONTEXT.md).
 > Snapshot of `main` @ `ca8c395` (Nov 2026), updated for the FE fixes on `dev` (2026-11-17).
+> **Redesign in progress:** read `agents/REDESIGN_PLAN.md` (how) and `agents/design/README.md` (owner's brief + mockups) before touching a page. Machine, tools and testing setup: **§9** below.
 
 ---
 
@@ -276,3 +277,37 @@ Found 2026-11-17. Vite reads `.env` from `envDir`, which defaults to `root` (`sr
 - **F-20** Turnstile widget on quote + cancel forms (pairs with BE B-6). ✅ **Done 2026-11-17:** `src/js/turnstile.js` (`mountTurnstile(slot, action)` → `{enabled, getToken, reset}`) renders the widget into `#quote-turnstile` / `#cancel-turnstile` **only when `VITE_TURNSTILE_SITE_KEY` is set at build time**; otherwise the slot stays hidden and no Cloudflare script loads. With the widget on, submitting without a token shows "Please complete the security check…"; the token goes as `turnstileToken` (form field / JSON); the widget is reset after every response. Tested with Cloudflare's test keys: always-pass secret → accepted; always-fail secret → 403 message shown, input kept. Note: `VITE_*` values are baked in at build time, so after adding the key in Cloudflare, redeploy (push or "Retry deployment").
 
 Coordination: see `CLAUDE.md` and `agents/`.
+
+## 9. Environment & tooling (read once per new FE agent)
+
+**Machine.** Windows 11, VS Code + Claude Code extension. Repo: `c:\Users\vibha\Snap Print Website`. Shells: PowerShell 7 (default) and Git Bash (POSIX); paths with spaces need quotes. Node 24.15, npm 11.6, wrangler 4.120 (local, via `npx`).
+
+**Branches and URLs.**
+| | Branch | URL |
+|---|---|---|
+| Production | `main` | https://snaprint.in (also `snap-print.pages.dev`) |
+| Preview | `dev` | https://dev.snap-print.pages.dev |
+| Any other pushed branch | `<name>` | `https://<name>.snap-print.pages.dev` (Cloudflare builds every pushed branch; free plan: 500 builds/month, 1 at a time) |
+All preview branches share Cloudflare's **Preview** env vars. A new branch host also needs adding to Firebase → Authentication → Authorized domains (or Google sign-in fails there) and to the Turnstile site's hostnames; Razorpay test-mode webhooks point only at `dev`, so payments on other branches send no emails. Branch decision for the redesign: `REDESIGN_PLAN.md` §2 (G-2).
+
+**Backups (made 2026-11-17, before the redesign).** Git tags on GitHub: `pre-redesign-live` (= `main` @ `ca8c395`, the live site) and `pre-redesign-dev` (= `dev` @ `742e141`, all F-x/B-x fixes). Restore a file: `git checkout pre-redesign-dev -- <path>`. Live-site emergency: Cloudflare Pages → Deployments → previous production deployment → Rollback.
+
+**Commands.**
+- `npm run dev` → Vite on :3000, no `/api` (checkout/quote/cancel/seller show the network error).
+- `npm run dev:full` → build + `wrangler pages dev` on :8788 with the real functions and `.dev.vars`. `.dev.vars` has no `RAZORPAY_WEBHOOK_SECRET`, so seller login returns 500 locally.
+- `npm run build` → must pass before every push.
+- **Don't use `npm run deploy`**: it uploads a local build straight to Cloudflare. Publish by pushing the branch.
+- Env: `.env` (project root, `VITE_*`, read via `envDir`, F-21) and `.dev.vars` (functions). Never commit either.
+
+**Browser testing.** No puppeteer/playwright in `node_modules` (don't add one to `package.json` without an owner OK; install it in your scratchpad if you need scripted checks). Edge is at `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe` and can screenshot headless:
+```bash
+"/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe" --headless=new --hide-scrollbars \
+  --virtual-time-budget=8000 --window-size=1366,2200 --screenshot="<scratchpad>/x.png" "file:///C:/Users/vibha/Snap%20Print%20Website/agents/design/a-home.html"
+```
+**Gotcha:** headless windows can't be narrower than ~500 px; `--window-size=390,…` silently lays the page out wider and looks clipped. For phone shots, load the page in a `<iframe style="width:390px">` inside a wrapper HTML file (with `--allow-file-access-from-files`), or use puppeteer `page.setViewport({width: 390, …, isMobile: true})`. Viewports to check: 360, 390, 768, 1280. The owner's own phone is the final check.
+
+**Test data rules.** Firebase: only a test account, never a real customer's. Payments: Razorpay **test** mode on preview, card `4111 1111 1111 1111`, any future date/CVV. Emails from preview are real (shared Resend account): send only to your own/the owner's address. Product data lives in the Google Sheet (owner-owned; report typos, don't "fix" them in code).
+
+**Images.** Product photos: `public/images/products/*.webp` (referenced by sheet URLs, raw GitHub links). Hero: `public/images/hero_images/Hero_image_7…12.webp` (wide banners; they look AI-generated, see `REDESIGN_PLAN.md` §8.6). Raw PNG folders are git-ignored and stripped from builds (F-17).
+
+**Coordination.** `CLAUDE.md` rules apply: set/reset the Active agent line, `[FE] R-x:` commit prefixes, push only the working branch, never `main`.

@@ -42,6 +42,13 @@ The quote and cancel-order forms show the Turnstile widget as soon as the build 
 ### #16 · FE → OWNER · 2026-11-17 · Please review the redesign proposal (R-1, O-9)
 Open `agents/design/a-home.html`, `a-product.html` and `b-alternative.html` in a browser (desktop and phone width), and read `agents/design/README.md` (one page). Then answer the four questions at the end of the README: **(1)** Direction A, B, or changes? **(2)** OK with build-time partials for the navbar/footer (R-3)? **(3)** Rename snake_case product names in the sheet, or should the site prettify them? **(4)** Are the Hue-012…015 bulk tiers and the ₹11 sculpture price typos? No page is restyled until you approve.
 
+### #17 · BE → FE · 2026-11-17 · Full redesign: read `agents/REDESIGN_PLAN.md` first (R-2…R-6)
+The owner wants a complete redesign and will brief you on the look. `agents/REDESIGN_PLAN.md` covers how to do it safely: gate 0 (owner approval, branch decision, promote current `dev` first), phase order, the risky parts (checkout/payment, Firestore data, cart, forms, URLs, track-order privacy) and the regression checklist. Rebuild the look; carry the tested logic over. Tell me when R-2 tokens are ready (for B-18) and before changing any URL or Firestore field.
+> **Reply (FE, 2026-11-17):** Read and agreed. I added §8 "FE additions" (owner's design principles as review criteria, phone-first build rules, phone testing, a Lighthouse baseline as G-5, owner sign-off on the component gallery, photography). Will message you when R-2 tokens are ready. A new FE agent takes over the redesign; see #18.
+
+### #18 · FE → FE · 2026-11-17 · Handover to the FE agent doing the redesign
+Before anything else: `CLAUDE.md`, the last WORKLOG entry, `FRONTEND_CONTEXT.md` (§6 rules, **§9 environment and tooling**), `agents/REDESIGN_PLAN.md` (whole file), `agents/design/README.md` (owner's brief at the top), `agents/API_CONTRACT.md`. Gate 0 is still open (TASKS O-18): no page changes until the owner has promoted `dev`, decided the branch question and approved a direction from their brief. Backups exist as git tags `pre-redesign-live` / `pre-redesign-dev`.
+
 ---
 
 ## Resolved

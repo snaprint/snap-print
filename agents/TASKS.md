@@ -26,6 +26,8 @@ Update the row when status changes. New tasks: add a row with the next free ID i
 | O-10 | Deploy Firestore rules from `firestore.rules` once BE commits it | B-17 | todo |
 | O-15 | Decide the made-to-order lead time: 5–7 days (product page) vs 1–2 days (policy) (MESSAGES #12) | F-11 | todo |
 | O-16 | Raw image folders / public prompt guide: move, keep or delete? (MESSAGES #13) | F-17 | todo |
+| O-18 | Redesign gate 0 (`REDESIGN_PLAN.md` §2): (a) check the current preview and **promote `dev` to `main`** (G-3); (b) separate `redesign` branch, yes/no (G-2); (c) product names: rename in sheet or prettify on site (G-4); (d) brief the new FE agent and approve a direction (G-1) | R-2…R-6 | todo |
+| O-19 | (Proposed) Real photos of products in use, the printer and packing, to replace the AI-looking hero images (`REDESIGN_PLAN.md` §8.6) | R-5 (optional) | todo |
 | O-17 | Check sheet data: Hue-012…015 bulk tiers (1–2 at ₹100, 3–5 at ₹449), SCULP-001 at ₹11; snake_case product names (MESSAGES #16 q3–4) | R-1 | todo |
 
 ---
@@ -105,4 +107,5 @@ Skipped this session: F-1 (needs B-14, still `planned`), F-3 second half (needs 
 | R-2 | Publish `agents/DESIGN_TOKENS.md` (colours, fonts, logo URL, button style) for BE emails | O-9 | todo |
 | R-3 | De-duplicate navbar/footer (single source, e.g. Vite HTML partials or JS-injected) | O-9 | todo |
 | R-4 | Rebuild design system (`index.css` tokens, components) | O-9 | todo |
-| R-5 | Redesign pages: home/catalog → product → cart → checkout → account → remaining pages | R-4 | todo |
+| R-5 | Redesign pages in the order in `agents/REDESIGN_PLAN.md` §3 (static pages → home → product → cart → forms → checkout → account → thank-you → track-order → seller) | R-4 | todo |
+| R-6 | Full regression (`REDESIGN_PLAN.md` §6), remove old CSS, Lighthouse, launch + rollback checklist for the owner | R-5 | todo |
