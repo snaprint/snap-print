@@ -421,33 +421,16 @@ export function getShippingCostPreview(rates, method, itemTotal) {
 export function isValidEmail(email) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); }
 export function isValidPhone(phone) { return /^[6-9]\d{9}$/.test(phone.replace(/[\s\-+]/g, '').replace(/^91/, '')); }
 
-// ── Hamster Wheel HTML (single source of truth) ──
-const HAMSTER_HTML = `
-  <div aria-label="Loading" role="img" class="wheel-and-hamster">
-    <div class="wheel"></div>
-    <div class="hamster">
-      <div class="hamster__body">
-        <div class="hamster__head">
-          <div class="hamster__ear"></div>
-          <div class="hamster__eye"></div>
-          <div class="hamster__nose"></div>
-        </div>
-        <div class="hamster__limb hamster__limb--fr"></div>
-        <div class="hamster__limb hamster__limb--fl"></div>
-        <div class="hamster__limb hamster__limb--br"></div>
-        <div class="hamster__limb hamster__limb--bl"></div>
-        <div class="hamster__tail"></div>
-      </div>
-    </div>
-    <div class="spoke"></div>
-  </div>
+// ── Loader HTML (single source of truth): four "print layers" stacking up ──
+const LOADER_HTML = `
+  <div class="print-loader" role="img" aria-label="Loading"><span></span><span></span><span></span><span></span></div>
 `;
 
 // ── Inline Loader (replaces skeleton cards inside a grid/container) ──
 export function renderSkeletons(container, count = 8) {
   container.innerHTML = `
     <div class="loader-center">
-      ${HAMSTER_HTML}
+      ${LOADER_HTML}
       <span class="loader-center__text">Loading products…</span>
     </div>
   `;
@@ -461,7 +444,7 @@ export function showPageLoader(message = '') {
   _loaderEl = document.createElement('div');
   _loaderEl.className = 'loader-overlay';
   _loaderEl.innerHTML = `
-    ${HAMSTER_HTML}
+    ${LOADER_HTML}
     ${message ? `<span class="loader-overlay__text">${escapeHtml(message)}</span>` : ''}
   `;
   document.body.appendChild(_loaderEl);
