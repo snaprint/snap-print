@@ -9,5 +9,7 @@ Disallow: /seller-dashboard.html
 Disallow: /checkout.html
 Disallow: /cart.html
 Disallow: /thank-you.html
+Disallow: /account.html
+Disallow: /cancel-order.html
 
 Sitemap: https://snaprint.in/sitemap.xml

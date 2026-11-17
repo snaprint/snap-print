@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════
    SNAP PRINT — Main (shared across all pages)
-   Navbar, mobile menu, cart badge, scroll animations,
+   Navbar, mobile menu, cart badge,
    global search, and shop category dropdown
    ═══════════════════════════════════════════════════════════════ */
 
@@ -121,9 +121,10 @@ function initGlobalSearch() {
 
   // ── Search toggle button (icon) ──
   const searchBtn = document.createElement('button');
-  searchBtn.className = 'navbar__search-toggle';
+  searchBtn.className = 'icon-btn navbar__search-toggle';
+  searchBtn.type = 'button';
   searchBtn.setAttribute('aria-label', 'Search products');
-  searchBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
+  searchBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
 
   const cartBtn = actions.querySelector('.cart-icon-btn');
   actions.insertBefore(searchBtn, cartBtn);
@@ -211,10 +212,9 @@ async function initShopDropdown() {
   if (!navbar) return;
 
   // ── Desktop: Find the "Shop" link and wrap it in a dropdown ──
+  // R-3: the shared navbar partial marks the Shop link with data-nav="shop"
   const desktopLinks = navbar.querySelector('.navbar__links');
-  const shopLink = desktopLinks
-    ? [...desktopLinks.querySelectorAll('.navbar__link')].find(a => a.textContent.trim() === 'Shop')
-    : null;
+  const shopLink = desktopLinks?.querySelector('[data-nav="shop"]') || null;
 
   let menu; // the dropdown menu element, populated after fetch
 
@@ -232,6 +232,7 @@ async function initShopDropdown() {
     // Create empty dropdown menu
     menu = document.createElement('div');
     menu.className = 'navbar__dropdown-menu';
+    menu.setAttribute('aria-label', 'Shop categories');
     wrapper.appendChild(menu);
   }
 
@@ -259,9 +260,7 @@ async function initShopDropdown() {
     // Populate mobile menu categories
     const mobileMenu = navbar.querySelector('.navbar__mobile-menu');
     if (mobileMenu) {
-      const mobileShopLink = [...mobileMenu.querySelectorAll('.navbar__link')].find(
-        a => a.textContent.trim() === 'Shop'
-      );
+      const mobileShopLink = mobileMenu.querySelector('[data-nav="shop"]');
       if (mobileShopLink) {
         const catContainer = document.createElement('div');
         catContainer.className = 'navbar__mobile-categories';
@@ -278,25 +277,6 @@ async function initShopDropdown() {
       menu.innerHTML = `<a href="/" class="navbar__dropdown-item">All Products</a>`;
     }
   }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Scroll Animations
-// ═══════════════════════════════════════════════════════════════
-function initScrollAnimations() {
-  const observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('animate-fade-in-up');
-          observer.unobserve(entry.target);
-        }
-      });
-    },
-    { threshold: 0.1, rootMargin: '0px 0px -30px 0px' }
-  );
-
-  document.querySelectorAll('.scroll-animate').forEach(el => observer.observe(el));
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -352,7 +332,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initEmailCopyButtons();
   initGlobalSearch();
   initShopDropdown();
-  initScrollAnimations();
   updateCartBadge();
   populateFooterShopLinks();
   initTrackOrderRedirect();

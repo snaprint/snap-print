@@ -1,5 +1,6 @@
 import { resolve } from 'path';
 import { rm } from 'fs/promises';
+import { readFileSync } from 'fs';
 import { defineConfig } from 'vite';
 
 // F-17: raw/source image folders that live inside public/ on the owner's
@@ -23,8 +24,31 @@ function dropRawImages() {
   };
 }
 
+// R-3: one source for the shared page shell. A page writes
+// `<!-- @include navbar -->` and the build (and dev server) replaces it with
+// src/partials/navbar.html. Output is plain HTML, so no flash and no JS needed.
+const PARTIALS_DIR = resolve(__dirname, 'src/partials');
+function htmlPartials() {
+  return {
+    name: 'snaprint-html-partials',
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html) {
+        return html.replace(/<!--\s*@include\s+([\w-]+)\s*-->/g, (_, name) =>
+          readFileSync(resolve(PARTIALS_DIR, `${name}.html`), 'utf8').trimEnd());
+      },
+    },
+    handleHotUpdate({ file, server }) {
+      if (file.startsWith(PARTIALS_DIR.replace(/\\/g, '/')) || file.startsWith(PARTIALS_DIR)) {
+        server.ws.send({ type: 'full-reload' });
+        return [];
+      }
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [dropRawImages()],
+  plugins: [htmlPartials(), dropRawImages()],
   root: 'src',
   // F-21: read .env from the project root, not from `root` (src/). Without
   // this, local builds/dev got no VITE_* values and silently used sample data.
