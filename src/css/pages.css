@@ -598,13 +598,16 @@
 
 .cart-item {
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr);
+  /* phone: photo + name on top, a full-width row of controls below,
+     so long prices never run into the border */
+  grid-template-columns: 72px minmax(0, 1fr);
   grid-template-areas:
     "img info"
-    "img qty";
+    "ctrl ctrl";
   column-gap: var(--space-3);
   row-gap: var(--space-3);
   align-items: center;
+  min-width: 0;
   padding: var(--space-3);
   background: var(--surface);
   border: var(--bw) solid var(--line);
@@ -612,14 +615,14 @@
 }
 
 .cart-item > .cart-item__image { grid-area: img; align-self: start; }
-.cart-item > .cart-item__info { grid-area: info; }
-.cart-item > .qty-selector { grid-area: qty; justify-self: start; height: 44px; }
+.cart-item > .cart-item__info { grid-area: info; align-self: start; }
+.cart-item > .qty-selector { grid-area: ctrl; justify-self: start; height: 44px; }
 .cart-item > .qty-selector .qty-selector__btn { width: 40px; }
-.cart-item > .flex { grid-area: qty; justify-self: end; }
+.cart-item > .flex { grid-area: ctrl; justify-self: end; min-width: 0; gap: var(--space-2); }
 
 .cart-item__image {
-  width: 76px;
-  height: 76px;
+  width: 72px;
+  height: 72px;
   overflow: hidden;
   background: var(--sunken);
   border: var(--bw) solid var(--line);
@@ -648,7 +651,7 @@
 
 .cart-item__meta { font-size: var(--text-sm); color: var(--ink-2); }
 
-.cart-item__price { font-family: var(--font-display); font-size: var(--text-md); font-weight: 700; white-space: nowrap; }
+.cart-item__price { font-family: var(--font-display); font-size: var(--text-md); font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 .cart-item__remove {
   display: grid;
@@ -682,14 +685,18 @@
 .cart-item--unavailable { background: var(--danger-bg); border-style: dashed; }
 .cart-item--unavailable .cart-item__image { opacity: 0.6; }
 
-@media (min-width: 640px) {
+/* one row per line only where the items column is wide enough */
+@media (min-width: 720px) and (max-width: 899px), (min-width: 1100px) {
   .cart-item {
     grid-template-columns: 88px minmax(0, 1fr) auto auto;
     grid-template-areas: "img info qty total";
+    column-gap: var(--space-4);
     padding: var(--space-4);
   }
+  .cart-item > .cart-item__info { align-self: center; }
+  .cart-item > .qty-selector { grid-area: qty; }
   .cart-item__image { width: 88px; height: 88px; }
-  .cart-item > .flex { grid-area: total; }
+  .cart-item > .flex { grid-area: total; gap: var(--space-3); }
 }
 
 /* ═══ Checkout ════════════════════════════════════════════════ */

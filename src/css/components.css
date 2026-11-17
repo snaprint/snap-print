@@ -815,7 +815,8 @@ input[type="radio"], input[type="checkbox"] { accent-color: var(--ink); }
 @media (hover: hover) { .qty-selector__btn:not(:disabled):hover { background: var(--lime); } }
 
 .qty-selector__value {
-  min-width: 40px;
+  min-width: 44px;
+  padding: 0 6px;
   height: 100%;
   display: grid;
   place-items: center;

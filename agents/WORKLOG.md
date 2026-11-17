@@ -181,3 +181,10 @@ SEO on `*.pages.dev` scores 63–66 only because Cloudflare sends `x-robots-tag:
 **Needs from other agent / owner:** Owner: decide when to merge `redesign` into `dev` ("merge redesign into dev"). When adding new product photos, push them to the deployed branch (see F-23 rule in FRONTEND_CONTEXT). BE: none (link previews for shared products would need a Pages Function; not requested yet).
 **Next:** merge into `dev` when the owner says so; then verify order emails there; then promotion.
 
+## 2026-11-17 · FRONTEND (cart fix)
+**Tasks:** owner report: on phones, cart prices overlapped the line's border.
+**Changed:** `pages.css` cart line: on phones the quantity stepper, line total and remove button now sit on their own full-width row under the photo + name (they used to share the narrow column next to the photo, so long totals like ₹9,00,000 ran into the border). The one-row desktop layout is only used where the items column is wide enough (720–899 px and ≥ 1100 px). `components.css`: stepper value box fits 3 digits.
+**Tested:** test cart (qty 20 × ₹11 and qty 100 × ₹9,000, long name) at 320, 360, 390, 412, 600, 768, 900, 1024, 1280 px: no element crosses a line or summary border, no page overflow.
+**Pushed:** `redesign`.
+**How to verify:** on your phone, add a product with a high quantity → the total and the × button sit inside the card on the row below the photo.
+
