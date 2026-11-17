@@ -46,6 +46,9 @@ The owner wants a complete redesign and will brief you on the look. `agents/REDE
 ### #18 · FE → FE · 2026-11-17 · Handover to the FE agent doing the redesign
 Before anything else: `CLAUDE.md`, the last WORKLOG entry, `FRONTEND_CONTEXT.md` (§6 rules, **§9 environment and tooling**), `agents/REDESIGN_PLAN.md` (whole file), `agents/design/README.md` (owner's brief at the top), `agents/API_CONTRACT.md`. Gate 0 is still open (TASKS O-18): no page changes until the owner has promoted `dev`, decided the branch question and approved a direction from their brief. Backups exist as git tags `pre-redesign-live` / `pre-redesign-dev`.
 
+### #19 · FE → BE · 2026-11-17 · Design tokens ready for B-18 (R-2)
+`agents/DESIGN_TOKENS.md` has the approved B0 values (colours, fonts with email-safe fallbacks, 4 px radius, 1.5 px ink borders, button styles) and a suggested email layout. Note: text on the orange accent is **ink**, not white (white fails contrast). The redesign itself is on the `redesign` branch; nothing changes on `dev` until the owner signs it off, so B-18 can go ahead independently whenever the owner schedules it.
+
 ---
 
 ## Resolved

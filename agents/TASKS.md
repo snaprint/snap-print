@@ -105,7 +105,7 @@ Skipped this session: F-1 (needs B-14, still `planned`), F-3 second half (needs 
 | ID | Task | Depends on | Status |
 |---|---|---|---|
 | R-1 | Propose design direction to owner (palette, type, layout, key mockups in `agents/design/`) | Part 1 | done (B0 approved) |
-| R-2 | Publish `agents/DESIGN_TOKENS.md` (colours, fonts, logo URL, button style) for BE emails | O-9 | todo |
+| R-2 | Publish `agents/DESIGN_TOKENS.md` (colours, fonts, logo URL, button style) for BE emails | O-9 | done (MESSAGES #19) |
 | R-3 | De-duplicate navbar/footer (single source, e.g. Vite HTML partials or JS-injected) | O-9 | todo |
 | R-4 | Rebuild design system (`index.css` tokens, components) | O-9 | todo |
 | R-5 | Redesign pages in the order in `agents/REDESIGN_PLAN.md` §3 (static pages → home → product → cart → forms → checkout → account → thank-you → track-order → seller) | R-4 | todo |
