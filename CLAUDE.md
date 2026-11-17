@@ -52,6 +52,7 @@ Then set the **Active agent** line at the top of `agents/WORKLOG.md` to your rol
   git checkout main && git pull --ff-only origin main && git merge --ff-only dev && npm run build && git push origin main && git checkout dev
   ```
 - Never force-push `dev` either, and never rewrite pushed history.
+- **Redesign exception (owner, 2026-11-17):** FE does the redesign (R-2…R-6) on the `redesign` branch (preview `https://redesign.snap-print.pages.dev`) and may push it freely. Merge `dev` into `redesign` regularly (`git merge dev`, never rebase). `redesign` is merged into `dev` only after the owner signs off the whole redesign.
 - Never commit secrets (`.env`, `.dev.vars`, keys). Server env vars are set by the owner in the Cloudflare dashboard. If you need one, add it to `agents/TASKS.md` → "Owner actions".
 
 ### Preview caveats

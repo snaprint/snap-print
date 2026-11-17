@@ -1,4 +1,10 @@
-# R-1 · Design proposal (awaiting owner approval, O-9)
+# R-1 · Design proposal
+
+## Approved direction (owner, 2026-11-17)
+
+**Direction B0 "Layer Lines", original** (`b-variants.html#b0`, same as `b-alternative.html`). The owner compared it with the softer variants B1–B4 and chose B0 as is: off-white `#F2F1EC`, ink `#0E0E0C`, filament orange `#FF5B14`, lime highlight `#D9F24F`; Space Grotesk headings, JetBrains Mono uppercase labels, Inter body; 4 px corners, 1.5 px ink outlines, 3 px offset "pressed" shadows on buttons. This **replaces** the earlier soft-look principles below wherever they conflict (outlines, shadows, mono labels). Still applies: phone-first, no glassmorphism/blur/gradients, plain human copy, quiet motion.
+Other gate-0 answers: separate `redesign` branch; owner renames product names in the sheet; everything goes live together after full verification (no early promotion).
+
 
 ## Owner's brief so far (2026-11-17, from the owner in chat)
 

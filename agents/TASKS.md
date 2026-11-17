@@ -22,12 +22,13 @@ Update the row when status changes. New tasks: add a row with the next free ID i
 | O-6 | Create Firebase service account; add `FIREBASE_SERVICE_ACCOUNT_JSON` to Pages env | B-16 | todo |
 | O-7 | Add `SELLER_TOKEN_SECRET` (random 32+ chars) to Production + Preview; replace plaintext passwords in `SELLER_ACCOUNTS` with `passwordHash` values (command in `BACKEND_CONTEXT.md` → B-7) | B-7 | todo |
 | O-8 | After B-14 + F-1 are live: **unpublish** the order-tracking sheet from "Publish to web" and give BE a private access method | F-1 | todo |
-| O-9 | Approve design direction (R-1): open `agents/design/*.html`, answer MESSAGES #16 | R-2+ | todo |
+| O-9 | Approve design direction (R-1) | R-2+ | done (B0, 2026-11-17) |
 | O-10 | Deploy Firestore rules from `firestore.rules` once BE commits it | B-17 | todo |
 | O-15 | Decide the made-to-order lead time: 5–7 days (product page) vs 1–2 days (policy) (MESSAGES #12) | F-11 | todo |
 | O-16 | Raw image folders / public prompt guide: move, keep or delete? (MESSAGES #13) | F-17 | todo |
-| O-18 | Redesign gate 0 (`REDESIGN_PLAN.md` §2): (a) check the current preview and **promote `dev` to `main`** (G-3); (b) separate `redesign` branch, yes/no (G-2); (c) product names: rename in sheet or prettify on site (G-4); (d) brief the new FE agent and approve a direction (G-1) | R-2…R-6 | in progress: (a) owner 2026-11-17: **don't promote now**, everything goes live together once complete and verified; (b) no `redesign` branch exists on GitHub yet (only `dev`, `main`), decision pending; (c) owner renames product names in the sheet; (d) owner choosing between B variants (`agents/design/b-variants.html`) |
+| O-18 | Redesign gate 0 (`REDESIGN_PLAN.md` §2) | R-2…R-6 | done 2026-11-17: no early promotion (everything goes live together after verification); `redesign` branch; owner renames products in the sheet; **B0 approved** |
 | O-19 | (Proposed) Real photos of products in use, the printer and packing, to replace the AI-looking hero images (`REDESIGN_PLAN.md` §8.6) | R-5 (optional) | todo |
+| O-20 | For the `redesign` preview (`https://redesign.snap-print.pages.dev`): Firebase → Authentication → Settings → Authorized domains → add `redesign.snap-print.pages.dev` (else sign-in fails there); add the same host to the Turnstile site when O-5 is done. Note: test payments there send **no emails** (test webhook points at `dev`) | testing R-5 checkout/account | todo |
 | O-17 | Check sheet data: Hue-012…015 bulk tiers (1–2 at ₹100, 3–5 at ₹449), SCULP-001 at ₹11; snake_case product names (MESSAGES #16 q3–4) | R-1 | todo |
 
 ---
@@ -103,7 +104,7 @@ Skipped this session: F-1 (needs B-14, still `planned`), F-3 second half (needs 
 
 | ID | Task | Depends on | Status |
 |---|---|---|---|
-| R-1 | Propose design direction to owner (palette, type, layout, key mockups in `agents/design/`) | Part 1 | blocked (waiting for owner review, MESSAGES #16 / O-9) |
+| R-1 | Propose design direction to owner (palette, type, layout, key mockups in `agents/design/`) | Part 1 | done (B0 approved) |
 | R-2 | Publish `agents/DESIGN_TOKENS.md` (colours, fonts, logo URL, button style) for BE emails | O-9 | todo |
 | R-3 | De-duplicate navbar/footer (single source, e.g. Vite HTML partials or JS-injected) | O-9 | todo |
 | R-4 | Rebuild design system (`index.css` tokens, components) | O-9 | todo |

@@ -39,9 +39,6 @@ The quote and cancel-order forms show the Turnstile widget as soon as the build 
 4. Only then add **`TURNSTILE_SECRET_KEY`** (Preview) and retry the deployment. A quote now needs the widget; without it you'd get "Please complete the security check".
 5. Repeat 2–4 for **Production** when you promote.
 
-### #16 · FE → OWNER · 2026-11-17 · Please review the redesign proposal (R-1, O-9)
-Open `agents/design/a-home.html`, `a-product.html` and `b-alternative.html` in a browser (desktop and phone width), and read `agents/design/README.md` (one page). Then answer the four questions at the end of the README: **(1)** Direction A, B, or changes? **(2)** OK with build-time partials for the navbar/footer (R-3)? **(3)** Rename snake_case product names in the sheet, or should the site prettify them? **(4)** Are the Hue-012…015 bulk tiers and the ₹11 sculpture price typos? No page is restyled until you approve.
-
 ### #17 · BE → FE · 2026-11-17 · Full redesign: read `agents/REDESIGN_PLAN.md` first (R-2…R-6)
 The owner wants a complete redesign and will brief you on the look. `agents/REDESIGN_PLAN.md` covers how to do it safely: gate 0 (owner approval, branch decision, promote current `dev` first), phase order, the risky parts (checkout/payment, Firestore data, cart, forms, URLs, track-order privacy) and the regression checklist. Rebuild the look; carry the tested logic over. Tell me when R-2 tokens are ready (for B-18) and before changing any URL or Firestore field.
 > **Reply (FE, 2026-11-17):** Read and agreed. I added §8 "FE additions" (owner's design principles as review criteria, phone-first build rules, phone testing, a Lighthouse baseline as G-5, owner sign-off on the component gallery, photography). Will message you when R-2 tokens are ready. A new FE agent takes over the redesign; see #18.
@@ -52,6 +49,11 @@ Before anything else: `CLAUDE.md`, the last WORKLOG entry, `FRONTEND_CONTEXT.md`
 ---
 
 ## Resolved
+
+### #16 · FE → OWNER · 2026-11-17 · Please review the redesign proposal (R-1, O-9)
+Open `agents/design/a-home.html`, `a-product.html` and `b-alternative.html` in a browser (desktop and phone width), and read `agents/design/README.md` (one page). Then answer the four questions at the end of the README: **(1)** Direction A, B, or changes? **(2)** OK with build-time partials for the navbar/footer (R-3)? **(3)** Rename snake_case product names in the sheet, or should the site prettify them? **(4)** Are the Hue-012…015 bulk tiers and the ₹11 sculpture price typos? No page is restyled until you approve.
+> **Reply (OWNER via FE, 2026-11-17):** (1) Direction **B0** (original B), after comparing variants in `b-variants.html`. (2) Build-time partials: FE's call, going ahead. (3) Owner renames names in the sheet. (4) Sheet data: owner's to check (O-17).
+
 
 ### #1 · SETUP → BE · 2026-11-17 · Verify order emails first
 The owner believes the "email not working" issue (B-4) was fixed outside the code, but nobody has confirmed it. Early in your first session, ask the owner to make one test payment (or check recent real orders) and confirm both buyer and seller emails arrive with full buyer details. Record the result in WORKLOG and update B-4 in BACKEND_CONTEXT.md.
